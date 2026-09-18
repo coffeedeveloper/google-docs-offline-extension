@@ -1,8 +1,14 @@
 {
+  "completedAt": "2026-09-18T04:28:17.009Z",
   "scope": "Native Chrome extension API comparison in separate synthetic profiles. Google traffic blocked; no Google backend or real document sync tested.",
   "results": [
     {
       "variant": "original",
+      "testedJavaScript": {
+        "page_embed_script.js": "44ffccd887253071f2d25b8cacc86131f40cd31434228caa225b67cea7bb9883",
+        "service_worker_bin_prod.js": "3d98261dc84b114d5b0f29f2c47fc08ae9ba13b177f100d740e413d5716f5c1e",
+        "offscreendocument_main.js": "cabb475f35b9ee52751af070a2307ec4373b068ffbe2e84958e157cb24b421ba"
+      },
       "browser": "153.0.8010.12",
       "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
       "probe": {
@@ -39,11 +45,16 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-PWswPf",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-XIEJya",
       "passed": true
     },
     {
       "variant": "readable",
+      "testedJavaScript": {
+        "page_embed_script.js": "b446c3c48415c3fde67b0e558179090c91a8f8a660b85669e24595c32042d43f",
+        "service_worker_bin_prod.js": "4739ef32eb0780f6ce79db656fb5707b3ce4a12dffdc7364f6d6ccb14d6f26f8",
+        "offscreendocument_main.js": "c78e52623614de33bb1d6cad6804899fc77d29bd72345161f28be9ec87a019a9"
+      },
       "browser": "153.0.8010.12",
       "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
       "probe": {
@@ -80,7 +91,7 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-Y1ghCB",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-LovIHQ",
       "passed": true
     }
   ]

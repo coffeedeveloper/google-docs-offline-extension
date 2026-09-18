@@ -1,0 +1,37 @@
+{
+  "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
+  "version": "1.110.1",
+  "claim": "Unchanged baseline/assets and extracted vendor tokens; deterministic modular bundles and matching source maps. Business behavior requires differential/browser tests; no business AST-equivalence claim.",
+  "baselineFiles": 88,
+  "byteIdenticalResources": 85,
+  "vendorFiles": [
+    "src/vendor/background-runtime.js",
+    "src/vendor/offscreen-runtime.js"
+  ],
+  "bundles": [
+    {
+      "file": "page_embed_script.js.map",
+      "sha256": "1f00850d1291b1993b172446c1a8926ff22ba8ec360293d3b38f75f14fb55279"
+    },
+    {
+      "file": "page_embed_script.js",
+      "sha256": "b446c3c48415c3fde67b0e558179090c91a8f8a660b85669e24595c32042d43f"
+    },
+    {
+      "file": "service_worker_bin_prod.js.map",
+      "sha256": "5d80a853c89e8dbdf0513fc0ce580e4ede2889b3294af463c90de596809bfce8"
+    },
+    {
+      "file": "service_worker_bin_prod.js",
+      "sha256": "4739ef32eb0780f6ce79db656fb5707b3ce4a12dffdc7364f6d6ccb14d6f26f8"
+    },
+    {
+      "file": "offscreendocument_main.js.map",
+      "sha256": "45fe4995510c29743751efbf5af462280d4ec9caf8c63ed93fb05433e233dae6"
+    },
+    {
+      "file": "offscreendocument_main.js",
+      "sha256": "c78e52623614de33bb1d6cad6804899fc77d29bd72345161f28be9ec87a019a9"
+    }
+  ]
+}

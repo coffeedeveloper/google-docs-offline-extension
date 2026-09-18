@@ -11,9 +11,23 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-真实 Chromium 测试对原始与可读版分别运行，使用合成的 Docs origin 页面和空白 profile。它证明扩展可加载及原生 API 链路正常，不证明 Google 文档上传成功。
+真实 Chromium 测试对原始与模块化构建版分别运行，使用合成的 Docs origin 页面和空白 profile。它证明扩展可加载及原生 API 链路正常，不证明 Google 文档上传成功。`npm test` 当前另有 22 项差分测试，覆盖账号恢复、双端口握手、断开重试与生命周期等分支。
+
+调试时在 DevTools Sources 打开 source map 中的 `src/background/`、`src/offscreen/` 源文件。在 `ExtensionController.dispatch`、`OffscreenManager.initializeDocument`、`OffscreenController.onFrameRequest` 和 `GoogleIframeManager.request` 设置断点，可依次观察请求、隐藏页初始化、握手和 RPC。修改 `src/` 后重新构建并在扩展页 Reload；未构建的源码修改不会自动更新 Chrome。
 
 ## Google 账号下完整实验
+
+2026-09-18 已启动真实 Google 验证：独立 Chrome for Testing 加载当前 `extension/`，通过浏览器内读取资源并计算 SHA-256，确认三个实际加载的 JS 与重构产物完全相同。没有合成页面或网络路由替代。当前停在 Google 登录页，尚未验证离线编辑与服务端同步；状态见 [`google-docs-live.json`](../research/validation/google-docs-live.json)。登录页没有 Docs 的扩展探测标记是正常的，不能据此判定扩展失败。
+
+可复用的启动与只读检查：
+
+```sh
+node scripts/google-docs-live-session.mjs
+# 在弹出的隔离浏览器中手动登录；另一个终端使用启动输出的 loopback endpoint：
+node scripts/google-docs-live-inspect.mjs http://127.0.0.1:<port>
+```
+
+启动器不复制正式 profile、Cookie 或登录凭据，也不自动创建文档。登录由用户手动完成。诊断报告只记录扩展状态、资源哈希和页面能力，不输出账号标识或文档正文。启动终端输入 `stop` 可恢复该测试 context 联网并关闭窗口；包含登录状态的临时 profile 保留在打印的路径，不纳入仓库。下列完整实验尚待登录后执行。
 
 1. 使用专用 profile 和测试账号；只安装一个相同 ID 的扩展，加载 `extension/`。
 2. 创建测试文档，输入 `online-baseline`，等到已保存到 Drive，再设为可离线。

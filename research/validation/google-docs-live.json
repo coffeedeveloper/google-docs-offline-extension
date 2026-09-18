@@ -1,0 +1,38 @@
+{
+  "inspectedAt": "2026-09-18T03:27:16.804Z",
+  "browser": "153.0.8010.12",
+  "fixtureRouting": false,
+  "loadedJavaScriptMatchesReconstruction": true,
+  "loadedHashes": {
+    "page_embed_script.js": "b446c3c48415c3fde67b0e558179090c91a8f8a660b85669e24595c32042d43f",
+    "service_worker_bin_prod.js": "4739ef32eb0780f6ce79db656fb5707b3ce4a12dffdc7364f6d6ccb14d6f26f8",
+    "offscreendocument_main.js": "c78e52623614de33bb1d6cad6804899fc77d29bd72345161f28be9ec87a019a9"
+  },
+  "extensionState": {
+    "id": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
+    "version": "1.110.1",
+    "optedIn": null,
+    "hasAccountIdentifier": false,
+    "lastSuccessfulFrameConnectTime": null,
+    "heartbeat": null,
+    "contexts": [
+      {
+        "type": "BACKGROUND",
+        "pathname": null
+      }
+    ]
+  },
+  "pages": [
+    {
+      "origin": "https://accounts.google.com",
+      "isDocumentEditor": false,
+      "authenticationPage": true,
+      "extensionDetected": false,
+      "extensionVersion": null,
+      "online": true,
+      "webServiceWorkerControlled": false
+    }
+  ],
+  "authenticationRequired": true,
+  "limitations": "Metadata snapshot only. Does not establish offline editing, restart persistence or server synchronization."
+}

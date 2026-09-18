@@ -5,9 +5,9 @@
 | 上下文 | 入口 | 角色 |
 | --- | --- | --- |
 | Google 网页 | `chrome.runtime.sendMessage(extensionId, array)` | 外部请求，由 manifest externally_connectable 限定域名 |
-| 扩展 worker | `dn`, `en`, `dn.prototype.wb` | 状态/企业策略/隐藏页协调 |
-| 隐藏 DOM 页 | `Jm`, `Jm.prototype.U`, `Mm` | DOM 与 Google iframe 生命周期 |
-| Google 同源 iframe | `/offline/extension/frame?ouid=...` | 包外业务页面，MessageChannel 通信 |
+| 扩展 worker | `ExtensionController.onWebsiteMessage` / `dispatch` | 状态/企业策略/隐藏页协调 |
+| 隐藏 DOM 页 | `OffscreenController` / `FrameMessageRouter` | DOM 与 Google iframe 生命周期 |
+| Google origin iframe | `/offline/extension/frame?ouid=...` | 包外业务页面，与 Google 网页同源，与扩展跨源；MessageChannel 通信 |
 
 所有“类型名”均为研究者按控制流给出的描述。
 
@@ -43,8 +43,25 @@ worker 发出的 type 1 / 6 的字段 2 含 `[ouid, origin, version, optInStatus
 
 双方 Chrome `onMessage` 监听返回 `true` 以延迟响应。数组构造函数可能在收到的数据上附加内部标记；测试模拟 Chrome 序列化时必须克隆输入，不能复用同一个被内部消息对象接管的数组。
 
-## 为什么保持 bundle
+## 字段阅读约定
 
-两个大 JS 文件有不同的短符号映射、共享全局辅助函数及原始初始化时序。直接拆模块、改为 ES modules、全局重命名、改 Promise 实现或者调整 callback 返回值都会引入语义风险。本工程只改变注释和空白，验证器同时检查 token 顺序和 AST。
+业务中 `setNested(response, Messages.FrameResponse, 4, value)` 的 `4` 是协议字段号，不是数组下标。`readType()` 读取字段 1；`readEchoType()` 保留原版回显读取路径，不应随意统一替换。
 
-分析某个函数时，先确认文件：例如 `Dm` 在 worker 中是 offscreen 管理器，在 offscreen bundle 中是 1 小时关闭计时器。
+| 消息 | 关键字段（1 起算） |
+| --- | --- |
+| WebsiteRequest | 1 type；3 UserChange；4 FrameRequest；5 DomainPolicyRequest；7 FrameConnection；8 EnableOffline |
+| WebsiteResponse | 1 type；3 FrameResponse；4 DomainPolicyResponse；5 Error |
+| OffscreenRequest | 1 type；2 FrameConfiguration；4 FrameConnection；5 FrameRequest；6 UserChange |
+| OffscreenResponse | 1 type；3 Error；4 FrameResponse |
+| FrameConfiguration | 1 OUID；2 Docs origin；3 扩展版本；4 optInStatus |
+| FrameConnection | 1 OUID；2 时间戳字符串 |
+| EnableOffline | 1 OUID；2 forceHeartbeat |
+| FrameRequest 的 alarm 形式 | 1 type = 0；2 Alarm，后者字段 1 为 alarm 名 |
+
+## 重构怎样保留通信行为
+
+业务已拆为 ES modules，esbuild 生成保持 manifest 入口不变的经典 IIFE。消息类型用 `shared/message-types.js` 命名；构造器、数组内部标记、可选值读取与布尔编码留在原始 codec，由 `runtime-api.js` 提供可读接口。
+
+不同通道上的相同数字不一定含义相同，例如外部 type 3 是账号变化，而内部 type 3 是握手。不得合并为一个含混的大枚举。
+
+这里刻意没有把数组协议替换成 JSON 对象，也没有新增或收紧原版消息来源检查。面向 Zoom 的独立实现应明确校验 origin/source、账号、文档权限与版本；这属于另一个产品设计任务，不应混入本次行为保持重构。

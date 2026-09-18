@@ -1,0 +1,61 @@
+{
+  "src/vendor/background-runtime.js": {
+    "original": "service_worker_bin_prod.js",
+    "originalSha256": "3d98261dc84b114d5b0f29f2c47fc08ae9ba13b177f100d740e413d5716f5c1e",
+    "sha256": "752b322418e4c710c5b68a6286abc347ee45a108d0a7bde7588b8908b59e94f4",
+    "ranges": [
+      {
+        "start": 0,
+        "end": 56654,
+        "sha256": "3e7557f01578134c61788f25c096ffef42c82eb3cda579b23676914a42b8ab66"
+      },
+      {
+        "start": 56862,
+        "end": 127750,
+        "sha256": "18fb2cab6aab962b6f6455335aae8bfb7db07ab32b695cfe99ff75938b671c50"
+      },
+      {
+        "start": 129750,
+        "end": 130032,
+        "sha256": "746ba9784c1729001b1c334146d3cab34e4cf9691c3bdf33985716dff2c94837"
+      },
+      {
+        "start": 133689,
+        "end": 134320,
+        "sha256": "380fe015cd338aa5985fd1a27beb06ba617be8726eeb6ee859d2e35ae537087c"
+      }
+    ]
+  },
+  "src/vendor/offscreen-runtime.js": {
+    "original": "offscreendocument_main.js",
+    "originalSha256": "cabb475f35b9ee52751af070a2307ec4373b068ffbe2e84958e157cb24b421ba",
+    "sha256": "dc97ab23a6fc8f8f14e4dfa01e4fce99d4657fff6da0b1635c3bfa8558c3cb88",
+    "ranges": [
+      {
+        "start": 0,
+        "end": 127541,
+        "sha256": "b38ac8a93db296313fa089cf0f805bf76fea6a773b302fe1f33e1691d45dd520"
+      },
+      {
+        "start": 128010,
+        "end": 128128,
+        "sha256": "6dea21c421c91fc7b002f4d294353aefac40b33c81514253d8c079291c15457d"
+      },
+      {
+        "start": 128632,
+        "end": 128769,
+        "sha256": "6c19fffa55c224ab86b89797a93025ab989bdf9ba44cc4b7f8fd5700e3a85b90"
+      },
+      {
+        "start": 129885,
+        "end": 130085,
+        "sha256": "b9faa189fb9532e35c116e55e45aa3eadc2debd141d630d28a4d8cda0f05e984"
+      },
+      {
+        "start": 130550,
+        "end": 131025,
+        "sha256": "e029e408816f4a67e9bfae5950d73a928df3947f140dd4aed1f344dec47b397e"
+      }
+    ]
+  }
+}

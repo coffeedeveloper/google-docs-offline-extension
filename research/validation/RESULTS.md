@@ -1,46 +1,48 @@
-# 验证结果
+# 模块化重构验证结果
 
-日期：2026-09-17。
+日期：2026-09-18。当前版本是实际 ES modules 业务重构，不是上一版格式化输出。
 
-## 静态检查
+## 静态与来源检查
 
-`npm run verify` 已通过：3 个 JavaScript 文件的可执行 token 文本/顺序相同，AST 在只忽略源位置和 literal raw 字段后相同；85 个非 JS 文件字节相同。EmptyStatement 没有被删除；作用域、指令序言、函数名、入口及消息字段不变。公钥派生的 ID 符合原扩展 ID。
+`npm run verify` 通过，记录在 `modular-build.json`：
 
-初次试用 Prettier 会移除编译输出中独立的空语句，因此运行工程改用 js-beautify，并保持严格 AST 检查。研究用 `research/readable/` 可以有格式化差异，它不是可加载入口。
+- 88 个原始文件的清单及 SHA-256 未变。
+- 85 个非 JS 运行资源逐字节相同，manifest key 派生 ID 不变。
+- 两个 vendor 文件的原始区间、哈希和可执行 token 验证通过（不含新增 export 声明）。
+- 3 个业务入口可重新生成完全相同的 bundle 和 source map；输出可按经典 script 解析，map 中的源内容对应当前磁盘源码。
 
-## 13 项差分行为测试
+**业务源码已重命名、拆模块和调整表达方式，不再宣称与原版 token/AST 相同。** `research/history/formatting-v1/static-equivalence.json` 仅是旧版历史记录。
 
-`npm test` 已全部通过：
+## 22 项差分行为测试
 
-1. 网页版本/权限标记。
-2. worker 启动与事件注册。
-3. 开关三态、账号写入及退出。
-4. 企业域名 allow / auto / deny，序列化 `0/1`。
-5. 未知外部消息错误。
-6. 启用时 offscreen 与 heartbeat。
-7. 从已启用持久化状态重启恢复。
-8. 退出时清除 OUID 与 heartbeat。
-9. iframe 地址、OUID URL 编码、握手超时。
-10. 确保 iframe 单例及移除。
-11. 未知内部消息错误。
-12. 60 秒空闲关闭和 1 小时关闭配置。
-13. MessageChannel RPC 的端口释放。
+`npm test` 全部通过。20 项直接运行 `original/` 和当前 `extension/` 的实际输出；另 2 项（内部状态三态、MessageChannel 端口释放）用同一源码构建仅增加测试导出的入口，以便访问不公开的类/函数。
 
-测试执行原始及可读 bundle，在相同假时钟、API 和输入下比较回复、storage、Chrome 调用与错误输出，同时断言预期行为。模拟器不执行 Google 同源 iframe 业务，也不模拟文档同步服务。
+每个用例比较原版与重构版的回复、storage、Chrome/DOM API 调用轨迹和 console 错误，同时断言预期行为。假时钟用于可重复比较，不表示真实浏览器会精确按这些毫秒值执行。
 
-## 原生 Chromium 测试
+覆盖：
 
-`npm run test:browser` 已对两个版本分别通过。Chrome for Testing 的实际版本与输出见 `browser-smoke.json`。
+- 网页能力探测、worker 启动同步监听、状态恢复。
+- 开关三态、OUID 写入/移除、退出及 heartbeat 清理。
+- 企业 allow / auto / deny；序列化布尔保持 `0/1`。
+- 网页及内部握手、时间写入、双端口握手、连接超时取消。
+- 账号不匹配只恢复一次；offscreen 配置只初始化一次。
+- offscreen 创建、确保单例、移除、OUID URL 编码。
+- 已有 heartbeat 不重建，force 才立即转发。
+- 初始化通道断开后重建并重试；错误 envelope 向外传递。
+- 未知网页/内部消息返回错误。
+- 外部连接计数、60 秒空闲关闭和 1 小时关闭配置。
+- MessageChannel 响应后的端口释放。
 
-- 原始 manifest 与 ID 正常加载，MV3 worker 正常启动。
-- Docs origin 合成页面能加载 web-accessible 探测脚本。
-- 外部消息由真实 Chrome runtime 传递，策略和未知消息响应正确。
-- 启用请求创建真实 offscreen document、保存测试状态、注册 5 分钟 heartbeat。
-- 退出请求移除账号、清除 alarm、关闭 offscreen document。
-- 原始版和可读版上述归一化结果相同。
+## 真实 Chromium 回归
 
-每版使用独立临时 profile，Google 外部流量经不可用代理阻断，页面由本地测试夹具响应。测试浏览器均已关闭，profile 路径保留在 JSON 以便核查，不包含用户账号或文档。
+`npm run test:browser` 已对原版、模块化构建版分别通过；浏览器版本及实测输出见 `browser-smoke.json`。
 
-## 保证边界
+使用真实 MV3 worker、runtime 外部消息、web-accessible 探测脚本、offscreen document、storage 和 alarms。比较启用、查询、错误及退出清理的归一化结果。
 
-没有宣称逐字节程序输出的形式化等价：源文本、函数 toString、错误堆栈行列和时序性能可能因格式化不同。未覆盖所有错误重试排列、Google 企业部署、用户端完整离线编辑和服务器冲突合并。没有替换用户正式安装的扩展。
+两版使用独立临时 profile、合成页面和账号。Google 外部流量经不可用代理阻断，不登录、不触碰用户 Chrome profile。测试结束后浏览器关闭，临时 profile 路径保留在 JSON 便于核查。
+
+## 未证明的部分
+
+这些检查不是所有执行路径的形式化等价证明，也不是 Google 服务端的端到端测试。仍未覆盖所有并发/失败排列、库中全部遥测采样路径、企业部署、完整离线编辑、并发合并、重连上传和版本更新。
+
+函数名称、词法作用域、堆栈、`Function.prototype.toString()` 和性能可能改变。协议字段、状态转移和已覆盖外部可见调用是当前对照验证的目标。测试通过不能写成“所有条件下绝对一致”。

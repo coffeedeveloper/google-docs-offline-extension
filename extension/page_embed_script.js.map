@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/page/extension-probe.js"],
+  "sourcesContent": ["// Executed in the website's main world when Docs loads this exposed resource.\n(function publishOfflineExtensionCapabilities() {\n  window._docs_chrome_extension_exists = true;\n  window._docs_chrome_extension_features_version = 2;\n  window._docs_chrome_extension_permissions =\n    \"alarms clipboardRead clipboardWrite storage unlimitedStorage offscreen\".split(\n      \" \",\n    );\n  window._docs_chrome_extension_manifest_version = 3;\n  window._docs_chrome_extension_version = \"1.110.1\";\n}).call(this);\n"],
+  "mappings": ";;;;;AACA,GAAC,iCAAS,sCAAsC;AAC9C,WAAO,gCAAgC;AACvC,WAAO,0CAA0C;AACjD,WAAO,qCACL,yEAAyE;AAAA,MACvE;AAAA,IACF;AACF,WAAO,0CAA0C;AACjD,WAAO,iCAAiC;AAAA,EAC1C,IATC,wCASE,KAAK,MAAI;",
+  "names": []
+}

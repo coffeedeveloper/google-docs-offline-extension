@@ -1,47 +1,70 @@
-# 可读代码导航
+# 可读源码导航
 
-自动生成；名称为研究注释，不是 Google 原始符号名。
+当前应阅读 `src/`。`extension/` 是这些源码的实际构建产物；`research/readable/` 仍是调查用格式化样本，不要混淆。
 
-## offscreendocument_main.js
+## 按用例读调用链
 
-- [`function nm(a)`](../extension/offscreendocument_main.js#L7392) — offscreen → extension worker 的 runtime RPC，使用原始数组消息格式。
-- [`function qm(a)`](../extension/offscreendocument_main.js#L7423) — GoogleIframeManager（研究命名）：维护 iframe、握手门闩、超时与消息端口。
-- [`function rm(a)`](../extension/offscreendocument_main.js#L7435) — 移除 iframe 并清理超时，必要时重置握手状态。
-- [`function tm(a, b)`](../extension/offscreendocument_main.js#L7447) — 创建 extensionFrame iframe；14 秒未握手进入关闭路径。
-- [`function um(a, b)`](../extension/offscreendocument_main.js#L7466) — 构造 Google 同源后台页面 /offline/extension/frame?ouid=...，账号值做 URL 编码。
-- [`function vm(a, b)`](../extension/offscreendocument_main.js#L7472) — 每次 frame RPC 使用 MessageChannel；响应后关闭本地回复端口。
-- [`function Bm()`](../extension/offscreendocument_main.js#L7515) — OffscreenLifetime（研究命名）：跟踪外部连接数，避免无界后台常驻。
-- [`function Em(a)`](../extension/offscreendocument_main.js#L7537) — 连接归零后的空闲关闭：60 秒。
-- [`function Dm(a)`](../extension/offscreendocument_main.js#L7544) — offscreen 从启动起 1 小时关闭；这不是永久保活机制。
-- [`function Jm()`](../extension/offscreendocument_main.js#L7589) — OffscreenController（研究命名）：解析启动参数、注册消息监听和生命周期。
-- [`function Lm(a, b, c)`](../extension/offscreendocument_main.js#L7623) — Google frame → offscreen：type 1 完成握手，type 3 回传账号状态；继续转给 worker。
-- [`function Mm(a, b)`](../extension/offscreendocument_main.js#L7666) — worker → offscreen：1 重建 iframe；4 frame RPC；5 移除 iframe；6 确保 iframe 存在。
-- [`function Nm(a, b)`](../extension/offscreendocument_main.js#L7696) — 惰性初始化：账号、Google origin、版本、状态及日志上下文。
-- [`new Jm;`](../extension/offscreendocument_main.js#L7745) — 原始 offscreen 入口。完整 Docs 编辑器与 Google 同源业务脚本不在此包中。
+### 启用离线
 
-## page_embed_script.js
+从 [ExtensionController.dispatch](../src/background/extension-controller.js) 的 `WebsiteRequest.ENSURE_OFFLINE` 开始：
 
-- [`(function()`](../extension/page_embed_script.js#L4) — 网页能力探测：由 Google 网页加载，写入版本/权限标记。不是 manifest content_scripts 自动注入。
+1. [enableOffline](../src/background/offline-state.js) 写开关，可选写 OUID；请求未传账号时读取上次账号。
+2. [OffscreenManager.ensureFrame](../src/background/offscreen-manager.js) 构造 type 6 配置，确保隐藏页存在，等待原版的启动缓冲时间并发送消息。
+3. [OffscreenController.dispatch](../src/offscreen/offscreen-controller.js) 初始化配置，再调用 [GoogleIframeManager.ensure](../src/offscreen/iframe-manager.js)。
+4. iframe 已存在则不重复创建，否则打开 Google 的 `/offline/extension/frame?ouid=...`。
+5. worker 调用 [HeartbeatScheduler.start](../src/background/heartbeat.js)，缺失 alarm 才创建；新建或 force 时立即发起一次异步转发。
 
-## service_worker_bin_prod.js
+此链路没有下载或编辑文档正文；这些职责在包外的 Google 网页代码中。
 
-- [`function nm()`](../extension/service_worker_bin_prod.js#L7391) — 状态层：读取已启用离线的账号 OUID。以下 storage.local 函数只保存控制状态。
-- [`function pm(a)`](../extension/service_worker_bin_prod.js#L7398) — 启用离线并可选保存 OUID；保持原始 Promise 顺序。
-- [`function rm()`](../extension/service_worker_bin_prod.js#L7410) — 退出离线：写入 false，再清理账号标识。
-- [`function tm()`](../extension/service_worker_bin_prod.js#L7419) — 三态开关：unknown / opted_in / opted_out；异常值会抛错。
-- [`function Fg()`](../extension/service_worker_bin_prod.js#L7436) — 企业策略：允许离线的域名列表。autoEnabled 列表也会隐含允许。
-- [`function Dm(a, b, c)`](../extension/service_worker_bin_prod.js#L7517) — OffscreenDocumentManager（研究命名）：创建隐藏 DOM 页的配置、就绪门闩和恢复状态。
-- [`function Fm(a)`](../extension/service_worker_bin_prod.js#L7543) — 关闭链路：先请求 offscreen 移除 iframe，再关闭 offscreen document 并重置门闩。
-- [`function Pm(a)`](../extension/service_worker_bin_prod.js#L7570) — Chrome offscreen 创建入口；处理并发创建单例时的特定错误。
-- [`function Rm(a, b)`](../extension/service_worker_bin_prod.js#L7599) — 向 Google iframe 发起业务 RPC；特定端口错误允许一次延迟重试。
-- [`function Km(a, b)`](../extension/service_worker_bin_prod.js#L7646) — 确保 offscreen 存在并发送初始化消息；连接失败时重建再重试。
-- [`function Gm()`](../extension/service_worker_bin_prod.js#L7678) — 通过 self.clients.matchAll 检查 offscreen 页面是否存在；不是网页 Service Worker 注册检查。
-- [`function dn()`](../extension/service_worker_bin_prod.js#L7786) — OfflineExtensionController（研究命名）：同步注册 Chrome 事件，随后 load() 恢复持久化状态。
-- [`function kn(a, b)`](../extension/service_worker_bin_prod.js#L7853) — 后台调度：heartbeat alarm 的配置周期为 5 分钟，实际触发受浏览器调度影响。
-- [`p.pb = function()`](../extension/service_worker_bin_prod.js#L7878) — Worker 启动恢复：读取开关及账号，已启用时重新创建 Google iframe。
-- [`function en(a, b, c)`](../extension/service_worker_bin_prod.js#L7928) — 外部网页消息入口：返回 true 保持异步回复通道；允许来源由 manifest 限制。
-- [`p.tb = function(a, b, c)`](../extension/service_worker_bin_prod.js#L7943) — offscreen → worker：type 3 保存握手信息，type 7 汇报账号/退出状态。
-- [`p.wb = function(a)`](../extension/service_worker_bin_prod.js#L7996) — 网页请求分发：1 握手；2 确保离线；3 账号/退出；4 frame RPC；5 企业策略。
-- [`function rn(a)`](../extension/service_worker_bin_prod.js#L8046) — 企业策略查询：autoEnabled 域名同时视为 allowed。
-- [`function qn(a)`](../extension/service_worker_bin_prod.js#L8067) — 完整退出：持久化关闭状态 → 清除 heartbeat → 关闭隐藏页面。
-- [`self.window = self;`](../extension/service_worker_bin_prod.js#L8119) — 保留原始入口与全局兼容别名；此 bundle 不负责网页导航缓存。
+### 握手与转发
+
+Google frame 的 window message 经 [FrameMessageRouter](../src/offscreen/frame-message-router.js) 分发。`ports[0]` 是本次回复端口，`ports[1]` 是后续通信端口。
+
+`OffscreenController.onFrameRequest` 先通知 worker 保存账号/连接时间；worker 的 `onOffscreenMessage` 调用 `markFrameConnected()` 解除 `frameReady` 等待。回复之后 iframe manager 接受长期通信端口并清除超时。
+
+后续网页 type 4 进入 `OffscreenManager.requestFrame()`，经过隐藏页存在性和握手检查，转到 `GoogleIframeManager.request()`；每次请求创建独立 MessageChannel，在响应或发送异常后关闭本地端口。
+
+### 退出与恢复
+
+- 正常退出：`ExtensionController.optOut()` → `disableOffline()` → `heartbeat.stop()` → `offscreen.close()`。
+- 关闭隐藏页：先发 type 5 移除 iframe，再调用 `chrome.offscreen.closeDocument()`，最后重置握手状态。
+- 账号不匹配：`recoverAccount()` 第一次重建；后续通知关闭，`accountRecoveryAttempted` 不被重置成无限循环。
+- 消息通道失效：`initializeDocument()` 或 `requestFrame()` 的已知断开错误分支，各按原版规则恢复/重试。
+- worker 重启：`load()` 注册报告上下文，`restoreSavedState()` 根据持久化三态决定是否恢复 iframe。
+
+## 原始符号 → 现在的真实模块/方法
+
+“worker”指原始 `service_worker_bin_prod.js`；“offscreen”指原始 `offscreendocument_main.js`。同名压缩符号在两文件中含义不同。
+
+| 原始位置与符号 | 重构后的实际实现 |
+| --- | --- |
+| worker `dn` | `ExtensionController` |
+| worker `en` / `dn.prototype.wb` | `onWebsiteMessage` / `dispatch` |
+| worker `dn.prototype.tb` | `onOffscreenMessage` |
+| worker `dn.prototype.pb` | `restoreSavedState` |
+| worker `nm / pm / rm / tm` | `getOptedInUserId / enableOffline / disableOffline / getOptInStatus` |
+| worker `Fg / Gg / rn` | `domain-policy.js` 中的策略读取和 `queryDomainPolicy` |
+| worker `Dm` | `OffscreenManager` |
+| worker `Fm / Pm / Km / Rm / Gm` | `close / createDocument / initializeDocument / requestFrame / hasOffscreenDocument` |
+| worker `kn / qn` | `HeartbeatScheduler.start / ExtensionController.optOut` |
+| offscreen `Jm` | `OffscreenController` |
+| offscreen `Lm / Mm / Nm` | `onFrameRequest / dispatch / initialize` |
+| offscreen `nm` | `sendWorkerRequest` |
+| offscreen `qm` | `GoogleIframeManager` |
+| offscreen `rm / tm / um / vm` | `remove / recreate / buildFrameUrl / request` |
+| offscreen `Bm / Em / Dm` | `OffscreenLifetime / scheduleIdleClose / 构造器中的一小时关闭计时` |
+| page 自执行函数 | `page/extension-probe.js` 中的能力声明入口 |
+
+## 状态命名
+
+| 可读状态 | 含义 |
+| --- | --- |
+| `frameReady` | worker 等待 Google frame 握手的 deferred，不是 iframe DOM 创建完成 |
+| `frameConnected` | worker 侧握手记录，用于恢复和错误上下文 |
+| `connection` / `connected` | iframe manager 持有的通信端口 deferred / 已连接状态 |
+| `accountRecoveryAttempted` | 当前 worker 生命周期内是否已尝试账号恢复 |
+| `activeConnections` | 隐藏页外部连接数，非正在同步的文档数量 |
+| `idleTimeout` / `connectionTimeout` | 空闲关闭 / iframe 握手超时的 timer ID |
+| `userId` / `docsOrigin` / `extensionVersion` | 当前配置的账号 OUID、Google origin、扩展版本 |
+
+兼容层仍有短字段名和 codec 访问器，集中在两个 `runtime-api.js`。这是已知的库边界，不是把旧的业务函数换个名称再藏回原始 bundle。
