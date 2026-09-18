@@ -8,6 +8,8 @@
 
 ## 从哪里读
 
+完整研究报告：[Google Docs Offline 技术调查与自研文档系统实施建议](docs/google-docs-offline-investigate.md)。包含架构与源码证据、无 Service Worker 的能力边界、真实 Google 验证状态，以及使用本重构扩展的 Offline Docs Demo 实践。
+
 1. [源码导航与旧符号对照](docs/CODE_MAP.md)：先看职责，再按用例跟调用链。
 2. [ExtensionController](src/background/extension-controller.js)：网页请求如何改变状态、调度隐藏页。
 3. [OffscreenManager](src/background/offscreen-manager.js)：创建、握手门闩、重试和重建。
@@ -27,7 +29,7 @@ extension/          src 构建出的 3 个 JS + source maps，及原始 manifest
 original/           用户样本的不可修改约定基线
 scripts/            构建、vendor 提取、校验、真实浏览器回归
 tests/              原版与重构版在相同输入下的差分测试
-docs/               源码导航、协议、实践指南
+docs/               完整研究报告、源码导航、协议、实践指南
 research/           研究样本、来源记录、验证结果与上一版历史记录
 ```
 
@@ -61,8 +63,8 @@ npm run test:browser
 
 22 项差分测试和真实浏览器回归提供已覆盖路径的行为证据，不是所有执行路径的形式化等价证明。重构改变函数名、作用域、堆栈、`toString()` 及可能的时序性能；完整 Google 离线编辑、并发合并和重连上传仍需按 [实践指南](docs/PRACTICE.md) 单独验收。
 
-扩展依赖包外的 Google iframe、网页 Service Worker、Docs 编辑器和后端。它不是独立离线编辑器。Zoom Docs 应复用设计原则，不应复用 Google ID；`content_capabilities` 的 Chromium stable 白名单能力也不能直接照搬。
+扩展依赖包外的 Google iframe、网页 Service Worker、Docs 编辑器和后端。它不是独立离线编辑器。自研文档系统应复用设计原则，不应复用 Google ID；`content_capabilities` 的 Chromium stable 白名单能力也不能直接照搬。
 
-完整研究报告：[`google-docs-offline-investigate.md`](</Users/ellison/Library/Mobile Documents/iCloud~md~obsidian/Documents/cattery/Offline/google-docs-offline-investigate.md>)。
+配套实践：[Offline Docs Demo](https://github.com/coffeedeveloper/google-docs-offline-demo/tree/8486658) 使用本项目 `e052242` 源码快照，补齐文件列表、编辑器、同源 iframe、网页缓存和本地同步服务；适配使用独立扩展 ID。Demo 通过不代表真实 Google 服务端已验证，覆盖范围见研究报告第 7、13 节。
 
 Google 原始代码与资源的权利归原权利人；本工程未为它们新增开源许可，不应以自己的扩展发布该研究副本。
