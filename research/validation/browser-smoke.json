@@ -1,0 +1,87 @@
+{
+  "scope": "Native Chrome extension API comparison in separate synthetic profiles. Google traffic blocked; no Google backend or real document sync tested.",
+  "results": [
+    {
+      "variant": "original",
+      "browser": "153.0.8010.12",
+      "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
+      "probe": {
+        "exists": true,
+        "version": "1.110.1",
+        "manifest": 3
+      },
+      "policy": [
+        5,
+        null,
+        null,
+        [
+          0,
+          0
+        ]
+      ],
+      "nativeState": {
+        "storage": {
+          "offlineOptedIn": true,
+          "optedInUserOuid": "offline-investigation-synthetic-user"
+        },
+        "heartbeat": {
+          "name": "heartbeat",
+          "periodInMinutes": 5
+        },
+        "offscreen": [
+          "/offscreendocument.html"
+        ]
+      },
+      "exited": {
+        "storage": {
+          "offlineOptedIn": false
+        },
+        "heartbeat": null,
+        "offscreenCount": 0
+      },
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-PWswPf",
+      "passed": true
+    },
+    {
+      "variant": "readable",
+      "browser": "153.0.8010.12",
+      "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
+      "probe": {
+        "exists": true,
+        "version": "1.110.1",
+        "manifest": 3
+      },
+      "policy": [
+        5,
+        null,
+        null,
+        [
+          0,
+          0
+        ]
+      ],
+      "nativeState": {
+        "storage": {
+          "offlineOptedIn": true,
+          "optedInUserOuid": "offline-investigation-synthetic-user"
+        },
+        "heartbeat": {
+          "name": "heartbeat",
+          "periodInMinutes": 5
+        },
+        "offscreen": [
+          "/offscreendocument.html"
+        ]
+      },
+      "exited": {
+        "storage": {
+          "offlineOptedIn": false
+        },
+        "heartbeat": null,
+        "offscreenCount": 0
+      },
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-Y1ghCB",
+      "passed": true
+    }
+  ]
+}
