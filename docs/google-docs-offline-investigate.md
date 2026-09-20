@@ -1,5 +1,7 @@
 # Google Docs Offline 技术调查与自研文档系统实施建议
 
+工程迁移说明（2026-09-20）：独立 Demo 已并入本仓库 `demo/`，由 pnpm workspace 直接引用共享 `src/`。第 13 节的独立仓库、快照和测试结果仍描述 2026-09-18 历史基线，不代表当前需要复制 upstream。当前安装、两种扩展加载目录及复验命令以 [统一工程指南](WORKSPACE.md) 为准，迁移后结果见 [迁移验证](WORKSPACE-VALIDATION.md)。
+
 研究日期：2026-09-17（Asia/Singapore）
 
 报告修订：2026-09-18，迁移至扩展仓库；补充 Service Worker 边界、真实 Google 测试状态及本地 Demo 验证。
@@ -430,10 +432,10 @@ assets [tenantId, userId, assetId]
 
 ```sh
 # 在本扩展仓库根目录执行
-npm ci --ignore-scripts
-npm run check
-npx playwright install chromium
-npm run test:browser
+pnpm install --frozen-lockfile
+pnpm check
+pnpm exec playwright install chromium
+pnpm test:browser
 ```
 
 后续修改业务请编辑 `src/` 并新增原版对照用例，再运行以上检查；不要直接编辑会被构建覆盖的 `extension/`。涉及协议、安全策略或重试规则的产品化变更，应明确作为独立派生设计，不混入行为保持重构。
@@ -547,23 +549,23 @@ npm run test:browser
 
 ### 13.5 复现实验
 
-在 Demo 仓库根目录执行，不是在本扩展仓库执行：
+迁移后在本仓库根目录执行（以下命令已更新，历史独立 Demo 结构见第 13.1 节）：
 
 ```sh
-npm ci
-npm run build
-npm start
+pnpm install --frozen-lockfile
+pnpm build
+pnpm start
 ```
 
-Chrome 加载 **Demo 的 `extension/dist/`**，访问 `http://localhost:4173`，启用离线并确认 iframe 握手。不要误加载本仓库的 Google 专用 `extension/`，也不要用 `127.0.0.1` 替代 localhost：origin 改变会影响精确消息来源校验、数据库和 worker。
+Chrome 加载 **`demo/extension/dist/`**，访问 `http://localhost:4173`，启用离线并确认 iframe 握手。不要误加载本仓库的 Google 专用 `extension/`，也不要用 `127.0.0.1` 替代 localhost：origin 改变会影响精确消息来源校验、数据库和 worker。
 
 建议手动顺序：准备文档并等外壳就绪 → 演示断网编辑 → 刷新确认本地保存 → 恢复并观察 ACK → 停服务再次刷新编辑 → 重启服务观察上传。仅使用合成文档。
 
 ```sh
-# 在 Demo 仓库执行；集成测试会独占 4173，先停止自己的开发服务
-npm run check
-npx playwright install chromium
-npm run test:integration
+# 在本仓库根目录执行；集成测试会独占 4173，先停止自己的开发服务
+pnpm check
+pnpm exec playwright install chromium
+pnpm test:integration
 ```
 
 集成测试使用临时数据和隔离 profile，不需要 Google 登录；正常 Chrome 是否手动加载 Demo 扩展不影响隔离测试结果。不要为运行这些实验清空用户 Google 站点数据。

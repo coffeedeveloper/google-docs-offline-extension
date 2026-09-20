@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-09-18T08:22:21.344Z",
+  "extensionId": "ikiiibboenfblpmpholjlkmbbnkichpo",
+  "checks": [
+    "real extension → offscreen → same-origin iframe handshake; web Service Worker installed",
+    "offline create/edit and durable document+outbox survive reload",
+    "iframe and foreground share IndexedDB; real server ACK drains durable outbox",
+    "server stopped: editor cold reload and editing work from SW/IndexedDB; restart sync succeeds",
+    "server committed but ACK lost: retry is idempotent",
+    "application tabs closed: extension alarm/offscreen frame syncs pending operations",
+    "two tabs concurrently edit offline: atomic local merge and server CRDT convergence preserve both changes",
+    "outbox write failure rolls back document transaction; unsaved editor data retained and explicit retry succeeds"
+  ],
+  "errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "expectedNetworkFailures": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "unexpectedErrors": [],
+  "passed": true
+}

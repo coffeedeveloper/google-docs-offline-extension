@@ -43,7 +43,9 @@ Google 编译产物的 Promise、数组消息内部标志、错误报告和 Trus
 
 esbuild 输出未压缩 IIFE，`keepNames: true`，保留函数名供调试，`treeShaking: false` 避免有意裁剪库代码。source map 是本项目新生成的，用于回到重构后的 `src/`，**不是找回 Google 原始 source map**。
 
-仅运行 `npm run build` 不会重新提取 vendor；日常迭代不会覆盖 `src/`。只有明确执行 `node scripts/extract-vendor.mjs` 才重新生成 vendor 和来源记录。变更提取区间后，必须重新审阅边界、执行全部检查。
+`src/` 同时是 `@offline-docs/extension-runtime` workspace 包：Google 目标直接编译这里的入口，Demo 通过 `workspace:*` 解析同一份源码，不再复制 upstream。Demo 的定制只存在于其 adapter/构建层。
+
+仅运行 `pnpm build` 不会重新提取 vendor；日常迭代不会覆盖 `src/`。只有明确执行 `node scripts/extract-vendor.mjs` 才重新生成 vendor 和来源记录。变更提取区间后，必须重新审阅边界、执行全部检查。
 
 ## 保持原版行为的约定
 

@@ -1,0 +1,9 @@
+{
+  "name": "@offline-docs/extension-runtime",
+  "version": "1.110.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  }
+}

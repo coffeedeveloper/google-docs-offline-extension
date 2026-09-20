@@ -1,0 +1,28 @@
+{
+  "startedAt": "2026-09-20T15:10:05.683Z",
+  "extensionId": "ikiiibboenfblpmpholjlkmbbnkichpo",
+  "checks": [
+    "real extension → offscreen → same-origin iframe handshake; web Service Worker installed",
+    "offline create/edit and durable document+outbox survive reload",
+    "iframe and foreground share IndexedDB; real server ACK drains durable outbox",
+    "server stopped: editor cold reload and editing work from SW/IndexedDB; restart sync succeeds",
+    "server committed but ACK lost: retry is idempotent",
+    "application tabs closed: extension alarm/offscreen frame syncs pending operations",
+    "two tabs concurrently edit offline: atomic local merge and server CRDT convergence preserve both changes",
+    "outbox write failure rolls back document transaction; unsaved editor data retained and explicit retry succeeds",
+    "React UI: click-create, controlled title/body input, escaped text, offline reload restores saved content",
+    "React UI: background merge preserves focused input identity and Yjs-relative caret position",
+    "React UI: IME composition draft survives refresh and merges remote edits at compositionend",
+    "React UI: search, offline filter, pin, setup navigation, browser Back, and reconnect ACK work through rendered controls"
+  ],
+  "errors": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "expectedNetworkFailures": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ],
+  "unexpectedErrors": [],
+  "passed": true
+}

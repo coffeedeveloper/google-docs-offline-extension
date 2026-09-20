@@ -1,3 +1,10 @@
 node_modules/
 .DS_Store
 research/browser-profile-*/
+demo/dist/
+demo/extension/dist/
+demo/extension/build-info.json
+demo/.data/
+demo/.profiles/
+demo/test-results/
+.pnpm-store/

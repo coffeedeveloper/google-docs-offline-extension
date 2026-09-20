@@ -3,13 +3,27 @@
   "version": "1.110.1",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10 <11"
+  },
   "description": "Auditable readable reconstruction of the locally installed Google Docs Offline extension",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "pnpm run build:google && pnpm run build:demo",
+    "build:google": "node scripts/build.mjs",
+    "build:demo": "pnpm --filter @offline-docs/demo run build",
+    "dev": "pnpm --filter @offline-docs/demo run dev",
+    "start": "pnpm --filter @offline-docs/demo run start",
+    "demo:chrome": "pnpm --filter @offline-docs/demo run demo:chrome",
+    "google:chrome": "pnpm run build:google && node scripts/google-docs-live-session.mjs",
     "verify": "node scripts/verify.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "check": "npm run build && npm run verify && npm test",
-    "test:browser": "node scripts/browser-smoke.mjs"
+    "test": "pnpm run test:google && pnpm --filter @offline-docs/demo test",
+    "test:google": "node --test tests/*.test.mjs",
+    "check": "pnpm run build && pnpm run verify && pnpm test",
+    "test:browser": "pnpm run build:google && node scripts/browser-smoke.mjs",
+    "test:integration": "pnpm run build:demo && pnpm --filter @offline-docs/demo run test:integration",
+    "test:all": "pnpm run check && pnpm run test:browser && pnpm run test:integration"
   },
   "devDependencies": {
     "acorn": "8.15.0",

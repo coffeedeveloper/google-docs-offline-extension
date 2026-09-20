@@ -1,17 +1,19 @@
 # 实践与复现实验
 
+2026-09-20 工程已合并为 pnpm workspace；下面的 Google 实验使用根目录 `extension/`，本地 Demo 使用 `demo/extension/dist/`，不可混用。构建、加载和恢复原版步骤见 [双目标指南](WORKSPACE.md)，迁移后自动化结果见 [验证记录](WORKSPACE-VALIDATION.md)。
+
 最初在用户 Chrome 的原版扩展环境中确认文档离线就绪，并在原有 DevTools Offline 条件下重新加载，最终恢复了文档大纲、Working offline 和 Editing 状态。这不属于重构版验收。没有编辑用户已有文档正文；后续仅向新建专用文档写入合成测试内容。公开网页脚本中确认了 IndexedDB、待同步命令与锁、网页 Service Worker 逻辑；未成功读取该 profile 的 Application 详情，因此不报告数据库记录数量或实际 cache keys。
 
 ## 先复现扩展自身逻辑
 
 ```sh
-npm ci --ignore-scripts
-npm run check
-npx playwright install chromium
-npm run test:browser
+pnpm install --frozen-lockfile
+pnpm check
+pnpm exec playwright install chromium
+pnpm test:browser
 ```
 
-真实 Chromium 测试对原始与模块化构建版分别运行，使用合成的 Docs origin 页面和空白 profile。它证明扩展可加载及原生 API 链路正常，不证明 Google 文档上传成功。`npm test` 当前另有 22 项差分测试，覆盖账号恢复、双端口握手、断开重试与生命周期等分支。
+真实 Chromium 测试对原始与模块化构建版分别运行，使用合成的 Docs origin 页面和空白 profile。它证明扩展可加载及原生 API 链路正常，不证明 Google 文档上传成功。`pnpm test` 当前另有 22 项差分测试，覆盖账号恢复、双端口握手、断开重试与生命周期等分支。
 
 调试时在 DevTools Sources 打开 source map 中的 `src/background/`、`src/offscreen/` 源文件。在 `ExtensionController.dispatch`、`OffscreenManager.initializeDocument`、`OffscreenController.onFrameRequest` 和 `GoogleIframeManager.request` 设置断点，可依次观察请求、隐藏页初始化、握手和 RPC。修改 `src/` 后重新构建并在扩展页 Reload；未构建的源码修改不会自动更新 Chrome。
 

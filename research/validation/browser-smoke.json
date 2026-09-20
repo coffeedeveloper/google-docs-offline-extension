@@ -1,5 +1,5 @@
 {
-  "completedAt": "2026-09-18T04:28:17.009Z",
+  "completedAt": "2026-09-20T14:51:37.477Z",
   "scope": "Native Chrome extension API comparison in separate synthetic profiles. Google traffic blocked; no Google backend or real document sync tested.",
   "results": [
     {
@@ -45,7 +45,7 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-XIEJya",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-BaivIc",
       "passed": true
     },
     {
@@ -91,7 +91,7 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-LovIHQ",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-wcsbx3",
       "passed": true
     }
   ]

@@ -1,6 +1,25 @@
-# Google Docs Offline：可阅读的模块化重构
+# Google Docs Offline：模块化重构与离线文档 Demo
 
-基于本机 Google Docs Offline **1.110.1**。**阅读、修改 `src/`；Chrome 加载 `extension/`。**
+基于本机 Google Docs Offline **1.110.1**。现已将离线文档 Demo 合并为 **pnpm workspace**：共享 `src/`，分别构建 Google 和本地 Demo 验证版。
+
+## 快速开始与构建目标
+
+要求 Node.js 24、pnpm 10.28.1，在仓库根目录执行：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm start
+```
+
+| 验证目标 | 单独构建 | Chrome 加载目录 | 扩展 ID |
+| --- | --- | --- | --- |
+| Google Docs 官方替代验证 | `pnpm build:google` | `extension/` | `ghbmnnjooekpmoecnnnilnnbdlolhkhi` |
+| 本地 Demo | `pnpm build:demo` | `demo/extension/dist/` | `ikiiibboenfblpmpholjlkmbbnkichpo` |
+
+Demo 页面位于 `http://localhost:4173`，使用 React 组件实现文件列表、编辑页和设置页，保留离线持久化、重连及后台同步。两个目标权限和输出分离，不是在一个 manifest 中同时放开 Google 与 localhost。
+
+完整命令、正常 Chrome 替代验证、隔离测试与数据迁移说明见 [统一工程指南](docs/WORKSPACE.md)；Demo 用法见 [demo/README.md](demo/README.md)。原独立 Demo 目录及其数据保留不动。
 
 上一版只是格式化和职责注释，不满足可维护源码的要求。当前版本已经把业务控制流重写为命名明确的 ES modules：账号状态、企业策略、后台调度、隐藏页面管理、iframe 握手与消息转发分别维护，构建后执行这些模块，不是“另写一份示意代码，实际仍执行原来的业务 bundle”。
 
@@ -20,6 +39,7 @@
 
 ```text
 src/
+  package.json      @offline-docs/extension-runtime，共享运行库 workspace 包
   background/       账号状态、企业策略、heartbeat、offscreen 协调、总控制器
   offscreen/        Google iframe、连接计数、空闲关闭、消息路由、总控制器
   page/             网页扩展能力探测
@@ -28,6 +48,11 @@ src/
 extension/          src 构建出的 3 个 JS + source maps，及原始 manifest/资源
 original/           用户样本的不可修改约定基线
 scripts/            构建、vendor 提取、校验、真实浏览器回归
+demo/               @offline-docs/demo：网页、服务、适配层、端到端实验
+  public/           HTML / CSS / SVG 源资源
+  extension/dist/   Demo 专用扩展构建产物（不入 Git）
+  dist/             Demo 网页构建产物（不入 Git）
+pnpm-workspace.yaml workspace 配置；单一 pnpm-lock.yaml 锁定依赖
 tests/              原版与重构版在相同输入下的差分测试
 docs/               完整研究报告、源码导航、协议、实践指南
 research/           研究样本、来源记录、验证结果与上一版历史记录
@@ -40,18 +65,20 @@ research/           研究样本、来源记录、验证结果与上一版历史
 Node.js 24 下验证；依赖固定在 lockfile：
 
 ```sh
-npm ci --ignore-scripts
-npm run check
-npm run test:browser
+pnpm install --frozen-lockfile
+pnpm check
+pnpm test:browser
 ```
 
-若缺少测试浏览器，先执行 `npx playwright install chromium`。
+若缺少测试浏览器，先执行 `pnpm exec playwright install chromium`。
 
 - 修改业务：编辑 `src/background/`、`src/offscreen/` 等模块，补充对照测试。
-- `npm run build`：esbuild 将三个入口打包成经典 IIFE，保留原来的 manifest 入口，不要求改成 module worker；输出未压缩并附 source map。
-- `npm run verify`：验证原始哈希、资源、vendor 提取的 token、构建可复现性、source map 内容与扩展 ID。**不再要求重构业务的 AST 与压缩原版相同。**
-- `npm test`：22 项原版/重构版行为对照，比较响应、状态和 API 调用轨迹。
-- `npm run test:browser`：两个隔离 profile 中测试真实 Chromium 扩展 API；使用合成页面和账号，不登录 Google，也不访问用户文档。
+- `pnpm build`：构建两个目标；`pnpm build:google` 将三个 Google 入口打包成经典 IIFE，保留原 manifest 入口；输出未压缩并附 source map。
+- `pnpm verify`：验证原始哈希、资源、vendor 提取的 token、构建可复现性、source map 内容与扩展 ID。**不再要求重构业务的 AST 与压缩原版相同。**
+- `pnpm test:google`：22 项原版/重构版行为对照；`pnpm test` 另包含 Demo 的数据、来源与适配隔离测试。
+- `pnpm test:integration`：构建并验证 Demo 的 8 条核心离线链路及 4 组 React 控件交互，需先停止 4173 开发服务。
+- `pnpm test:all`：顺序运行构建/单元检查和两个浏览器测试套件。
+- `pnpm test:browser`：两个隔离 profile 中测试真实 Chromium 扩展 API；使用合成页面和账号，不登录 Google，也不访问用户文档。
 
 不要直接修改 `extension/` 的 JS，它们会在构建时覆盖。构建图和兼容层约定见 [src/README.md](src/README.md)。
 
@@ -65,6 +92,6 @@ npm run test:browser
 
 扩展依赖包外的 Google iframe、网页 Service Worker、Docs 编辑器和后端。它不是独立离线编辑器。自研文档系统应复用设计原则，不应复用 Google ID；`content_capabilities` 的 Chromium stable 白名单能力也不能直接照搬。
 
-配套实践：[Offline Docs Demo](https://github.com/coffeedeveloper/google-docs-offline-demo/tree/8486658) 使用本项目 `e052242` 源码快照，补齐文件列表、编辑器、同源 iframe、网页缓存和本地同步服务；适配使用独立扩展 ID。Demo 通过不代表真实 Google 服务端已验证，覆盖范围见研究报告第 7、13 节。
+配套实践现位于 [demo/](demo/README.md)，通过 `workspace:*` 直接使用本项目当前源码，不再维护复制快照。独立仓库 `8486658` 仅是迁移来源和历史验证基线。Demo 通过不代表真实 Google 服务端已验证，覆盖范围见 [迁移验证](docs/WORKSPACE-VALIDATION.md) 和研究报告第 7、13 节。
 
 Google 原始代码与资源的权利归原权利人；本工程未为它们新增开源许可，不应以自己的扩展发布该研究副本。
