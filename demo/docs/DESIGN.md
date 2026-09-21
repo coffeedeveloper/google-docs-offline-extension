@@ -129,6 +129,8 @@ sequenceDiagram
 
 ### 6.1 为什么需要隐藏网站 frame
 
+先看具体场景：断网编辑已经写入 IDB，用户关闭所有编辑标签页后，数据还在，但页面代码已停止。扩展 worker 可以被后续事件唤醒，却不能直接用自己的 IDB API 读取网站数据库，也没有 DOM 来创建网站 iframe。因此用 offscreen 提供隐藏 DOM，再让网站 iframe 恢复网站侧同步逻辑。完整分步案例、存储分区条件与替代方案见 [Offscreen 专题](../../docs/OFFSCREEN.md)。这解决的是关页后的执行环境问题，不是离线编辑本身的必要条件。
+
 扩展 worker 负责可恢复调度，offscreen 提供隐藏 DOM，网站 iframe 提供网站 origin 的业务执行环境。Demo 只适配原控制器的 origin、遥测和来源边界，实际仍复用其状态、握手、重建和生命周期逻辑。
 
 握手次序：

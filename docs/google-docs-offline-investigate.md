@@ -116,6 +116,8 @@ Chrome 可终止空闲扩展 worker，因此持久化状态和可重建连接是
 
 ### 4.2 offscreen + 同源 iframe
 
+设计动机可先读 [Offscreen 案例讲解](OFFSCREEN.md)：以“断网修改后关闭文档，后续在后台上传”为例，解释为什么需要隐藏 DOM、为什么还要网站 iframe，以及数据归属、存储分区和生命周期边界。该案例对应本地 Demo，不将其 Yjs/ACK 实现当作 Google 私有协议。
+
 `Dm` 生成 `offscreendocument.html?randomPercentageForSampling=...&sessionId=...`；`Pm` 调用 `chrome.offscreen.createDocument`，reason 为 `IFRAME_SCRIPTING`。创建说明直接写明用途是通过 iframe 访问 docs.google.com 域的数据。
 
 offscreen bundle 中 `tm()` 创建 `id="extensionFrame"` 的 iframe，地址为：
@@ -443,6 +445,8 @@ pnpm test:browser
 ## 12. 没有 Service Worker，这套方案还能成立吗？
 
 **本地编辑与持久化可以成立，但不能原样保留全部能力。** 要先区分“没有网页 Service Worker”和“没有扩展 Service Worker”。以下是根据职责边界给出的设计分析，不是本次对 Google 产品进行逐项禁用后的实测结果。
+
+补充研究（2026-09-22）：若要求保留原 HTTPS URL，可进一步研究 HTTP 缓存、debugger/CDP 响应回放、本机 HTTPS 代理或客户端请求处理层，见 [无网页 SW 的离线方案](OFFLINE-WITHOUT-SERVICE-WORKER.md)。其中详细说明 MV2/MV3 普通网络 API 与 CDP 的区别，以及“首次在线录制、后续离线回放”的设计和待验收边界；尚未实施。
 
 ### 12.1 三个执行环境不能互相替代
 

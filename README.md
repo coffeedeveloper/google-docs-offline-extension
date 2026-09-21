@@ -29,6 +29,10 @@ Demo 页面位于 `http://localhost:4173`，使用 React 组件实现文件列�
 
 完整研究报告：[Google Docs Offline 技术调查与自研文档系统实施建议](docs/google-docs-offline-investigate.md)。包含架构与源码证据、无 Service Worker 的能力边界、真实 Google 验证状态，以及使用本重构扩展的 Offline Docs Demo 实践。
 
+想先理解设计动机，可读 [为什么需要 Offscreen：关闭文档后同步的具体案例](docs/OFFSCREEN.md)，再对照下面的源码入口。
+
+如果关注禁用网页 SW 后如何保留原 URL 离线访问，见 [替代方案与 CDP 录制/回放设计](docs/OFFLINE-WITHOUT-SERVICE-WORKER.md)。这是尚未实现的研究方案，不是当前扩展已支持的功能。
+
 1. [源码导航与旧符号对照](docs/CODE_MAP.md)：先看职责，再按用例跟调用链。
 2. [ExtensionController](src/background/extension-controller.js)：网页请求如何改变状态、调度隐藏页。
 3. [OffscreenManager](src/background/offscreen-manager.js)：创建、握手门闩、重试和重建。

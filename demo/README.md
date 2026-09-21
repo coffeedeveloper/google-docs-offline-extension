@@ -7,6 +7,8 @@
 ## 先读哪些文档
 
 - [核心设计与完整链路](docs/DESIGN.md)：功能边界、模块职责、数据归属，以及编辑/事务/握手/上传/ACK 的全流程，建议从这里开始。
+- [为什么需要 Offscreen](../docs/OFFSCREEN.md)：用“断网编辑、关闭标签页、后台上传”的案例解释 worker、offscreen 与网站 iframe 的分工。
+- [无网页 SW 的离线方案](../docs/OFFLINE-WITHOUT-SERVICE-WORKER.md)：原 URL 访问、MV2/MV3 边界、CDP 在线录制与离线回放；尚未实现的设计研究。
 - [精简架构](docs/ARCHITECTURE.md)：快速理解三层职责和扩展适配。
 - [React 实现](docs/REACT.md)：状态订阅、受控输入、光标与中文组合输入。
 - [验证说明](docs/VALIDATION.md)：测试覆盖了什么、尚未证明什么。
