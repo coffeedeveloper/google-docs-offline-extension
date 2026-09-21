@@ -23,6 +23,7 @@ const encode = (doc) =>
   Buffer.from(Y.encodeStateAsUpdate(doc)).toString("base64");
 const decode = (state) => new Uint8Array(Buffer.from(state, "base64"));
 export class DocumentStore {
+  // 仅供单个本地 Node 进程使用：整库 JSON + 进程内串行队列，不是多进程数据库。
   constructor(file) {
     this.file = file;
     this.queue = Promise.resolve();
@@ -31,6 +32,7 @@ export class DocumentStore {
     try {
       this.state = JSON.parse(await readFile(this.file, "utf8"));
     } catch (error) {
+      // 只在文件不存在时创建样例；损坏/无法读取的现有文件必须报错，不能静默重置数据。
       if (error.code !== "ENOENT") throw error;
       this.state = { documents: {} };
       for (const [id, title, body] of seeds) {
@@ -51,6 +53,7 @@ export class DocumentStore {
     return this;
   }
   async persist(next) {
+    // 临时文件写完再 rename，避免普通中断留下半份 JSON；没有 fsync 级断电持久性保证。
     await mkdir(path.dirname(this.file), { recursive: true });
     await writeFile(this.file + ".tmp", JSON.stringify(next));
     await rename(this.file + ".tmp", this.file);
@@ -70,6 +73,7 @@ export class DocumentStore {
     return result;
   }
   list() {
+    // 列表只返回元数据；正文和 CRDT 快照在打开/同步单文档时再传输。
     return Object.values(this.state.documents).map((row) => {
       const { state, body, ...metadata } = this.view(row);
       return metadata;
@@ -83,6 +87,7 @@ export class DocumentStore {
   }
   sync(id, operations) {
     const run = async () => {
+      // 在副本上验证和合并，全部成功并持久化后才替换内存基线。
       const next = structuredClone(this.state);
       let row = Object.hasOwn(next.documents, id) ? next.documents[id] : null;
       if (!row && !operations.length)
@@ -114,6 +119,7 @@ export class DocumentStore {
           )
             throw Object.assign(Error("Invalid operation"), { status: 400 });
           const hash = createHash("sha256").update(op.update).digest("hex");
+          // 回执绑定 ID 与载荷摘要：相同操作可重试，同 ID 换内容必须拒绝，不能误报成功。
           if (
             Object.hasOwn(row.receipts, op.id) &&
             row.receipts[op.id] !== hash
@@ -125,6 +131,7 @@ export class DocumentStore {
           if (!Object.hasOwn(row.receipts, op.id)) {
             Y.applyUpdate(doc, decode(op.update));
             Object.defineProperty(row.receipts, op.id, {
+              // 将任意操作 ID 作为普通自有数据键，避免特殊名称触发原型上的 setter。
               value: hash,
               enumerable: true,
               writable: true,
@@ -132,6 +139,7 @@ export class DocumentStore {
             });
             changed = true;
           }
+          // 重复操作也返回确认，解决“服务端已提交，但上一份 ACK 丢失”的重试窗口。
           ack.push(op.id);
         }
         if (changed) {
@@ -139,6 +147,7 @@ export class DocumentStore {
           row.version++;
           row.updatedAt = Date.now();
           await this.persist(next);
+          // 先落盘再发布内存状态和 ACK；持久化失败时调用方不能得到成功回执。
           this.state = next;
         }
         return { ...this.view(row), ack };
@@ -147,6 +156,7 @@ export class DocumentStore {
       }
     };
     const pending = this.queue.then(run);
+    // 串行修改整库文件；吞掉的只是队列尾错误，返回给本次调用方的 pending 仍会拒绝。
     this.queue = pending.catch(() => {});
     return pending;
   }

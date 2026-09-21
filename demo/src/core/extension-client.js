@@ -1,6 +1,7 @@
 import { EXTENSION_ID, ACCOUNT } from "./config.js";
 import { getMeta, setMeta, recordEvent } from "./database.js";
 export async function request(message, timeout = 15000) {
+  // 数组布局是共享扩展原有 wire 格式，不是任意 JSON；同时处理 Chrome 错误与协议错误。
   if (!globalThis.chrome?.runtime?.sendMessage)
     throw Error("尚未加载 Demo 适配扩展");
   return new Promise((resolve, reject) => {
@@ -24,6 +25,7 @@ export async function request(message, timeout = 15000) {
   });
 }
 export async function detectExtension() {
+  // type 5 是策略查询，这里用来探测扩展是否可响应；探测成功不代表 iframe 已就绪。
   try {
     const response = await request([5, null, null, null, ["localhost"]], 2500);
     return response?.[0] === 5;
@@ -32,6 +34,7 @@ export async function detectExtension() {
   }
 }
 export async function connectExtension() {
+  // type 2 请求确保离线 frame；站点中的 enabled 记录和实际握手记录是不同状态。
   await request([2, null, null, null, null, null, null, [ACCOUNT, false]]);
   await setMeta("extensionEnabled", true);
   await recordEvent("extension", "已启用：worker → offscreen → 同源 iframe");
@@ -42,6 +45,6 @@ export async function disconnectExtension() {
 }
 export async function requestSync(reason = "manual") {
   if (await getMeta("simulateOffline")) return;
-  // Original WebsiteRequest.FORWARD_TO_FRAME + FrameRequest.ALARM wire shape.
+  // 外层 type 4 转发，内层 type 0 表示 frame alarm；必须走扩展，不能在前台直接 syncAll。
   return request([4, null, null, [0, [reason]]]);
 }

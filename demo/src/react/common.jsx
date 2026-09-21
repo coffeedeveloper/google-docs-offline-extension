@@ -19,6 +19,7 @@ export function Icon() {
   return <img src="/icon.svg" alt="" />;
 }
 export function RouteLink({ href, children, onClick, ...props }) {
+  // 普通点击走应用路由，先保存本地待写内容；修饰键点击仍交给浏览器打开新标签。
   return (
     <a
       {...props}
@@ -52,6 +53,7 @@ export function Brand() {
   );
 }
 export function ActionButton({ action, id, children, className = "small" }) {
+  // ref 立即阻止连续点击，state 驱动禁用外观；业务错误统一交给应用状态显示。
   const locked = useRef(false);
   const [busy, setBusy] = useState(false);
   return (
@@ -103,6 +105,7 @@ export function NetworkTag({ state }) {
   );
 }
 export function OfflineSwitch({ state, className = "" }) {
+  // IDB 写入是异步的，短暂保留用户选择避免受控开关回弹；完成后以持久化状态为准。
   const [changingTo, setChangingTo] = useState(null);
   return (
     <label className={`checkbox-label ${className}`}>

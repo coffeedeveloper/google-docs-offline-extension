@@ -1,12 +1,14 @@
 import { CHANNEL } from "./config.js";
 import { Y, fromState, snapshot, content, encode, decode } from "./crdt.js";
 const DB_NAME = "OfflineDocsDemo-v1";
+// 前台页面和 localhost iframe 共用站点数据库，扩展的 chrome.storage 不保存正文。
 let databasePromise;
 export const events = new BroadcastChannel(CHANNEL);
 export function database() {
   return (databasePromise ||= new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = () => {
+      // documents：快照/元数据；outbox：未确认更新；meta：控制状态；events：诊断事件。
       const db = request.result;
       db.createObjectStore("documents", { keyPath: "id" });
       db.createObjectStore("outbox", { keyPath: "id" });
@@ -28,6 +30,8 @@ const result = (request) =>
     request.onerror = () => reject(request.error);
   });
 async function transaction(stores, mode, action) {
+  // 单个 put 成功不代表事务成功；必须等待 oncomplete，后续任何一步失败都应回滚。
+  // action 只执行本事务内的 IDB 操作，不在事务中等待网络请求，以免事务提前结束。
   const db = await database();
   const tx = db.transaction(stores, mode);
   const completed = new Promise((resolve, reject) => {
@@ -83,6 +87,7 @@ export const getEvents = () =>
     result(tx.objectStore("events").getAll()),
   );
 export async function mergeCatalog(items) {
+  // 云端列表只刷新未缓存文档的元信息，不能覆盖已缓存文档及本地未上传编辑。
   await transaction(["documents"], "readwrite", async (tx) => {
     const store = tx.objectStore("documents");
     for (const item of items) {
@@ -94,6 +99,7 @@ export async function mergeCatalog(items) {
   events.postMessage({ type: "catalog" });
 }
 export async function cacheDocument(remote, pinned = false) {
+  // 下载的快照也需与当前本地 CRDT 合并；下载期间另一标签可能已经产生修改。
   await transaction(["documents"], "readwrite", async (tx) => {
     const store = tx.objectStore("documents");
     const existing = await result(store.get(remote.id));
@@ -112,6 +118,7 @@ export async function cacheDocument(remote, pinned = false) {
   events.postMessage({ type: "document", id: remote.id });
 }
 export async function pinDocument(id, pinned) {
+  // pin 仅表达本地保留意图；取消固定不删除正文或队列，本 Demo 尚无自动淘汰算法。
   await transaction(["documents"], "readwrite", async (tx) => {
     const store = tx.objectStore("documents");
     const row = await result(store.get(id));
@@ -121,7 +128,8 @@ export async function pinDocument(id, pinned) {
   events.postMessage({ type: "document", id });
 }
 
-// Document update and durable outbox entry commit together, before any "saved" UI.
+// 文档快照与 outbox 更新必须同事务提交：不能出现“正文已保存，但上传操作丢了”。
+// 事务内先读取最新快照再合并，避免两个标签页用各自的旧内存覆盖彼此。
 export async function persistUpdate(id, update, { isNew = false } = {}) {
   await transaction(["documents", "outbox"], "readwrite", async (tx) => {
     const store = tx.objectStore("documents");
@@ -139,6 +147,7 @@ export async function persistUpdate(id, update, { isNew = false } = {}) {
       updatedAt: Date.now(),
     });
     tx.objectStore("outbox").put({
+      // ID 随操作持久化；网络重试读取此记录并复用 ID，不为每次请求另生成身份。
       id: crypto.randomUUID(),
       documentId: id,
       update: encode(update),
@@ -149,8 +158,8 @@ export async function persistUpdate(id, update, { isNew = false } = {}) {
   events.postMessage({ type: "document", id });
 }
 
-// Merge against the latest local state inside this transaction. An ACK must not
-// overwrite edits made while the request was in flight or remove new outbox items.
+// ACK 到达时必须重新读取最新本地状态，合并服务端快照并删除“明确确认”的操作。
+// 请求在途期间的新编辑不应被覆盖或随整队 clear；快照推进与队列移除同事务提交。
 export async function acknowledge(documentId, remote, operationIds) {
   await transaction(["documents", "outbox"], "readwrite", async (tx) => {
     const store = tx.objectStore("documents");

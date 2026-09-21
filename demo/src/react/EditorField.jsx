@@ -15,6 +15,7 @@ export function EditorField({ field, value }) {
     composition = useRef(null);
   const trailingComposition = useRef(null);
   const [draft, setDraft] = useState(null);
+  // draft 只承载尚未结束的输入法组合文字；常规输入的真值来自应用层 Y.Doc。
   const rememberSelection = () => {
     const node = input.current;
     if (node && !composition.current)
@@ -25,6 +26,7 @@ export function EditorField({ field, value }) {
       );
   };
   useLayoutEffect(() => {
+    // React 已提交新 value、浏览器尚未绘制时恢复选区；组合输入期间不能干扰原生候选态。
     const node = input.current;
     if (composition.current || document.activeElement !== node) return;
     const range = resolveSelection(selection.current);
@@ -42,6 +44,7 @@ export function EditorField({ field, value }) {
     composition.current = null;
     selection.current = null;
     trailingComposition.current = value;
+    // 某些浏览器会在 compositionend 后再触发同值 change，记住它以避免重复应用。
     setDraft(null);
     void commitComposition(session, value).catch(showError);
   }
@@ -62,6 +65,7 @@ export function EditorField({ field, value }) {
     onChange: (event) => {
       const next = event.currentTarget.value;
       if (composition.current) {
+        // 此时只更新组件草稿，不把每一次候选变化作为正式编辑写入 outbox。
         setDraft(next);
         return;
       }

@@ -38,6 +38,7 @@ async function body(req) {
 }
 const server = http.createServer(async (req, res) => {
   try {
+    // loopback/Host/Origin 检查只限制本地实验边界，不等于用户认证或文档权限系统。
     if (
       req.headers.host !== `localhost:${port}` &&
       req.headers.host !== `127.0.0.1:${port}`
@@ -85,6 +86,7 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         const response = await store.sync(match[1], payload.operations);
+        // 故障注入点刻意放在持久化之后：模拟已提交但 ACK 未送达，验证原 ID 重试。
         if (req.headers["x-demo-drop-ack"] === "1") {
           req.socket.destroy();
           return;
@@ -110,6 +112,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(405).end();
       return;
     }
+    // 在线路由与网页 SW 的离线回退保持一致：React 用 index.html，后台 iframe 用 frame.html。
     const requested =
       url.pathname === "/offline/extension/frame"
         ? "/frame.html"

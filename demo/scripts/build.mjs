@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 const demoRoot = path.resolve(import.meta.dirname, "..");
 process.chdir(demoRoot);
 const runtimeRoot = path.dirname(
+  // 通过 workspace 包解析单一源码位置，不依赖旧的独立 Demo 仓库或复制快照。
   fileURLToPath(
     import.meta.resolve("@offline-docs/extension-runtime/package.json"),
   ),
 );
 const sourceHashes = {};
+// 记录共享运行库来源；这不是 Google 私有源码的还原证明，也不是网站正文的哈希。
 async function recordSources(directory, prefix = "") {
   for (const entry of (await readdir(directory, { withFileTypes: true })).sort(
     (a, b) => a.name.localeCompare(b.name),
@@ -33,7 +35,7 @@ const origin = "http://localhost:4173";
 await mkdir("extension/dist", { recursive: true });
 await mkdir("dist", { recursive: true });
 await cp("public", "dist", { recursive: true });
-// The checked-in public key is stable. A missing key must not silently change the ID.
+// 仓库公钥保持 Demo ID 稳定；缺文件应构建失败，不自动生成另一个 ID 破坏已有连接。
 const key = (await readFile("extension/demo-public-key.txt", "utf8")).trim();
 const extensionId = createHash("sha256")
   .update(Buffer.from(key, "base64"))
@@ -54,11 +56,13 @@ const common = {
   metafile: true,
 };
 const originGuards = {
+  // 只修改 esbuild 本轮读到的字符串，不写回共享源码；Google 目标不使用这个插件。
   name: "demo-origin-guards",
   setup(builder) {
     builder.onLoad({ filter: /extension-controller\.js$/ }, async (args) => {
       let source = await readFile(args.path, "utf8");
       const needle = "this.onWebsiteMessage(request, reply),";
+      // 上游控制流发生变化时先失败，要求人工复核适配位置，不能悄悄跳过安全检查。
       if (!source.includes(needle))
         throw Error("Upstream external listener changed; review adapter.");
       source = source.replace(
@@ -157,6 +161,7 @@ await writeFile(
     2,
   ) + "\n",
 );
+// React 与业务代码一起进入离线 app.js，不依赖运行时 CDN；frame 仍是独立入口。
 await build({
   ...common,
   entryPoints: ["src/app.jsx"],
@@ -183,6 +188,7 @@ const assets = [
   "/icon.svg",
 ];
 const hash = createHash("sha256");
+// 外壳内容变化生成新缓存名；正文/队列使用独立 IDB，不跟着应用资源版本删除。
 for (const file of [
   "app.js",
   "frame.js",

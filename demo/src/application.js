@@ -21,8 +21,8 @@ import {
   requestSync,
 } from "./core/extension-client.js";
 
-// One application session, independent of React's render/effect lifecycle.
-// UI and automation use the same actions; only the extension iframe uploads.
+// 应用会话独立于 React 生命周期：界面、自动化和可选 WebMCP 共用同一套动作。
+// 前台只负责本地编辑/下载及请求调度；真正的上传始终由扩展持有的 iframe 执行。
 const state = {
   filter: "all",
   search: "",
@@ -53,10 +53,12 @@ let syncTimer,
   routeEpoch = 0,
   readEpoch = 0,
   bootPromise;
+// 两级队列不能混淆：unsaved 尚在内存，关闭页面可能丢失；IDB outbox 已提交，等待服务端 ACK。
 const unsaved = [];
 const compositions = new Set();
 const listeners = new Set();
 function snapshot() {
+  // 对 React 暴露可读快照，不暴露可变 Y.Doc；正文只是模型的派生视图。
   return {
     ...state,
     documents,
@@ -69,6 +71,7 @@ function snapshot() {
   };
 }
 let currentSnapshot = snapshot();
+// 仅发布变更时替换引用；getSnapshot 每次现造对象会破坏 useSyncExternalStore 的稳定性。
 function publish() {
   currentSnapshot = snapshot();
   for (const listener of listeners) listener();
@@ -105,6 +108,7 @@ export function setDiagnosticsOpen(value) {
   publish();
 }
 function scheduleSync(reason = "edit") {
+  // 700ms 合并前台的频繁请求，不直接上传，也不修改扩展原有的 5 分钟 alarm。
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
     if (state.extensionConnected && !state.offline)
@@ -112,6 +116,7 @@ function scheduleSync(reason = "edit") {
   }, 700);
 }
 async function readState() {
+  // 多个异步刷新可能交错完成；旧读取结果不能覆盖后发刷新获取的新状态。
   const epoch = ++readEpoch;
   const [rows, operations, simulated, frame, logs, sync, enabled] =
     await Promise.all([
@@ -142,6 +147,7 @@ export async function refresh() {
   const active = editor;
   if (active) {
     const row = await getDocument(active.id);
+    // 等待 IDB 时用户可能已经切换文档，先核对编辑会话，再把远端状态合入现有模型。
     if (editor === active && row) {
       Y.applyUpdate(active.doc, decode(row.state), "remote");
       active.pinned = row.pinned;
@@ -150,6 +156,7 @@ export async function refresh() {
   publish();
 }
 export async function flushLocalWrites() {
+  // 同一页面只有一个排队写入者；失败的队首不移除，允许在存储恢复后重试。
   if (writePromise) {
     await writePromise;
     if (unsaved.length) return flushLocalWrites();
@@ -159,6 +166,7 @@ export async function flushLocalWrites() {
     while (unsaved.length) {
       const job = unsaved[0];
       await persistUpdate(job.id, job.update);
+      // persistUpdate 已等待整个 IDB 事务完成，此时才能从内存待写队列删除。
       unsaved.shift();
     }
   })();
@@ -179,6 +187,7 @@ export async function flushLocalWrites() {
   scheduleSync();
 }
 async function ensureCached(id, pin = false) {
+  // 文件列表可能只有云端元信息；首次打开须下载正文，已有本地快照则不依赖联网。
   let row = await getDocument(id);
   if (!row?.cached) {
     await cacheDocument(
@@ -193,6 +202,7 @@ async function ensureCached(id, pin = false) {
   return row;
 }
 export async function openDocument(id) {
+  // 路由版本避免较慢的旧打开请求切回旧文档；切换前先尝试保存内存中的修改。
   const epoch = ++routeEpoch;
   if (unsaved.length) await flushLocalWrites();
   const row = await ensureCached(id);
@@ -200,6 +210,7 @@ export async function openDocument(id) {
   editor?.doc.destroy();
   editor = { id, pinned: row.pinned, doc: fromState(row.state) };
   editor.doc.on("update", (update, origin) => {
+    // 只把用户编辑入队；refresh 合入的 remote update 不能再被当成本地操作重复上传。
     if (origin !== "editor") return;
     unsaved.push({ id, update });
     publish();
@@ -214,6 +225,7 @@ export async function openDocument(id) {
   scheduleSync("open-document");
 }
 export async function createDocument(title = "未命名文档") {
+  // 本地生成文档身份并提交初始更新，不需要先向服务端申请 ID，所以可以离线新建。
   if (typeof title !== "string" || !title.trim() || title.length > 200)
     throw Error("标题必须为 1–200 个字符");
   if (unsaved.length) await flushLocalWrites();
@@ -249,8 +261,8 @@ export async function editDocument(field, value) {
   await flushLocalWrites();
 }
 
-// React owns the input elements. Selection anchors live in the Yjs document so
-// a background merge can move the caret without replacing/remounting the input.
+// DOM 由 React 管理；选区保存成 Yjs 相对位置，而不是容易被远端插入推偏的固定下标。
+// 组件在模型合并后解析相对位置，恢复焦点输入框的光标，无需销毁/重建输入节点。
 export function captureSelection(field, start, end) {
   if (!editor) return null;
   const text = editor.doc.getText(field);
@@ -269,8 +281,8 @@ export function resolveSelection(selection) {
       0,
   );
 }
-// During IME composition keep a branch of the starting document. Merging only
-// its update at compositionend preserves remote edits arriving in the meantime.
+// 输入法组合期间保留起始文档分支与 state vector；候选文字只在组件草稿中展示。
+// 结束时只合入此分支新增的 update，避免用整段候选文本覆盖期间到达的远端修改。
 export function beginComposition(field) {
   if (!editor) return null;
   const doc = new Y.Doc();
@@ -322,6 +334,7 @@ export async function enableOffline() {
 }
 export async function setNetworkSimulation(offline) {
   if (typeof offline !== "boolean") throw Error("offline must be boolean");
+  // 开关先写同源 IDB，再通知其它上下文，确保隐藏 iframe 也遵守“演示断网”。
   await setMeta("simulateOffline", offline);
   state.simulated = offline;
   state.offline = offline || !navigator.onLine;
@@ -345,6 +358,7 @@ export async function inspectState() {
 }
 export { getDocument as readLocalDocument };
 export async function navigate(url) {
+  // 本地写入失败就拒绝主动导航，避免销毁还持有未保存正文的编辑会话。
   if (unsaved.length) await flushLocalWrites();
   history.pushState({}, "", url);
   await route();
@@ -396,6 +410,7 @@ export async function performAction(action, id) {
       if (state.offline) throw Error("当前离线，修改已在设备上保留");
       await requestSync("manual");
       await refresh();
+      // runtime RPC 回复只表示链路已处理；业务同步错误须从 iframe 写入的状态读取。
       const result = await getMeta("syncStatus");
       if (result?.error) throw Error(result.error);
       toast("同步检查完成");
@@ -419,6 +434,7 @@ export async function performAction(action, id) {
   }
 }
 export function boot() {
+  // 初始化幂等，不在 React effect 内重复注册消息监听、恢复扩展或启动定时器。
   return (bootPromise ||= initialize());
 }
 async function initialize() {
@@ -426,6 +442,7 @@ async function initialize() {
     void route().catch(showError);
   });
   window.addEventListener("beforeunload", (event) => {
+    // 已进入 outbox 的数据不需要靠页面存活；未提交的操作和输入法草稿才需要离页警告。
     if (unsaved.length || compositions.size) {
       event.preventDefault();
       event.returnValue = "";
@@ -478,6 +495,7 @@ async function initialize() {
     state.loading = false;
     publish();
   }
+  // 页面存在时的补充刷新/调度；关页后由扩展 alarm 提供执行机会，不承诺常驻或准时。
   setInterval(() => {
     void refresh().catch(showError);
     if (state.extensionConnected && !state.offline)

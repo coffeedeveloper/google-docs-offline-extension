@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./react/App.jsx";
 import { boot, createDocument, inspectState } from "./application.js";
 
-// Keep the existing automation API; every action is shared with the React UI.
+// 保留浏览器自动化入口，调用的就是 React 使用的动作，不建立另一条保存/同步通路。
 export { createDocument, inspectState };
 export {
   openDocument,
@@ -19,6 +19,7 @@ createRoot(document.getElementById("app")).render(
     <App />
   </StrictMode>,
 );
+// 初始化放在组件 effect 之外且内部幂等，避免 StrictMode 或重挂载造成重复监听/调度。
 await boot();
 
 if (document.modelContext?.registerTool) {

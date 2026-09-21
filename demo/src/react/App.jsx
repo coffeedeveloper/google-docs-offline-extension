@@ -6,6 +6,7 @@ import { SetupPage } from "./SetupPage.jsx";
 import { RouteLink } from "./common.jsx";
 
 export function App() {
+  // 状态层负责模型与副作用，根组件只订阅快照并决定页面；重渲染不等于重新启动应用。
   const state = useSyncExternalStore(subscribe, getSnapshot);
   let page;
   if (state.loading) page = <main className="loading">正在打开本地文档…</main>;
@@ -28,6 +29,7 @@ export function App() {
     );
   else if (state.pathname === "/setup") page = <SetupPage state={state} />;
   else if (state.editor)
+    // 只在文档身份改变时重建编辑组件，不能用版本号作 key，否则后台刷新会丢焦点。
     page = <EditorPage key={state.editor.id} state={state} />;
   else page = <ListPage state={state} />;
   return (
