@@ -9,10 +9,10 @@ import {
   files,
   jsFiles,
   sha256,
-  executableTokens,
   extensionId,
 } from "./common.mjs";
 import { compileEntry } from "./build.mjs";
+import { generateReadableVendors } from "./readable-vendor.mjs";
 
 const inventory = JSON.parse(
   await readFile(path.join(root, "research/baseline-sha256.json"), "utf8"),
@@ -45,7 +45,8 @@ for (const relative of baselineFiles) {
   }
 }
 
-// Only extracted library code retains executable-token identity. Business modules do not.
+// 原始范围哈希 + 作用域绑定 AST 校验 + 确定性生成。业务模块不要求 AST 相同。
+const readableVendors = await generateReadableVendors();
 const provenance = JSON.parse(
   await readFile(path.join(root, "research/vendor-provenance.json"), "utf8"),
 );
@@ -65,15 +66,25 @@ for (const [file, record] of Object.entries(provenance)) {
     record.sha256,
     `Vendor file changed: ${file}`,
   );
-  const ast = parse(generated, { ecmaVersion: "latest", sourceType: "module" });
-  const last = ast.body.at(-1);
-  assert.equal(last.type, "ExportNamedDeclaration");
+  const target = file.includes("background") ? "background" : "offscreen";
   assert.deepEqual(
-    executableTokens(generated.slice(0, last.start)),
-    executableTokens(extracted),
-    `Vendor token drift: ${file}`,
+    generated,
+    readableVendors[target].output,
+    `Vendor reproducibility drift: ${file}`,
   );
 }
+assert.deepEqual(
+  JSON.parse(
+    await readFile(path.join(root, "research/vendor-symbol-map.json"), "utf8"),
+  ),
+  Object.fromEntries(
+    Object.entries(readableVendors).map(([target, result]) => [
+      target,
+      result.records,
+    ]),
+  ),
+  "Vendor symbol-map drift",
+);
 
 const bundles = [];
 for (const file of jsFiles) {
@@ -131,7 +142,7 @@ await writeFile(
       extensionId: extensionId(manifest.key),
       version: manifest.version,
       claim:
-        "Unchanged baseline/assets and extracted vendor tokens; deterministic modular bundles and matching source maps. Business behavior requires differential/browser tests; no business AST-equivalence claim.",
+        "Unchanged baseline/assets; vendor source-range hashes, scope-normalized AST equivalence and reproducible semantic renaming; unchanged ABI properties. Deterministic bundles/maps. Runtime behavior still requires differential/browser tests; names/stacks differ, no universal behavioral-equivalence claim.",
       baselineFiles: baselineFiles.length,
       byteIdenticalResources: resources.length,
       vendorFiles: Object.keys(provenance),
@@ -142,5 +153,5 @@ await writeFile(
   ) + "\n",
 );
 console.log(
-  `PASS: baseline ${baselineFiles.length}; resources ${resources.length} byte-identical; vendor token provenance; 3 reproducible bundles/maps; manifest ID preserved.`,
+  `PASS: baseline ${baselineFiles.length}; resources ${resources.length} byte-identical; vendor binding-AST provenance; 3 reproducible bundles/maps; manifest ID preserved.`,
 );

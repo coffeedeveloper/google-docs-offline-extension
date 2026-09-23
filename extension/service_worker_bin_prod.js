@@ -3,147 +3,142 @@
   var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
   // src/vendor/background-runtime.js
-  function aa() {
-    return function(a) {
-      return a;
+  function createIdentityFunction() {
+    return function(value) {
+      return value;
     };
   }
-  __name(aa, "aa");
-  function n() {
+  __name(createIdentityFunction, "createIdentityFunction");
+  function createNoopFunction() {
     return function() {
     };
   }
-  __name(n, "n");
-  function ba(a) {
+  __name(createNoopFunction, "createNoopFunction");
+  function createPropertyGetter(propertyName) {
     return function() {
-      return this[a];
+      return this[propertyName];
     };
   }
-  __name(ba, "ba");
-  function ca(a) {
+  __name(createPropertyGetter, "createPropertyGetter");
+  function createConstantFunction(value) {
     return function() {
-      return a;
+      return value;
     };
   }
-  __name(ca, "ca");
-  var p, da = typeof Object.create == "function" ? Object.create : function(a) {
-    function b() {
+  __name(createConstantFunction, "createConstantFunction");
+  var prototypeAlias, createObjectWithPrototype = typeof Object.create == "function" ? Object.create : function(value) {
+    function helper() {
     }
-    __name(b, "b");
-    b.prototype = a;
-    return new b();
-  }, ea = typeof Object.defineProperties == "function" ? Object.defineProperty : function(a, b, c) {
-    if (a == Array.prototype || a == Object.prototype) return a;
-    a[b] = c.value;
-    return a;
+    __name(helper, "helper");
+    helper.prototype = value;
+    return new helper();
+  }, definePropertyCompat = typeof Object.defineProperties == "function" ? Object.defineProperty : function(value, other, options) {
+    if (value == Array.prototype || value == Object.prototype) return value;
+    value[other] = options.value;
+    return value;
   };
-  function fa(a) {
-    a = [
+  function findGlobalObject(candidate) {
+    candidate = [
       "object" == typeof globalThis && globalThis,
-      a,
+      candidate,
       "object" == typeof window && window,
       "object" == typeof self && self,
       "object" == typeof global && global
     ];
-    for (var b = 0; b < a.length; ++b) {
-      var c = a[b];
-      if (c && c.Math == Math) return c;
+    for (var index = 0; index < candidate.length; ++index) {
+      var intermediate = candidate[index];
+      if (intermediate && intermediate.Math == Math) return intermediate;
     }
     throw Error("Cannot find global object");
   }
-  __name(fa, "fa");
-  var ha = fa(void 0);
-  function r(a, b) {
-    if (b) a: {
-      var c = ha;
-      a = a.split(".");
-      for (var d = 0; d < a.length - 1; d++) {
-        var e = a[d];
-        if (!(e in c)) break a;
-        c = c[e];
+  __name(findGlobalObject, "findGlobalObject");
+  var polyfillGlobal = findGlobalObject(void 0);
+  function installPolyfill(qualifiedName, factory) {
+    if (factory)
+      a: {
+        var polyfillGlobal2 = polyfillGlobal;
+        qualifiedName = qualifiedName.split(".");
+        for (var index = 0; index < qualifiedName.length - 1; index++) {
+          var intermediate = qualifiedName[index];
+          if (!(intermediate in polyfillGlobal2)) break a;
+          polyfillGlobal2 = polyfillGlobal2[intermediate];
+        }
+        qualifiedName = qualifiedName[qualifiedName.length - 1];
+        index = polyfillGlobal2[qualifiedName];
+        factory = factory(index);
+        factory != index && factory != null && definePropertyCompat(polyfillGlobal2, qualifiedName, {
+          configurable: true,
+          writable: true,
+          value: factory
+        });
       }
-      a = a[a.length - 1];
-      d = c[a];
-      b = b(d);
-      b != d && b != null && ea(c, a, {
-        configurable: true,
-        writable: true,
-        value: b
-      });
-    }
   }
-  __name(r, "r");
-  var ia;
-  if (typeof Object.setPrototypeOf == "function") ia = Object.setPrototypeOf;
+  __name(installPolyfill, "installPolyfill");
+  var setPrototypeOfImplementation;
+  if (typeof Object.setPrototypeOf == "function")
+    setPrototypeOfImplementation = Object.setPrototypeOf;
   else {
     a: {
-      ka = {
-        a: true
-      }, la = {};
+      prototypeProbe = { a: true }, prototypeProbeInstance = {};
       try {
-        la.__proto__ = ka;
-        ja = la.a;
+        prototypeProbeInstance.__proto__ = prototypeProbe;
+        supportsProtoAssignment = prototypeProbeInstance.a;
         break a;
-      } catch (a) {
+      } catch (caughtError) {
       }
-      ja = false;
+      supportsProtoAssignment = false;
     }
-    ia = ja ? function(a, b) {
-      a.__proto__ = b;
-      if (a.__proto__ !== b) throw new TypeError(a + " is not extensible");
-      return a;
+    setPrototypeOfImplementation = supportsProtoAssignment ? function(value, other) {
+      value.__proto__ = other;
+      if (value.__proto__ !== other) throw new TypeError(value + " is not extensible");
+      return value;
     } : null;
   }
-  var na = ia;
-  function v(a, b) {
-    a.prototype = da(b.prototype);
-    a.prototype.constructor = a;
-    if (na) na(a, b);
+  var setPrototypeOfCompat = setPrototypeOfImplementation;
+  function inheritCompiledClass(subclass, superclass) {
+    subclass.prototype = createObjectWithPrototype(superclass.prototype);
+    subclass.prototype.constructor = subclass;
+    if (setPrototypeOfCompat) setPrototypeOfCompat(subclass, superclass);
     else
-      for (var c in b)
-        if (c != "prototype")
+      for (var intermediate in superclass)
+        if (intermediate != "prototype")
           if (Object.defineProperties) {
-            var d = Object.getOwnPropertyDescriptor(b, c);
-            d && Object.defineProperty(a, c, d);
-          } else a[c] = b[c];
-    a.W = b.prototype;
+            var ownPropertyDescriptor = Object.getOwnPropertyDescriptor(superclass, intermediate);
+            ownPropertyDescriptor && Object.defineProperty(subclass, intermediate, ownPropertyDescriptor);
+          } else subclass[intermediate] = superclass[intermediate];
+    subclass.W = superclass.prototype;
   }
-  __name(v, "v");
-  function oa(a) {
-    var b = 0;
+  __name(inheritCompiledClass, "inheritCompiledClass");
+  function createArrayIteratorNext(values) {
+    var index = 0;
     return function() {
-      return b < a.length ? {
-        done: false,
-        value: a[b++]
-      } : {
-        done: true
-      };
+      return index < values.length ? { done: false, value: values[index++] } : { done: true };
     };
   }
-  __name(oa, "oa");
-  function w(a) {
-    var b = typeof Symbol != "undefined" && Symbol.iterator && a[Symbol.iterator];
-    if (b) return b.call(a);
-    if (typeof a.length == "number") return {
-      next: oa(a)
-    };
-    throw Error(String(a) + " is not an iterable or ArrayLike");
+  __name(createArrayIteratorNext, "createArrayIteratorNext");
+  function getIterator(iterable) {
+    var intermediate = typeof Symbol != "undefined" && Symbol.iterator && iterable[Symbol.iterator];
+    if (intermediate) return intermediate.call(iterable);
+    if (typeof iterable.length == "number") return { next: createArrayIteratorNext(iterable) };
+    throw Error(String(iterable) + " is not an iterable or ArrayLike");
   }
-  __name(w, "w");
-  function pa(a) {
-    if (!(a instanceof Array)) {
-      a = w(a);
-      for (var b, c = []; !(b = a.next()).done; ) c.push(b.value);
-      a = c;
+  __name(getIterator, "getIterator");
+  function iterableToArray(iterable) {
+    if (!(iterable instanceof Array)) {
+      iterable = getIterator(iterable);
+      for (var intermediate, values = []; !(intermediate = iterable.next()).done; )
+        values.push(intermediate.value);
+      iterable = values;
     }
-    return a;
+    return iterable;
   }
-  __name(pa, "pa");
-  function qa(a) {
-    if (!(a instanceof Object)) throw new TypeError("Iterator result " + a + " is not an object");
+  __name(iterableToArray, "iterableToArray");
+  function assertIteratorResult(result) {
+    if (!(result instanceof Object))
+      throw new TypeError("Iterator result " + result + " is not an object");
   }
-  __name(qa, "qa");
-  function y() {
+  __name(assertIteratorResult, "assertIteratorResult");
+  function GeneratorContext() {
     this.A = false;
     this.o = null;
     this.J = void 0;
@@ -151,2811 +146,2892 @@
     this.v = this.D = 0;
     this.H = this.l = null;
   }
-  __name(y, "y");
-  function ra(a) {
-    if (a.A) throw new TypeError("Generator is already running");
-    a.A = true;
+  __name(GeneratorContext, "GeneratorContext");
+  function enterGenerator(context) {
+    if (context.A) throw new TypeError("Generator is already running");
+    context.A = true;
   }
-  __name(ra, "ra");
-  y.prototype.C = function(a) {
-    this.J = a;
+  __name(enterGenerator, "enterGenerator");
+  GeneratorContext.prototype.C = function(value) {
+    this.J = value;
   };
-  function sa(a, b) {
-    a.l = {
-      Ia: b,
-      Oa: true
-    };
-    a.j = a.D || a.v;
+  function setGeneratorException(context, error) {
+    context.l = { Ia: error, Oa: true };
+    context.j = context.D || context.v;
   }
-  __name(sa, "sa");
-  y.prototype.getNextAddressJsc = ba("j");
-  y.prototype.getYieldResultJsc = ba("J");
-  y.prototype.return = function(a) {
-    this.l = {
-      return: a
-    };
+  __name(setGeneratorException, "setGeneratorException");
+  GeneratorContext.prototype.getNextAddressJsc = createPropertyGetter("j");
+  GeneratorContext.prototype.getYieldResultJsc = createPropertyGetter("J");
+  GeneratorContext.prototype.return = function(value) {
+    this.l = { return: value };
     this.j = this.v;
   };
-  y.prototype["return"] = y.prototype.return;
-  y.prototype.U = function(a) {
-    this.l = {
-      ha: a
-    };
-    this.v < a ? (this.j = a, this.l = null) : this.j = this.v;
+  GeneratorContext.prototype["return"] = GeneratorContext.prototype.return;
+  GeneratorContext.prototype.U = function(value) {
+    this.l = { ha: value };
+    this.v < value ? (this.j = value, this.l = null) : this.j = this.v;
   };
-  y.prototype.jumpThroughFinallyBlocks = y.prototype.U;
-  y.prototype.G = function(a, b) {
-    this.j = b;
-    return {
-      value: a
-    };
+  GeneratorContext.prototype.jumpThroughFinallyBlocks = GeneratorContext.prototype.U;
+  GeneratorContext.prototype.G = function(value, other) {
+    this.j = other;
+    return { value };
   };
-  y.prototype.yield = y.prototype.G;
-  y.prototype.fa = function(a, b) {
-    a = w(a);
-    var c = a.next();
-    qa(c);
-    if (c.done) this.J = c.value, this.j = b;
-    else return this.o = a, this.G(c.value, b);
+  GeneratorContext.prototype.yield = GeneratorContext.prototype.G;
+  GeneratorContext.prototype.fa = function(iterator, other) {
+    iterator = getIterator(iterator);
+    var iteration = iterator.next();
+    assertIteratorResult(iteration);
+    if (iteration.done) {
+      this.J = iteration.value;
+      this.j = other;
+    } else return this.o = iterator, this.G(iteration.value, other);
   };
-  y.prototype.yieldAll = y.prototype.fa;
-  y.prototype.ha = function(a) {
-    this.j = a;
+  GeneratorContext.prototype.yieldAll = GeneratorContext.prototype.fa;
+  GeneratorContext.prototype.ha = function(value) {
+    this.j = value;
   };
-  y.prototype.jumpTo = y.prototype.ha;
-  y.prototype.V = function() {
+  GeneratorContext.prototype.jumpTo = GeneratorContext.prototype.ha;
+  GeneratorContext.prototype.V = function() {
     this.j = 0;
   };
-  y.prototype.jumpToEnd = y.prototype.V;
-  y.prototype.O = function(a, b) {
-    this.D = a;
-    b != void 0 && (this.v = b);
+  GeneratorContext.prototype.jumpToEnd = GeneratorContext.prototype.V;
+  GeneratorContext.prototype.O = function(value, other) {
+    this.D = value;
+    other != void 0 && (this.v = other);
   };
-  y.prototype.setCatchFinallyBlocks = y.prototype.O;
-  y.prototype.ea = function(a) {
+  GeneratorContext.prototype.setCatchFinallyBlocks = GeneratorContext.prototype.O;
+  GeneratorContext.prototype.ea = function(value) {
     this.D = 0;
-    this.v = a || 0;
+    this.v = value || 0;
   };
-  y.prototype.setFinallyBlock = y.prototype.ea;
-  y.prototype.X = function(a, b) {
-    this.j = a;
-    this.D = b || 0;
+  GeneratorContext.prototype.setFinallyBlock = GeneratorContext.prototype.ea;
+  GeneratorContext.prototype.X = function(value, other) {
+    this.j = value;
+    this.D = other || 0;
   };
-  y.prototype.leaveTryBlock = y.prototype.X;
-  y.prototype.L = function(a) {
-    this.D = a || 0;
-    a = this.l.Ia;
+  GeneratorContext.prototype.leaveTryBlock = GeneratorContext.prototype.X;
+  GeneratorContext.prototype.L = function(value) {
+    this.D = value || 0;
+    value = this.l.Ia;
     this.l = null;
-    return a;
+    return value;
   };
-  y.prototype.enterCatchBlock = y.prototype.L;
-  y.prototype.M = function(a, b, c) {
-    c ? this.H[c] = this.l : this.H = [this.l];
-    this.D = a || 0;
-    this.v = b || 0;
+  GeneratorContext.prototype.enterCatchBlock = GeneratorContext.prototype.L;
+  GeneratorContext.prototype.M = function(value, other, options) {
+    options ? this.H[options] = this.l : this.H = [this.l];
+    this.D = value || 0;
+    this.v = other || 0;
     this.l = null;
   };
-  y.prototype.enterFinallyBlock = y.prototype.M;
-  y.prototype.P = function(a, b) {
-    b = this.H.splice(b || 0)[0];
-    (b = this.l = this.l || b) ? b.Oa ? this.j = this.D || this.v : b.ha != void 0 && this.v < b.ha ? (this.j = b.ha, this.l = null) : this.j = this.v : this.j = a;
+  GeneratorContext.prototype.enterFinallyBlock = GeneratorContext.prototype.M;
+  GeneratorContext.prototype.P = function(value, other) {
+    other = this.H.splice(other || 0)[0];
+    (other = this.l = this.l || other) ? other.Oa ? this.j = this.D || this.v : other.ha != void 0 && this.v < other.ha ? (this.j = other.ha, this.l = null) : this.j = this.v : this.j = value;
   };
-  y.prototype.leaveFinallyBlock = y.prototype.P;
-  y.prototype.R = function(a) {
-    return new ta(a);
+  GeneratorContext.prototype.leaveFinallyBlock = GeneratorContext.prototype.P;
+  GeneratorContext.prototype.R = function(value) {
+    return new GeneratorPropertyIterator(value);
   };
-  y.prototype.forIn = y.prototype.R;
-  function ta(a) {
-    this.o = a;
+  GeneratorContext.prototype.forIn = GeneratorContext.prototype.R;
+  function GeneratorPropertyIterator(object) {
+    this.o = object;
     this.j = [];
-    for (var b in a) this.j.push(b);
+    for (var intermediate in object) this.j.push(intermediate);
     this.j.reverse();
   }
-  __name(ta, "ta");
-  ta.prototype.l = function() {
+  __name(GeneratorPropertyIterator, "GeneratorPropertyIterator");
+  GeneratorPropertyIterator.prototype.l = function() {
     for (; this.j.length > 0; ) {
-      var a = this.j.pop();
-      if (a in this.o) return a;
+      var intermediate = this.j.pop();
+      if (intermediate in this.o) return intermediate;
     }
     return null;
   };
-  ta.prototype.getNext = ta.prototype.l;
-  function ua(a) {
-    this.j = new y();
-    this.l = a;
+  GeneratorPropertyIterator.prototype.getNext = GeneratorPropertyIterator.prototype.l;
+  function GeneratorEngine(program) {
+    this.j = new GeneratorContext();
+    this.l = program;
   }
-  __name(ua, "ua");
-  function va(a, b) {
-    ra(a.j);
-    var c = a.j.o;
-    if (c) return wa(a, "return" in c ? c["return"] : function(d) {
-      return {
-        value: d,
-        done: true
-      };
-    }, b, a.j.return);
-    a.j.return(b);
-    return xa(a);
+  __name(GeneratorEngine, "GeneratorEngine");
+  function returnFromGenerator(engine, value) {
+    enterGenerator(engine.j);
+    var intermediate = engine.j.o;
+    if (intermediate)
+      return advanceDelegatedIterator(
+        engine,
+        "return" in intermediate ? intermediate["return"] : function(value2) {
+          return { value: value2, done: true };
+        },
+        value,
+        engine.j.return
+      );
+    engine.j.return(value);
+    return runGenerator(engine);
   }
-  __name(va, "va");
-  function wa(a, b, c, d) {
+  __name(returnFromGenerator, "returnFromGenerator");
+  function advanceDelegatedIterator(engine, iteratorMethod, value, resume) {
     try {
-      var e = b.call(a.j.o, c);
-      qa(e);
-      if (!e.done) return a.j.A = false, e;
-      var f = e.value;
-    } catch (g) {
-      return a.j.o = null, sa(a.j, g), xa(a);
+      var intermediate = iteratorMethod.call(engine.j.o, value);
+      assertIteratorResult(intermediate);
+      if (!intermediate.done) return engine.j.A = false, intermediate;
+      var value2 = intermediate.value;
+    } catch (caughtError) {
+      return engine.j.o = null, setGeneratorException(engine.j, caughtError), runGenerator(engine);
     }
-    a.j.o = null;
-    d.call(a.j, f);
-    return xa(a);
+    engine.j.o = null;
+    resume.call(engine.j, value2);
+    return runGenerator(engine);
   }
-  __name(wa, "wa");
-  function xa(a) {
-    for (; a.j.j; ) try {
-      var b = a.l(a.j);
-      if (b) return a.j.A = false, {
-        value: b.value,
-        done: false
-      };
-    } catch (c) {
-      a.j.J = void 0, sa(a.j, c);
-    }
-    a.j.A = false;
-    if (a.j.l) {
-      b = a.j.l;
-      a.j.l = null;
-      if (b.Oa) throw b.Ia;
-      return {
-        value: b.return,
-        done: true
-      };
-    }
-    return {
-      value: void 0,
-      done: true
-    };
-  }
-  __name(xa, "xa");
-  function ya(a) {
-    this.next = function(b) {
-      ra(a.j);
-      a.j.o ? b = wa(a, a.j.o.next, b, a.j.C) : (a.j.C(b), b = xa(a));
-      return b;
-    };
-    this.throw = function(b) {
-      ra(a.j);
-      if (a.j.o) {
-        var c = a.j.o["throw"];
-        if (c) var d = wa(a, c, b, a.j.C);
-        else {
-          b = a.j.o;
-          a.j.o = null;
-          try {
-            b["return"] && (d = b["return"](), qa(d)), sa(a.j, new TypeError(
-              "The iterator does not provide a 'throw' method."
-            ));
-          } catch (e) {
-            sa(a.j, e);
-          }
-          d = xa(a);
+  __name(advanceDelegatedIterator, "advanceDelegatedIterator");
+  function runGenerator(engine) {
+    for (; engine.j.j; )
+      try {
+        var iterator = engine.l(engine.j);
+        if (iterator) return engine.j.A = false, { value: iterator.value, done: false };
+      } catch (caughtError) {
+        {
+          engine.j.J = void 0;
+          setGeneratorException(engine.j, caughtError);
         }
-      } else sa(a.j, b), d = xa(a);
-      return d;
+      }
+    engine.j.A = false;
+    if (engine.j.l) {
+      iterator = engine.j.l;
+      engine.j.l = null;
+      if (iterator.Oa) throw iterator.Ia;
+      return { value: iterator.return, done: true };
+    }
+    return { value: void 0, done: true };
+  }
+  __name(runGenerator, "runGenerator");
+  function GeneratorIterator(engine) {
+    this.next = function(value) {
+      enterGenerator(engine.j);
+      engine.j.o ? value = advanceDelegatedIterator(engine, engine.j.o.next, value, engine.j.C) : (engine.j.C(value), value = runGenerator(engine));
+      return value;
     };
-    this.return = function(b) {
-      return va(a, b);
+    this.throw = function(value) {
+      enterGenerator(engine.j);
+      if (engine.j.o) {
+        var intermediate = engine.j.o["throw"];
+        if (intermediate)
+          var intermediate2 = advanceDelegatedIterator(engine, intermediate, value, engine.j.C);
+        else {
+          value = engine.j.o;
+          engine.j.o = null;
+          try {
+            {
+              value["return"] && (intermediate2 = value["return"](), assertIteratorResult(intermediate2));
+              setGeneratorException(
+                engine.j,
+                new TypeError("The iterator does not provide a 'throw' method.")
+              );
+            }
+          } catch (caughtError) {
+            setGeneratorException(engine.j, caughtError);
+          }
+          intermediate2 = runGenerator(engine);
+        }
+      } else {
+        setGeneratorException(engine.j, value);
+        intermediate2 = runGenerator(engine);
+      }
+      return intermediate2;
+    };
+    this.return = function(value) {
+      return returnFromGenerator(engine, value);
     };
     this[Symbol.iterator] = function() {
       return this;
     };
   }
-  __name(ya, "ya");
-  function za(a) {
-    function b(d) {
-      return a.next(d);
+  __name(GeneratorIterator, "GeneratorIterator");
+  function runAsyncGenerator(iterator) {
+    function helper(helper3) {
+      return iterator.next(helper3);
     }
-    __name(b, "b");
-    function c(d) {
-      return a.throw(d);
+    __name(helper, "helper");
+    function helper2(helper3) {
+      return iterator.throw(helper3);
     }
-    __name(c, "c");
-    return new Promise(function(d, e) {
-      function f(g) {
-        g.done ? d(g.value) : Promise.resolve(g.value).then(b, c).then(f, e);
+    __name(helper2, "helper2");
+    return new Promise(function(callback, other) {
+      function helper3(helper4) {
+        helper4.done ? callback(helper4.value) : Promise.resolve(helper4.value).then(helper, helper2).then(helper3, other);
       }
-      __name(f, "f");
-      f(a.next());
+      __name(helper3, "helper3");
+      helper3(iterator.next());
     });
   }
-  __name(za, "za");
-  function Aa() {
-    for (var a = Number(this), b = [], c = a; c < arguments.length; c++) b[c - a] = arguments[c];
-    return b;
+  __name(runAsyncGenerator, "runAsyncGenerator");
+  function collectRestArguments() {
+    for (var intermediate = Number(this), values = [], intermediate2 = intermediate; intermediate2 < arguments.length; intermediate2++)
+      values[intermediate2 - intermediate] = arguments[intermediate2];
+    return values;
   }
-  __name(Aa, "Aa");
-  r("globalThis", function(a) {
-    return a || ha;
+  __name(collectRestArguments, "collectRestArguments");
+  installPolyfill("globalThis", function(value) {
+    return value || polyfillGlobal;
   });
-  r("Symbol", function(a) {
-    function b(f) {
-      if (this instanceof b) throw new TypeError("Symbol is not a constructor");
-      return new c(d + (f || "") + "_" + e++, f);
+  installPolyfill("Symbol", function(value) {
+    function helper(helper3) {
+      if (this instanceof helper) throw new TypeError("Symbol is not a constructor");
+      return new helper2(intermediate + (helper3 || "") + "_" + index++, helper3);
     }
-    __name(b, "b");
-    function c(f, g) {
-      this.j = f;
-      ea(this, "description", {
+    __name(helper, "helper");
+    function helper2(helper3, helper4) {
+      this.j = helper3;
+      definePropertyCompat(this, "description", {
         configurable: true,
         writable: true,
-        value: g
+        value: helper4
       });
     }
-    __name(c, "c");
-    if (a) return a;
-    c.prototype.toString = ba("j");
-    var d = "jscomp_symbol_" + (Math.random() * 1e9 >>> 0) + "_", e = 0;
-    return b;
+    __name(helper2, "helper2");
+    if (value) return value;
+    helper2.prototype.toString = createPropertyGetter("j");
+    var intermediate = "jscomp_symbol_" + (Math.random() * 1e9 >>> 0) + "_", index = 0;
+    return helper;
   });
-  r("Symbol.iterator", function(a) {
-    if (a) return a;
-    a = /* @__PURE__ */ Symbol("Symbol.iterator");
-    ea(Array.prototype, a, {
+  installPolyfill("Symbol.iterator", function(value) {
+    if (value) return value;
+    value = /* @__PURE__ */ Symbol("Symbol.iterator");
+    definePropertyCompat(Array.prototype, value, {
       configurable: true,
       writable: true,
       value: /* @__PURE__ */ __name(function() {
-        return Ba(oa(this));
+        return createIterableIterator(createArrayIteratorNext(this));
       }, "value")
     });
-    return a;
+    return value;
   });
-  function Ba(a) {
-    a = {
-      next: a
-    };
-    a[Symbol.iterator] = function() {
+  function createIterableIterator(next) {
+    next = { next };
+    next[Symbol.iterator] = function() {
       return this;
     };
-    return a;
+    return next;
   }
-  __name(Ba, "Ba");
-  r("Promise", function(a) {
-    function b(g) {
+  __name(createIterableIterator, "createIterableIterator");
+  installPolyfill("Promise", function(value) {
+    function helper(helper4) {
       this.j = 0;
       this.o = void 0;
       this.l = [];
       this.J = false;
-      var h = this.v();
+      var intermediate = this.v();
       try {
-        g(h.resolve, h.reject);
-      } catch (k) {
-        h.reject(k);
+        helper4(intermediate.resolve, intermediate.reject);
+      } catch (caughtError) {
+        intermediate.reject(caughtError);
       }
     }
-    __name(b, "b");
-    function c() {
+    __name(helper, "helper");
+    function helper2() {
       this.j = null;
     }
-    __name(c, "c");
-    function d(g) {
-      return g instanceof b ? g : new b(function(h) {
-        h(g);
+    __name(helper2, "helper2");
+    function helper3(helper4) {
+      return helper4 instanceof helper ? helper4 : new helper(function(callback) {
+        callback(helper4);
       });
     }
-    __name(d, "d");
-    if (a) return a;
-    c.prototype.l = function(g) {
+    __name(helper3, "helper3");
+    if (value) return value;
+    helper2.prototype.l = function(value2) {
       if (this.j == null) {
         this.j = [];
-        var h = this;
+        var instance = this;
         this.o(function() {
-          h.D();
+          instance.D();
         });
       }
-      this.j.push(g);
+      this.j.push(value2);
     };
-    var e = ha.setTimeout;
-    c.prototype.o = function(g) {
-      e(g, 0);
+    var setTimeout2 = polyfillGlobal.setTimeout;
+    helper2.prototype.o = function(value2) {
+      setTimeout2(value2, 0);
     };
-    c.prototype.D = function() {
+    helper2.prototype.D = function() {
       for (; this.j && this.j.length; ) {
-        var g = this.j;
+        var intermediate = this.j;
         this.j = [];
-        for (var h = 0; h < g.length; ++h) {
-          var k = g[h];
-          g[h] = null;
+        for (var index = 0; index < intermediate.length; ++index) {
+          var callback = intermediate[index];
+          intermediate[index] = null;
           try {
-            k();
-          } catch (l) {
-            this.v(l);
+            callback();
+          } catch (caughtError) {
+            this.v(caughtError);
           }
         }
       }
       this.j = null;
     };
-    c.prototype.v = function(g) {
+    helper2.prototype.v = function(value2) {
       this.o(function() {
-        throw g;
+        throw value2;
       });
     };
-    b.prototype.v = function() {
-      function g(l) {
-        return function(m) {
-          k || (k = true, l.call(h, m));
+    helper.prototype.v = function() {
+      function helper4(helper5) {
+        return function(value2) {
+          intermediate || (intermediate = true, helper5.call(instance, value2));
         };
       }
-      __name(g, "g");
-      var h = this, k = false;
-      return {
-        resolve: g(this.M),
-        reject: g(this.D)
-      };
+      __name(helper4, "helper4");
+      var instance = this, intermediate = false;
+      return { resolve: helper4(this.M), reject: helper4(this.D) };
     };
-    b.prototype.M = function(g) {
-      if (g === this) this.D(new TypeError("A Promise cannot resolve to itself"));
-      else if (g instanceof b) this.O(g);
+    helper.prototype.M = function(value2) {
+      if (value2 === this) this.D(new TypeError("A Promise cannot resolve to itself"));
+      else if (value2 instanceof helper) this.O(value2);
       else {
-        a: switch (typeof g) {
+        a: switch (typeof value2) {
           case "object":
-            var h = g != null;
+            var intermediate = value2 != null;
             break a;
           case "function":
-            h = true;
+            intermediate = true;
             break a;
           default:
-            h = false;
+            intermediate = false;
         }
-        h ? this.L(g) : this.A(g);
+        intermediate ? this.L(value2) : this.A(value2);
       }
     };
-    b.prototype.L = function(g) {
-      var h = void 0;
+    helper.prototype.L = function(value2) {
+      var intermediate = void 0;
       try {
-        h = g.then;
-      } catch (k) {
-        this.D(k);
+        intermediate = value2.then;
+      } catch (caughtError) {
+        this.D(caughtError);
         return;
       }
-      typeof h == "function" ? this.R(h, g) : this.A(g);
+      typeof intermediate == "function" ? this.R(intermediate, value2) : this.A(value2);
     };
-    b.prototype.D = function(g) {
-      this.C(2, g);
+    helper.prototype.D = function(value2) {
+      this.C(2, value2);
     };
-    b.prototype.A = function(g) {
-      this.C(1, g);
+    helper.prototype.A = function(value2) {
+      this.C(1, value2);
     };
-    b.prototype.C = function(g, h) {
-      if (this.j != 0) throw Error("Cannot settle(" + g + ", " + h + "): Promise already settled in state" + this.j);
-      this.j = g;
-      this.o = h;
+    helper.prototype.C = function(value2, other) {
+      if (this.j != 0)
+        throw Error(
+          "Cannot settle(" + value2 + ", " + other + "): Promise already settled in state" + this.j
+        );
+      this.j = value2;
+      this.o = other;
       this.j === 2 && this.P();
       this.G();
     };
-    b.prototype.P = function() {
-      var g = this;
-      e(function() {
-        if (g.H()) {
-          var h = ha.console;
-          typeof h !== "undefined" && h.error(g.o);
+    helper.prototype.P = function() {
+      var instance = this;
+      setTimeout2(function() {
+        if (instance.H()) {
+          var console = polyfillGlobal.console;
+          typeof console !== "undefined" && console.error(instance.o);
         }
       }, 1);
     };
-    b.prototype.H = function() {
+    helper.prototype.H = function() {
       if (this.J) return false;
-      var g = ha.CustomEvent, h = ha.Event, k = ha.dispatchEvent;
-      if (typeof k === "undefined") return true;
-      typeof g === "function" ? g = new g("unhandledrejection", {
-        cancelable: true
-      }) : typeof h === "function" ? g = new h("unhandledrejection", {
-        cancelable: true
-      }) : (g = ha.document.createEvent("CustomEvent"), g.initCustomEvent(
-        "unhandledrejection",
-        false,
-        true,
-        g
-      ));
-      g.promise = this;
-      g.reason = this.o;
-      return k(g);
+      var CustomEvent = polyfillGlobal.CustomEvent, Event = polyfillGlobal.Event, dispatchEvent = polyfillGlobal.dispatchEvent;
+      if (typeof dispatchEvent === "undefined") return true;
+      typeof CustomEvent === "function" ? CustomEvent = new CustomEvent("unhandledrejection", { cancelable: true }) : typeof Event === "function" ? CustomEvent = new Event("unhandledrejection", { cancelable: true }) : (CustomEvent = polyfillGlobal.document.createEvent("CustomEvent"), CustomEvent.initCustomEvent("unhandledrejection", false, true, CustomEvent));
+      CustomEvent.promise = this;
+      CustomEvent.reason = this.o;
+      return dispatchEvent(CustomEvent);
     };
-    b.prototype.G = function() {
+    helper.prototype.G = function() {
       if (this.l != null) {
-        for (var g = 0; g < this.l.length; ++g) f.l(this.l[g]);
+        for (var index = 0; index < this.l.length; ++index) helper22.l(this.l[index]);
         this.l = null;
       }
     };
-    var f = new c();
-    b.prototype.O = function(g) {
-      var h = this.v();
-      g.ka(h.resolve, h.reject);
+    var helper22 = new helper2();
+    helper.prototype.O = function(value2) {
+      var intermediate = this.v();
+      value2.ka(intermediate.resolve, intermediate.reject);
     };
-    b.prototype.R = function(g, h) {
-      var k = this.v();
+    helper.prototype.R = function(value2, other) {
+      var intermediate = this.v();
       try {
-        g.call(h, k.resolve, k.reject);
-      } catch (l) {
-        k.reject(l);
+        value2.call(other, intermediate.resolve, intermediate.reject);
+      } catch (caughtError) {
+        intermediate.reject(caughtError);
       }
     };
-    b.prototype.then = function(g, h) {
-      function k(t, x) {
-        return typeof t == "function" ? function(u) {
+    helper.prototype.then = function(value2, other) {
+      function helper4(helper6, helper7) {
+        return typeof helper6 == "function" ? function(value3) {
           try {
-            l(t(u));
-          } catch (N) {
-            m(N);
+            callback(helper6(value3));
+          } catch (caughtError) {
+            callback2(caughtError);
           }
-        } : x;
+        } : helper7;
       }
-      __name(k, "k");
-      var l, m, q = new b(function(t, x) {
-        l = t;
-        m = x;
+      __name(helper4, "helper4");
+      var callback, callback2, helper5 = new helper(function(value3, other2) {
+        callback = value3;
+        callback2 = other2;
       });
-      this.ka(k(g, l), k(h, m));
-      return q;
+      this.ka(helper4(value2, callback), helper4(other, callback2));
+      return helper5;
     };
-    b.prototype.catch = function(g) {
-      return this.then(void 0, g);
+    helper.prototype.catch = function(value2) {
+      return this.then(void 0, value2);
     };
-    b.prototype.ka = function(g, h) {
-      function k() {
-        switch (l.j) {
+    helper.prototype.ka = function(callback, callback2) {
+      function helper4() {
+        switch (instance.j) {
           case 1:
-            g(l.o);
+            callback(instance.o);
             break;
           case 2:
-            h(l.o);
+            callback2(instance.o);
             break;
           default:
-            throw Error("Unexpected state: " + l.j);
+            throw Error("Unexpected state: " + instance.j);
         }
       }
-      __name(k, "k");
-      var l = this;
-      this.l == null ? f.l(k) : this.l.push(k);
+      __name(helper4, "helper4");
+      var instance = this;
+      this.l == null ? helper22.l(helper4) : this.l.push(helper4);
       this.J = true;
     };
-    b.resolve = d;
-    b.reject = function(g) {
-      return new b(function(h, k) {
-        k(g);
+    helper.resolve = helper3;
+    helper.reject = function(value2) {
+      return new helper(function(value3, callback) {
+        callback(value2);
       });
     };
-    b.race = function(g) {
-      return new b(function(h, k) {
-        for (var l = w(g), m = l.next(); !m.done; m = l.next()) d(m.value).ka(h, k);
+    helper.race = function(value2) {
+      return new helper(function(value3, other) {
+        for (var iterator = getIterator(value2), iteration = iterator.next(); !iteration.done; iteration = iterator.next())
+          helper3(iteration.value).ka(value3, other);
       });
     };
-    b.all = function(g) {
-      var h = w(g), k = h.next();
-      return k.done ? d([]) : new b(function(l, m) {
-        function q(u) {
-          return function(N) {
-            t[u] = N;
-            x--;
-            x == 0 && l(t);
+    helper.all = function(value2) {
+      var iterator = getIterator(value2), iteration = iterator.next();
+      return iteration.done ? helper3([]) : new helper(function(callback, other) {
+        function helper4(helper5) {
+          return function(value3) {
+            values[helper5] = value3;
+            index--;
+            index == 0 && callback(values);
           };
         }
-        __name(q, "q");
-        var t = [], x = 0;
-        do
-          t.push(void 0), x++, d(k.value).ka(q(t.length - 1), m), k = h.next();
-        while (!k.done);
+        __name(helper4, "helper4");
+        var values = [], index = 0;
+        do {
+          values.push(void 0);
+          index++;
+          helper3(iteration.value).ka(helper4(values.length - 1), other);
+          iteration = iterator.next();
+        } while (!iteration.done);
       });
     };
-    return b;
+    return helper;
   });
-  function Ca(a, b) {
-    return Object.prototype.hasOwnProperty.call(a, b);
+  function hasOwnProperty(object, key) {
+    return Object.prototype.hasOwnProperty.call(object, key);
   }
-  __name(Ca, "Ca");
-  var Da = typeof Object.assign == "function" ? Object.assign : function(a, b) {
-    if (a == null) throw new TypeError("No nullish arg");
-    a = Object(a);
-    for (var c = 1; c < arguments.length; c++) {
-      var d = arguments[c];
-      if (d)
-        for (var e in d) Ca(d, e) && (a[e] = d[e]);
+  __name(hasOwnProperty, "hasOwnProperty");
+  var assignProperties = typeof Object.assign == "function" ? Object.assign : function(value, other) {
+    if (value == null) throw new TypeError("No nullish arg");
+    value = Object(value);
+    for (var index = 1; index < arguments.length; index++) {
+      var intermediate = arguments[index];
+      if (intermediate)
+        for (var intermediate2 in intermediate)
+          hasOwnProperty(intermediate, intermediate2) && (value[intermediate2] = intermediate[intermediate2]);
     }
-    return a;
+    return value;
   };
-  r("Object.assign", function(a) {
-    return a || Da;
+  installPolyfill("Object.assign", function(value) {
+    return value || assignProperties;
   });
-  r("Symbol.dispose", function(a) {
-    return a ? a : /* @__PURE__ */ Symbol("Symbol.dispose");
+  installPolyfill("Symbol.dispose", function(value) {
+    return value ? value : /* @__PURE__ */ Symbol("Symbol.dispose");
   });
-  r("Array.prototype.find", function(a) {
-    return a ? a : function(b, c) {
+  installPolyfill("Array.prototype.find", function(value) {
+    return value ? value : function(value2, other) {
       a: {
-        var d = this;
-        d instanceof String && (d = String(d));
-        for (var e = d.length, f = 0; f < e; f++) {
-          var g = d[f];
-          if (b.call(c, g, f, d)) {
-            b = g;
+        var instance = this;
+        instance instanceof String && (instance = String(instance));
+        for (var length = instance.length, index = 0; index < length; index++) {
+          var intermediate = instance[index];
+          if (value2.call(other, intermediate, index, instance)) {
+            value2 = intermediate;
             break a;
           }
         }
-        b = void 0;
+        value2 = void 0;
       }
-      return b;
+      return value2;
     };
   });
-  r("WeakMap", function(a) {
-    function b(k) {
-      this.j = (h += Math.random() + 1).toString();
-      if (k) {
-        k = w(k);
-        for (var l; !(l = k.next()).done; ) l = l.value, this.set(l[0], l[1]);
+  installPolyfill("WeakMap", function(value) {
+    function helper(helper6) {
+      this.j = (intermediate2 += Math.random() + 1).toString();
+      if (helper6) {
+        helper6 = getIterator(helper6);
+        for (var intermediate3; !(intermediate3 = helper6.next()).done; ) {
+          intermediate3 = intermediate3.value;
+          this.set(intermediate3[0], intermediate3[1]);
+        }
       }
     }
-    __name(b, "b");
-    function c() {
+    __name(helper, "helper");
+    function helper2() {
     }
-    __name(c, "c");
-    function d(k) {
-      var l = typeof k;
-      return l === "object" && k !== null || l === "function";
+    __name(helper2, "helper2");
+    function helper3(helper6) {
+      var intermediate3 = typeof helper6;
+      return intermediate3 === "object" && helper6 !== null || intermediate3 === "function";
     }
-    __name(d, "d");
-    function e(k) {
-      if (!Ca(k, g)) {
-        var l = new c();
-        ea(k, g, {
-          value: l
-        });
+    __name(helper3, "helper3");
+    function helper4(helper6) {
+      if (!hasOwnProperty(helper6, intermediate)) {
+        var helper22 = new helper2();
+        definePropertyCompat(helper6, intermediate, { value: helper22 });
       }
     }
-    __name(e, "e");
-    function f(k) {
-      var l = Object[k];
-      l && (Object[k] = function(m) {
-        if (m instanceof c) return m;
-        Object.isExtensible(m) && e(m);
-        return l(m);
+    __name(helper4, "helper4");
+    function helper5(helper6) {
+      var callback = Object[helper6];
+      callback && (Object[helper6] = function(value2) {
+        if (value2 instanceof helper2) return value2;
+        Object.isExtensible(value2) && helper4(value2);
+        return callback(value2);
       });
     }
-    __name(f, "f");
+    __name(helper5, "helper5");
     if ((function() {
-      if (!a || !Object.seal) return false;
+      if (!value || !Object.seal) return false;
       try {
-        var k = Object.seal({}), l = Object.seal({}), m = new a([
-          [k, 2],
-          [l, 3]
+        var intermediate3 = Object.seal({}), intermediate4 = Object.seal({}), value2 = new value([
+          [intermediate3, 2],
+          [intermediate4, 3]
         ]);
-        if (m.get(k) != 2 || m.get(l) != 3) return false;
-        m.delete(k);
-        m.set(l, 4);
-        return !m.has(k) && m.get(l) == 4;
-      } catch (q) {
+        if (value2.get(intermediate3) != 2 || value2.get(intermediate4) != 3) return false;
+        value2.delete(intermediate3);
+        value2.set(intermediate4, 4);
+        return !value2.has(intermediate3) && value2.get(intermediate4) == 4;
+      } catch (caughtError) {
         return false;
       }
-    })()) return a;
-    var g = "$jscomp_hidden_" + Math.random();
-    f("freeze");
-    f("preventExtensions");
-    f("seal");
-    var h = 0;
-    b.prototype.set = function(k, l) {
-      if (!d(k)) throw Error("Invalid WeakMap key");
-      e(k);
-      if (!Ca(k, g)) throw Error("WeakMap key fail: " + k);
-      k[g][this.j] = l;
+    })())
+      return value;
+    var intermediate = "$jscomp_hidden_" + Math.random();
+    helper5("freeze");
+    helper5("preventExtensions");
+    helper5("seal");
+    var intermediate2 = 0;
+    helper.prototype.set = function(value2, other) {
+      if (!helper3(value2)) throw Error("Invalid WeakMap key");
+      helper4(value2);
+      if (!hasOwnProperty(value2, intermediate)) throw Error("WeakMap key fail: " + value2);
+      value2[intermediate][this.j] = other;
       return this;
     };
-    b.prototype.get = function(k) {
-      return d(k) && Ca(k, g) ? k[g][this.j] : void 0;
+    helper.prototype.get = function(value2) {
+      return helper3(value2) && hasOwnProperty(value2, intermediate) ? value2[intermediate][this.j] : void 0;
     };
-    b.prototype.has = function(k) {
-      return d(k) && Ca(
-        k,
-        g
-      ) && Ca(k[g], this.j);
+    helper.prototype.has = function(value2) {
+      return helper3(value2) && hasOwnProperty(value2, intermediate) && hasOwnProperty(value2[intermediate], this.j);
     };
-    b.prototype.delete = function(k) {
-      return d(k) && Ca(k, g) && Ca(k[g], this.j) ? delete k[g][this.j] : false;
+    helper.prototype.delete = function(value2) {
+      return helper3(value2) && hasOwnProperty(value2, intermediate) && hasOwnProperty(value2[intermediate], this.j) ? delete value2[intermediate][this.j] : false;
     };
-    return b;
+    return helper;
   });
-  r("Map", function(a) {
-    function b() {
-      var h = {};
-      return h.previous = h.next = h.head = h;
+  installPolyfill("Map", function(value) {
+    function helper() {
+      var record = {};
+      return record.previous = record.next = record.head = record;
     }
-    __name(b, "b");
-    function c(h, k) {
-      var l = h[1];
-      return Ba(function() {
-        if (l) {
-          for (; l.head != h[1]; ) l = l.previous;
-          for (; l.next != l.head; ) return l = l.next, {
-            done: false,
-            value: k(l)
-          };
-          l = null;
+    __name(helper, "helper");
+    function helper2(helper5, helper6) {
+      var iterator = helper5[1];
+      return createIterableIterator(function() {
+        if (iterator) {
+          for (; iterator.head != helper5[1]; ) iterator = iterator.previous;
+          for (; iterator.next != iterator.head; )
+            return iterator = iterator.next, { done: false, value: helper6(iterator) };
+          iterator = null;
         }
-        return {
-          done: true,
-          value: void 0
-        };
+        return { done: true, value: void 0 };
       });
     }
-    __name(c, "c");
-    function d(h, k) {
-      var l = k && typeof k;
-      l == "object" || l == "function" ? f.has(k) ? l = f.get(k) : (l = "" + ++g, f.set(k, l)) : l = "p_" + k;
-      var m = h[0][l];
-      if (m && Ca(h[0], l))
-        for (h = 0; h < m.length; h++) {
-          var q = m[h];
-          if (k !== k && q.key !== q.key || k === q.key) return {
-            id: l,
-            list: m,
-            index: h,
-            entry: q
-          };
+    __name(helper2, "helper2");
+    function helper3(helper5, helper6) {
+      var intermediate = helper6 && typeof helper6;
+      intermediate == "object" || intermediate == "function" ? weakMap.has(helper6) ? intermediate = weakMap.get(helper6) : (intermediate = "" + ++index, weakMap.set(helper6, intermediate)) : intermediate = "p_" + helper6;
+      var intermediate2 = helper5[0][intermediate];
+      if (intermediate2 && hasOwnProperty(helper5[0], intermediate))
+        for (helper5 = 0; helper5 < intermediate2.length; helper5++) {
+          var intermediate3 = intermediate2[helper5];
+          if (helper6 !== helper6 && intermediate3.key !== intermediate3.key || helper6 === intermediate3.key)
+            return { id: intermediate, list: intermediate2, index: helper5, entry: intermediate3 };
         }
-      return {
-        id: l,
-        list: m,
-        index: -1,
-        entry: void 0
-      };
+      return { id: intermediate, list: intermediate2, index: -1, entry: void 0 };
     }
-    __name(d, "d");
-    function e(h) {
+    __name(helper3, "helper3");
+    function helper4(helper5) {
       this[0] = {};
-      this[1] = b();
+      this[1] = helper();
       this.size = 0;
-      if (h) {
-        h = w(h);
-        for (var k; !(k = h.next()).done; ) k = k.value, this.set(k[0], k[1]);
+      if (helper5) {
+        helper5 = getIterator(helper5);
+        for (var intermediate; !(intermediate = helper5.next()).done; ) {
+          intermediate = intermediate.value;
+          this.set(intermediate[0], intermediate[1]);
+        }
       }
     }
-    __name(e, "e");
+    __name(helper4, "helper4");
     if ((function() {
-      if (!a || typeof a != "function" || !a.prototype.entries || typeof Object.seal != "function")
+      if (!value || typeof value != "function" || !value.prototype.entries || typeof Object.seal != "function")
         return false;
       try {
-        var h = Object.seal({
-          x: 4
-        }), k = new a(w([
-          [h, "s"]
-        ]));
-        if (k.get(h) != "s" || k.size != 1 || k.get({
-          x: 4
-        }) || k.set({
-          x: 4
-        }, "t") != k || k.size != 2) return false;
-        var l = k.entries(), m = l.next();
-        if (m.done || m.value[0] != h || m.value[1] != "s") return false;
-        m = l.next();
-        return m.done || m.value[0].x != 4 || m.value[1] != "t" || !l.next().done ? false : true;
-      } catch (q) {
+        var intermediate = Object.seal({ x: 4 }), value2 = new value(getIterator([[intermediate, "s"]]));
+        if (value2.get(intermediate) != "s" || value2.size != 1 || value2.get({ x: 4 }) || value2.set({ x: 4 }, "t") != value2 || value2.size != 2)
+          return false;
+        var iterator = value2.entries(), iteration = iterator.next();
+        if (iteration.done || iteration.value[0] != intermediate || iteration.value[1] != "s")
+          return false;
+        iteration = iterator.next();
+        return iteration.done || iteration.value[0].x != 4 || iteration.value[1] != "t" || !iterator.next().done ? false : true;
+      } catch (caughtError) {
         return false;
       }
-    })()) return a;
-    var f = /* @__PURE__ */ new WeakMap();
-    e.prototype.set = function(h, k) {
-      h = h === 0 ? 0 : h;
-      var l = d(this, h);
-      l.list || (l.list = this[0][l.id] = []);
-      l.entry ? l.entry.value = k : (l.entry = {
+    })())
+      return value;
+    var weakMap = /* @__PURE__ */ new WeakMap();
+    helper4.prototype.set = function(value2, other) {
+      value2 = value2 === 0 ? 0 : value2;
+      var intermediate = helper3(this, value2);
+      intermediate.list || (intermediate.list = this[0][intermediate.id] = []);
+      intermediate.entry ? intermediate.entry.value = other : (intermediate.entry = {
         next: this[1],
         previous: this[1].previous,
         head: this[1],
-        key: h,
-        value: k
-      }, l.list.push(l.entry), this[1].previous.next = l.entry, this[1].previous = l.entry, this.size++);
+        key: value2,
+        value: other
+      }, intermediate.list.push(intermediate.entry), this[1].previous.next = intermediate.entry, this[1].previous = intermediate.entry, this.size++);
       return this;
     };
-    e.prototype.delete = function(h) {
-      h = d(this, h);
-      return h.entry && h.list ? (h.list.splice(h.index, 1), h.list.length || delete this[0][h.id], h.entry.previous.next = h.entry.next, h.entry.next.previous = h.entry.previous, h.entry.head = null, this.size--, true) : false;
+    helper4.prototype.delete = function(value2) {
+      value2 = helper3(this, value2);
+      return value2.entry && value2.list ? (value2.list.splice(value2.index, 1), value2.list.length || delete this[0][value2.id], value2.entry.previous.next = value2.entry.next, value2.entry.next.previous = value2.entry.previous, value2.entry.head = null, this.size--, true) : false;
     };
-    e.prototype.clear = function() {
+    helper4.prototype.clear = function() {
       this[0] = {};
-      this[1] = this[1].previous = b();
+      this[1] = this[1].previous = helper();
       this.size = 0;
     };
-    e.prototype.has = function(h) {
-      return !!d(this, h).entry;
+    helper4.prototype.has = function(value2) {
+      return !!helper3(this, value2).entry;
     };
-    e.prototype.get = function(h) {
-      return (h = d(this, h).entry) && h.value;
+    helper4.prototype.get = function(value2) {
+      return (value2 = helper3(this, value2).entry) && value2.value;
     };
-    e.prototype.entries = function() {
-      return c(this, function(h) {
-        return [h.key, h.value];
+    helper4.prototype.entries = function() {
+      return helper2(this, function(value2) {
+        return [value2.key, value2.value];
       });
     };
-    e.prototype.keys = function() {
-      return c(this, function(h) {
-        return h.key;
+    helper4.prototype.keys = function() {
+      return helper2(this, function(value2) {
+        return value2.key;
       });
     };
-    e.prototype.values = function() {
-      return c(
-        this,
-        function(h) {
-          return h.value;
-        }
-      );
+    helper4.prototype.values = function() {
+      return helper2(this, function(value2) {
+        return value2.value;
+      });
     };
-    e.prototype.forEach = function(h, k) {
-      for (var l = this.entries(), m; !(m = l.next()).done; ) m = m.value, h.call(k, m[1], m[0], this);
+    helper4.prototype.forEach = function(value2, other) {
+      for (var iterator = this.entries(), intermediate; !(intermediate = iterator.next()).done; ) {
+        intermediate = intermediate.value;
+        value2.call(other, intermediate[1], intermediate[0], this);
+      }
     };
-    e.prototype[Symbol.iterator] = e.prototype.entries;
-    var g = 0;
-    return e;
+    helper4.prototype[Symbol.iterator] = helper4.prototype.entries;
+    var index = 0;
+    return helper4;
   });
-  r("Set", function(a) {
-    function b(c) {
+  installPolyfill("Set", function(value) {
+    function helper(helper2) {
       this.j = /* @__PURE__ */ new Map();
-      if (c) {
-        c = w(c);
-        for (var d; !(d = c.next()).done; ) this.add(d.value);
+      if (helper2) {
+        helper2 = getIterator(helper2);
+        for (var intermediate; !(intermediate = helper2.next()).done; ) this.add(intermediate.value);
       }
       this.size = this.j.size;
     }
-    __name(b, "b");
+    __name(helper, "helper");
     if ((function() {
-      if (!a || typeof a != "function" || !a.prototype.entries || typeof Object.seal != "function")
+      if (!value || typeof value != "function" || !value.prototype.entries || typeof Object.seal != "function")
         return false;
       try {
-        var c = Object.seal({
-          x: 4
-        }), d = new a(w([c]));
-        if (!d.has(c) || d.size != 1 || d.add(c) != d || d.size != 1 || d.add({
-          x: 4
-        }) != d || d.size != 2) return false;
-        var e = d.entries(), f = e.next();
-        if (f.done || f.value[0] != c || f.value[1] != c) return false;
-        f = e.next();
-        return f.done || f.value[0] == c || f.value[0].x != 4 || f.value[1] != f.value[0] ? false : e.next().done;
-      } catch (g) {
+        var intermediate = Object.seal({ x: 4 }), value2 = new value(getIterator([intermediate]));
+        if (!value2.has(intermediate) || value2.size != 1 || value2.add(intermediate) != value2 || value2.size != 1 || value2.add({ x: 4 }) != value2 || value2.size != 2)
+          return false;
+        var iterator = value2.entries(), iteration = iterator.next();
+        if (iteration.done || iteration.value[0] != intermediate || iteration.value[1] != intermediate)
+          return false;
+        iteration = iterator.next();
+        return iteration.done || iteration.value[0] == intermediate || iteration.value[0].x != 4 || iteration.value[1] != iteration.value[0] ? false : iterator.next().done;
+      } catch (caughtError) {
         return false;
       }
-    })()) return a;
-    b.prototype.add = function(c) {
-      c = c === 0 ? 0 : c;
-      this.j.set(c, c);
+    })())
+      return value;
+    helper.prototype.add = function(value2) {
+      value2 = value2 === 0 ? 0 : value2;
+      this.j.set(value2, value2);
       this.size = this.j.size;
       return this;
     };
-    b.prototype.delete = function(c) {
-      c = this.j.delete(c);
+    helper.prototype.delete = function(value2) {
+      value2 = this.j.delete(value2);
       this.size = this.j.size;
-      return c;
+      return value2;
     };
-    b.prototype.clear = function() {
+    helper.prototype.clear = function() {
       this.j.clear();
       this.size = 0;
     };
-    b.prototype.has = function(c) {
-      return this.j.has(c);
+    helper.prototype.has = function(value2) {
+      return this.j.has(value2);
     };
-    b.prototype.entries = function() {
+    helper.prototype.entries = function() {
       return this.j.entries();
     };
-    b.prototype.values = function() {
+    helper.prototype.values = function() {
       return this.j.values();
     };
-    b.prototype.keys = b.prototype.values;
-    b.prototype[Symbol.iterator] = b.prototype.values;
-    b.prototype.forEach = function(c, d) {
-      var e = this;
-      this.j.forEach(function(f) {
-        return c.call(d, f, f, e);
+    helper.prototype.keys = helper.prototype.values;
+    helper.prototype[Symbol.iterator] = helper.prototype.values;
+    helper.prototype.forEach = function(value2, other) {
+      var instance = this;
+      this.j.forEach(function(value3) {
+        return value2.call(other, value3, value3, instance);
       });
     };
-    return b;
+    return helper;
   });
-  r("Object.values", function(a) {
-    return a ? a : function(b) {
-      var c = [], d;
-      for (d in b) Ca(b, d) && c.push(b[d]);
-      return c;
+  installPolyfill("Object.values", function(value) {
+    return value ? value : function(value2) {
+      var values = [], intermediate;
+      for (intermediate in value2)
+        hasOwnProperty(value2, intermediate) && values.push(value2[intermediate]);
+      return values;
     };
   });
-  r("Object.is", function(a) {
-    return a ? a : function(b, c) {
-      return b === c ? b !== 0 || 1 / b === 1 / c : b !== b && c !== c;
+  installPolyfill("Object.is", function(value) {
+    return value ? value : function(value2, other) {
+      return value2 === other ? value2 !== 0 || 1 / value2 === 1 / other : value2 !== value2 && other !== other;
     };
   });
-  r("Array.prototype.includes", function(a) {
-    return a ? a : function(b, c) {
-      var d = this;
-      d instanceof String && (d = String(d));
-      var e = d.length;
-      c = c || 0;
-      for (c < 0 && (c = Math.max(c + e, 0)); c < e; c++) {
-        var f = d[c];
-        if (f === b || Object.is(f, b)) return true;
+  installPolyfill("Array.prototype.includes", function(value) {
+    return value ? value : function(value2, index) {
+      var instance = this;
+      instance instanceof String && (instance = String(instance));
+      var length = instance.length;
+      index = index || 0;
+      for (index < 0 && (index = Math.max(index + length, 0)); index < length; index++) {
+        var intermediate = instance[index];
+        if (intermediate === value2 || Object.is(intermediate, value2)) return true;
       }
       return false;
     };
   });
-  function Ea(a, b, c) {
-    if (a == null) throw new TypeError("The 'this' value for String.prototype." + c + " must not be null or undefined");
-    if (b instanceof RegExp) throw new TypeError("First argument to String.prototype." + c + " must not be a regular expression");
-    return a + "";
+  function checkStringSearchArguments(receiver, searchValue, methodName) {
+    if (receiver == null)
+      throw new TypeError(
+        "The 'this' value for String.prototype." + methodName + " must not be null or undefined"
+      );
+    if (searchValue instanceof RegExp)
+      throw new TypeError(
+        "First argument to String.prototype." + methodName + " must not be a regular expression"
+      );
+    return receiver + "";
   }
-  __name(Ea, "Ea");
-  r("String.prototype.includes", function(a) {
-    return a ? a : function(b, c) {
-      return Ea(this, b, "includes").indexOf(b, c || 0) !== -1;
+  __name(checkStringSearchArguments, "checkStringSearchArguments");
+  installPolyfill("String.prototype.includes", function(value) {
+    return value ? value : function(value2, other) {
+      return checkStringSearchArguments(this, value2, "includes").indexOf(value2, other || 0) !== -1;
     };
   });
-  r("Array.from", function(a) {
-    return a ? a : function(b, c, d) {
-      c = c != null ? c : aa();
-      var e = [], f = typeof Symbol != "undefined" && Symbol.iterator && b[Symbol.iterator];
-      if (typeof f == "function") {
-        b = f.call(b);
-        for (var g = 0; !(f = b.next()).done; ) e.push(c.call(d, f.value, g++));
+  installPolyfill("Array.from", function(value) {
+    return value ? value : function(iterator, other, options) {
+      other = other != null ? other : createIdentityFunction();
+      var values = [], intermediate = typeof Symbol != "undefined" && Symbol.iterator && iterator[Symbol.iterator];
+      if (typeof intermediate == "function") {
+        iterator = intermediate.call(iterator);
+        for (var index = 0; !(intermediate = iterator.next()).done; )
+          values.push(other.call(options, intermediate.value, index++));
       } else
-        for (f = b.length, g = 0; g < f; g++) e.push(c.call(d, b[g], g));
-      return e;
+        for (intermediate = iterator.length, index = 0; index < intermediate; index++)
+          values.push(other.call(options, iterator[index], index));
+      return values;
     };
   });
-  r("Object.entries", function(a) {
-    return a ? a : function(b) {
-      var c = [], d;
-      for (d in b) Ca(b, d) && c.push([d, b[d]]);
-      return c;
+  installPolyfill("Object.entries", function(value) {
+    return value ? value : function(value2) {
+      var values = [], intermediate;
+      for (intermediate in value2)
+        hasOwnProperty(value2, intermediate) && values.push([intermediate, value2[intermediate]]);
+      return values;
     };
   });
-  r("Number.isFinite", function(a) {
-    return a ? a : function(b) {
-      return typeof b !== "number" ? false : !isNaN(b) && b !== Infinity && b !== -Infinity;
+  installPolyfill("Number.isFinite", function(value) {
+    return value ? value : function(value2) {
+      return typeof value2 !== "number" ? false : !isNaN(value2) && value2 !== Infinity && value2 !== -Infinity;
     };
   });
-  r("Number.MAX_SAFE_INTEGER", ca(9007199254740991));
-  r("Number.MIN_SAFE_INTEGER", ca(-9007199254740991));
-  r("Number.isInteger", function(a) {
-    return a ? a : function(b) {
-      return Number.isFinite(b) ? b === Math.floor(b) : false;
+  installPolyfill("Number.MAX_SAFE_INTEGER", createConstantFunction(9007199254740991));
+  installPolyfill("Number.MIN_SAFE_INTEGER", createConstantFunction(-9007199254740991));
+  installPolyfill("Number.isInteger", function(value) {
+    return value ? value : function(value2) {
+      return Number.isFinite(value2) ? value2 === Math.floor(value2) : false;
     };
   });
-  r("Number.isSafeInteger", function(a) {
-    return a ? a : function(b) {
-      return Number.isInteger(b) && Math.abs(b) <= Number.MAX_SAFE_INTEGER;
+  installPolyfill("Number.isSafeInteger", function(value) {
+    return value ? value : function(value2) {
+      return Number.isInteger(value2) && Math.abs(value2) <= Number.MAX_SAFE_INTEGER;
     };
   });
-  r("String.prototype.startsWith", function(a) {
-    return a ? a : function(b, c) {
-      var d = Ea(this, b, "startsWith");
-      b += "";
-      var e = d.length, f = b.length;
-      c = Math.max(0, Math.min(c | 0, d.length));
-      for (var g = 0; g < f && c < e; )
-        if (d[c++] != b[g++]) return false;
-      return g >= f;
+  installPolyfill("String.prototype.startsWith", function(value) {
+    return value ? value : function(value2, index) {
+      var intermediate = checkStringSearchArguments(this, value2, "startsWith");
+      value2 += "";
+      var length = intermediate.length, length2 = value2.length;
+      index = Math.max(0, Math.min(index | 0, intermediate.length));
+      for (var index2 = 0; index2 < length2 && index < length; )
+        if (intermediate[index++] != value2[index2++]) return false;
+      return index2 >= length2;
     };
   });
-  function Fa(a, b) {
-    a instanceof String && (a += "");
-    var c = 0, d = false, e = {
+  function createArrayEntryIterator(arrayLike, mapEntry) {
+    arrayLike instanceof String && (arrayLike += "");
+    var index = 0, intermediate = false, record = {
       next: /* @__PURE__ */ __name(function() {
-        if (!d && c < a.length) {
-          var f = c++;
-          return {
-            value: b(f, a[f]),
-            done: false
-          };
+        if (!intermediate && index < arrayLike.length) {
+          var intermediate2 = index++;
+          return { value: mapEntry(intermediate2, arrayLike[intermediate2]), done: false };
         }
-        d = true;
-        return {
-          done: true,
-          value: void 0
-        };
+        intermediate = true;
+        return { done: true, value: void 0 };
       }, "next")
     };
-    e[Symbol.iterator] = function() {
-      return e;
+    record[Symbol.iterator] = function() {
+      return record;
     };
-    return e;
+    return record;
   }
-  __name(Fa, "Fa");
-  r("Array.prototype.entries", function(a) {
-    return a ? a : function() {
-      return Fa(this, function(b, c) {
-        return [b, c];
+  __name(createArrayEntryIterator, "createArrayEntryIterator");
+  installPolyfill("Array.prototype.entries", function(value) {
+    return value ? value : function() {
+      return createArrayEntryIterator(this, function(value2, other) {
+        return [value2, other];
       });
     };
   });
-  r("Math.trunc", function(a) {
-    return a ? a : function(b) {
-      b = Number(b);
-      if (isNaN(b) || b === Infinity || b === -Infinity || b === 0) return b;
-      var c = Math.floor(Math.abs(b));
-      return b < 0 ? -c : c;
+  installPolyfill("Math.trunc", function(value) {
+    return value ? value : function(value2) {
+      value2 = Number(value2);
+      if (isNaN(value2) || value2 === Infinity || value2 === -Infinity || value2 === 0)
+        return value2;
+      var intermediate = Math.floor(Math.abs(value2));
+      return value2 < 0 ? -intermediate : intermediate;
     };
   });
-  r("Number.isNaN", function(a) {
-    return a ? a : function(b) {
-      return typeof b === "number" && isNaN(b);
+  installPolyfill("Number.isNaN", function(value) {
+    return value ? value : function(value2) {
+      return typeof value2 === "number" && isNaN(value2);
     };
   });
-  r("Array.prototype.keys", function(a) {
-    return a ? a : function() {
-      return Fa(this, aa());
+  installPolyfill("Array.prototype.keys", function(value) {
+    return value ? value : function() {
+      return createArrayEntryIterator(this, createIdentityFunction());
     };
   });
-  r("Array.prototype.values", function(a) {
-    return a ? a : function() {
-      return Fa(this, function(b, c) {
-        return c;
+  installPolyfill("Array.prototype.values", function(value) {
+    return value ? value : function() {
+      return createArrayEntryIterator(this, function(value2, other) {
+        return other;
       });
     };
   });
-  r("Math.imul", function(a) {
-    return a ? a : function(b, c) {
-      b = Number(b);
-      c = Number(c);
-      var d = b & 65535, e = c & 65535;
-      return d * e + ((b >>> 16 & 65535) * e + d * (c >>> 16 & 65535) << 16 >>> 0) | 0;
+  installPolyfill("Math.imul", function(value) {
+    return value ? value : function(value2, other) {
+      value2 = Number(value2);
+      other = Number(other);
+      var intermediate = value2 & 65535, intermediate2 = other & 65535;
+      return intermediate * intermediate2 + ((value2 >>> 16 & 65535) * intermediate2 + intermediate * (other >>> 16 & 65535) << 16 >>> 0) | 0;
     };
   });
-  r("String.prototype.repeat", function(a) {
-    return a ? a : function(b) {
-      var c = Ea(this, null, "repeat");
-      if (b < 0 || b > 1342177279) throw new RangeError("Invalid count value");
-      b |= 0;
-      for (var d = ""; b; )
-        if (b & 1 && (d += c), b >>>= 1) c += c;
-      return d;
+  installPolyfill("String.prototype.repeat", function(value) {
+    return value ? value : function(value2) {
+      var intermediate = checkStringSearchArguments(this, null, "repeat");
+      if (value2 < 0 || value2 > 1342177279) throw new RangeError("Invalid count value");
+      value2 |= 0;
+      for (var intermediate2 = ""; value2; )
+        if (value2 & 1 && (intermediate2 += intermediate), value2 >>>= 1)
+          intermediate += intermediate;
+      return intermediate2;
     };
   });
-  r("String.prototype.matchAll", function(a) {
-    return a ? a : function(b) {
-      if (b instanceof RegExp && !b.global) throw new TypeError(
-        "RegExp passed into String.prototype.matchAll() must have global tag."
-      );
-      var c = new RegExp(b, b instanceof RegExp ? void 0 : "g");
-      b instanceof RegExp && (c.lastIndex = b.lastIndex);
-      var d = this, e = false, f = {
+  installPolyfill("String.prototype.matchAll", function(value) {
+    return value ? value : function(value2) {
+      if (value2 instanceof RegExp && !value2.global)
+        throw new TypeError(
+          "RegExp passed into String.prototype.matchAll() must have global tag."
+        );
+      var regExp = new RegExp(value2, value2 instanceof RegExp ? void 0 : "g");
+      value2 instanceof RegExp && (regExp.lastIndex = value2.lastIndex);
+      var instance = this, intermediate = false, record = {
         next: /* @__PURE__ */ __name(function() {
-          if (e) return {
-            value: void 0,
-            done: true
-          };
-          var g = c.exec(d);
-          if (!g) return e = true, {
-            value: void 0,
-            done: true
-          };
-          g[0] === "" && (c.lastIndex += 1);
-          return {
-            value: g,
-            done: false
-          };
+          if (intermediate) return { value: void 0, done: true };
+          var intermediate2 = regExp.exec(instance);
+          if (!intermediate2) return intermediate = true, { value: void 0, done: true };
+          intermediate2[0] === "" && (regExp.lastIndex += 1);
+          return { value: intermediate2, done: false };
         }, "next")
       };
-      f[Symbol.iterator] = function() {
-        return f;
+      record[Symbol.iterator] = function() {
+        return record;
       };
-      return f;
+      return record;
     };
   });
-  var Ga = Ga || {}, z = self;
-  function Ha(a, b) {
-    var c = Ia("CLOSURE_FLAGS");
-    a = c && c[a];
-    return a != null ? a : b;
+  var closureNamespace = closureNamespace || {}, runtimeGlobal = self;
+  function readClosureFlag(flagId, fallback) {
+    var intermediate = lookupGlobalPath("CLOSURE_FLAGS");
+    flagId = intermediate && intermediate[flagId];
+    return flagId != null ? flagId : fallback;
   }
-  __name(Ha, "Ha");
-  function Ia(a) {
-    a = a.split(".");
-    for (var b = z, c = 0; c < a.length; c++)
-      if (b = b[a[c]], b == null) return null;
-    return b;
+  __name(readClosureFlag, "readClosureFlag");
+  function lookupGlobalPath(path) {
+    path = path.split(".");
+    for (var runtimeGlobal2 = runtimeGlobal, index = 0; index < path.length; index++)
+      if (runtimeGlobal2 = runtimeGlobal2[path[index]], runtimeGlobal2 == null) return null;
+    return runtimeGlobal2;
   }
-  __name(Ia, "Ia");
-  function Ja(a) {
-    var b = typeof a;
-    return b != "object" ? b : a ? Array.isArray(a) ? "array" : b : "null";
+  __name(lookupGlobalPath, "lookupGlobalPath");
+  function getValueType(value) {
+    var intermediate = typeof value;
+    return intermediate != "object" ? intermediate : value ? Array.isArray(value) ? "array" : intermediate : "null";
   }
-  __name(Ja, "Ja");
-  function Ka(a) {
-    var b = Ja(a);
-    return b == "array" || b == "object" && typeof a.length == "number";
+  __name(getValueType, "getValueType");
+  function isArrayLike(value) {
+    var valueType = getValueType(value);
+    return valueType == "array" || valueType == "object" && typeof value.length == "number";
   }
-  __name(Ka, "Ka");
-  function La(a) {
-    var b = typeof a;
-    return b == "object" && a != null || b == "function";
+  __name(isArrayLike, "isArrayLike");
+  function isObjectLike(value) {
+    var intermediate = typeof value;
+    return intermediate == "object" && value != null || intermediate == "function";
   }
-  __name(La, "La");
-  var Na = "closure_uid_" + (Math.random() * 1e9 >>> 0), Oa = 0;
-  function Pa(a, b, c) {
-    return a.call.apply(a.bind, arguments);
+  __name(isObjectLike, "isObjectLike");
+  var objectUidKey = "closure_uid_" + (Math.random() * 1e9 >>> 0), nextObjectUid = 0;
+  function nativeBind(callback, receiver, boundArguments) {
+    return callback.call.apply(callback.bind, arguments);
   }
-  __name(Pa, "Pa");
-  function Qa(a, b, c) {
-    if (!a) throw Error();
+  __name(nativeBind, "nativeBind");
+  function fallbackBind(callback, receiver, boundArguments) {
+    if (!callback) throw Error();
     if (arguments.length > 2) {
-      var d = Array.prototype.slice.call(arguments, 2);
+      var intermediate = Array.prototype.slice.call(arguments, 2);
       return function() {
-        var e = Array.prototype.slice.call(arguments);
-        Array.prototype.unshift.apply(e, d);
-        return a.apply(b, e);
+        var intermediate2 = Array.prototype.slice.call(arguments);
+        Array.prototype.unshift.apply(intermediate2, intermediate);
+        return callback.apply(receiver, intermediate2);
       };
     }
     return function() {
-      return a.apply(b, arguments);
+      return callback.apply(receiver, arguments);
     };
   }
-  __name(Qa, "Qa");
-  function A(a, b, c) {
-    A = Function.prototype.bind && Function.prototype.bind.toString().indexOf("native code") != -1 ? Pa : Qa;
-    return A.apply(null, arguments);
+  __name(fallbackBind, "fallbackBind");
+  function bindFunction(callback, receiver, boundArguments) {
+    bindFunction = Function.prototype.bind && Function.prototype.bind.toString().indexOf("native code") != -1 ? nativeBind : fallbackBind;
+    return bindFunction.apply(null, arguments);
   }
-  __name(A, "A");
-  function Ra(a, b) {
-    var c = Array.prototype.slice.call(arguments, 1);
+  __name(bindFunction, "bindFunction");
+  function partialApply(callback, boundArguments) {
+    var intermediate = Array.prototype.slice.call(arguments, 1);
     return function() {
-      var d = c.slice();
-      d.push.apply(d, arguments);
-      return a.apply(this, d);
+      var values = intermediate.slice();
+      values.push.apply(values, arguments);
+      return callback.apply(this, values);
     };
   }
-  __name(Ra, "Ra");
-  function Sa(a) {
-    (0, eval)(a);
+  __name(partialApply, "partialApply");
+  function evaluateGlobally(source) {
+    (0, eval)(source);
   }
-  __name(Sa, "Sa");
-  function Ta(a) {
-    return a;
+  __name(evaluateGlobally, "evaluateGlobally");
+  function identity(value) {
+    return value;
   }
-  __name(Ta, "Ta");
-  function B(a, b) {
-    function c() {
+  __name(identity, "identity");
+  function inheritClosureClass(subclass, superclass) {
+    function helper() {
     }
-    __name(c, "c");
-    c.prototype = b.prototype;
-    a.W = b.prototype;
-    a.prototype = new c();
-    a.prototype.constructor = a;
-    a.Fc = function(d, e, f) {
-      for (var g = Array(arguments.length - 2), h = 2; h < arguments.length; h++) g[h - 2] = arguments[h];
-      return b.prototype[e].apply(d, g);
+    __name(helper, "helper");
+    helper.prototype = superclass.prototype;
+    subclass.W = superclass.prototype;
+    subclass.prototype = new helper();
+    subclass.prototype.constructor = subclass;
+    subclass.Fc = function(value, other, options) {
+      for (var intermediate = Array(arguments.length - 2), index = 2; index < arguments.length; index++)
+        intermediate[index - 2] = arguments[index];
+      return superclass.prototype[other].apply(value, intermediate);
     };
   }
-  __name(B, "B");
-  ;
-  function Ua(a, b) {
-    if (Error.captureStackTrace) Error.captureStackTrace(this, Ua);
+  __name(inheritClosureClass, "inheritClosureClass");
+  function ClosureError(message, cause) {
+    if (Error.captureStackTrace) Error.captureStackTrace(this, ClosureError);
     else {
-      var c = Error().stack;
-      c && (this.stack = c);
+      var stack = Error().stack;
+      stack && (this.stack = stack);
     }
-    a && (this.message = String(a));
-    b !== void 0 && (this.cause = b);
+    message && (this.message = String(message));
+    cause !== void 0 && (this.cause = cause);
     this.j = true;
   }
-  __name(Ua, "Ua");
-  B(Ua, Error);
-  Ua.prototype.name = "CustomError";
-  function Va(a) {
-    z.setTimeout(function() {
-      throw a;
+  __name(ClosureError, "ClosureError");
+  inheritClosureClass(ClosureError, Error);
+  ClosureError.prototype.name = "CustomError";
+  function throwAsynchronously(error) {
+    runtimeGlobal.setTimeout(function() {
+      throw error;
     }, 0);
   }
-  __name(Va, "Va");
-  ;
-  var Wa = String.prototype.trim ? function(a) {
-    return a.trim();
-  } : function(a) {
-    return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(a)[1];
+  __name(throwAsynchronously, "throwAsynchronously");
+  var trimString = String.prototype.trim ? function(value) {
+    return value.trim();
+  } : function(value) {
+    return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(value)[1];
   };
-  var Xa = Ha(610401301, false), Ya = Ha(748402147, true);
-  var Za, $a = z.navigator;
-  Za = $a ? $a.userAgentData || null : null;
-  function ab(a) {
-    if (!Xa || !Za) return false;
-    for (var b = 0; b < Za.brands.length; b++) {
-      var c = Za.brands[b].brand;
-      if (c && c.indexOf(a) != -1) return true;
+  var useUserAgentClientHints = readClosureFlag(610401301, false), strictArrayValidation = readClosureFlag(748402147, true);
+  var userAgentData, runtimeNavigator = runtimeGlobal.navigator;
+  userAgentData = runtimeNavigator ? runtimeNavigator.userAgentData || null : null;
+  function hasUserAgentBrand(brand) {
+    if (!useUserAgentClientHints || !userAgentData) return false;
+    for (var index = 0; index < userAgentData.brands.length; index++) {
+      var brand2 = userAgentData.brands[index].brand;
+      if (brand2 && brand2.indexOf(brand) != -1) return true;
     }
     return false;
   }
-  __name(ab, "ab");
-  function C(a) {
-    var b;
+  __name(hasUserAgentBrand, "hasUserAgentBrand");
+  function userAgentContains(token) {
+    var intermediate;
     a: {
-      if (b = z.navigator) {
-        if (b = b.userAgent) break a;
+      if (intermediate = runtimeGlobal.navigator) {
+        if (intermediate = intermediate.userAgent) break a;
       }
-      b = "";
+      intermediate = "";
     }
-    return b.indexOf(a) != -1;
+    return intermediate.indexOf(token) != -1;
   }
-  __name(C, "C");
-  ;
-  function bb() {
-    return Xa ? !!Za && Za.brands.length > 0 : false;
+  __name(userAgentContains, "userAgentContains");
+  function hasUserAgentBrands() {
+    return useUserAgentClientHints ? !!userAgentData && userAgentData.brands.length > 0 : false;
   }
-  __name(bb, "bb");
-  ;
-  function cb(a, b) {
-    return Array.prototype.indexOf.call(a, b, void 0);
+  __name(hasUserAgentBrands, "hasUserAgentBrands");
+  function arrayIndexOf(values, value) {
+    return Array.prototype.indexOf.call(values, value, void 0);
   }
-  __name(cb, "cb");
-  function db(a, b) {
-    return Array.prototype.some.call(a, b, void 0);
+  __name(arrayIndexOf, "arrayIndexOf");
+  function arraySome(values, predicate) {
+    return Array.prototype.some.call(values, predicate, void 0);
   }
-  __name(db, "db");
-  function eb(a, b) {
-    b = cb(a, b);
-    var c;
-    (c = b >= 0) && Array.prototype.splice.call(a, b, 1);
-    return c;
+  __name(arraySome, "arraySome");
+  function removeArrayValue(values, value) {
+    value = arrayIndexOf(values, value);
+    var intermediate;
+    (intermediate = value >= 0) && Array.prototype.splice.call(values, value, 1);
+    return intermediate;
   }
-  __name(eb, "eb");
-  function fb(a, b) {
-    for (var c = 1; c < arguments.length; c++) {
-      var d = arguments[c];
-      if (Ka(d)) {
-        var e = a.length || 0, f = d.length || 0;
-        a.length = e + f;
-        for (var g = 0; g < f; g++) a[e + g] = d[g];
-      } else a.push(d);
-    }
-  }
-  __name(fb, "fb");
-  ;
-  var gb = C("Firefox") || C("FxiOS"), hb = C("Safari") && !((bb() ? ab("Chromium") : (C("Chrome") || C("CriOS")) && (bb() || !C("Edge")) || C(
-    "Silk"
-  )) || (bb() ? 0 : C("Coast")) || (bb() ? 0 : C("Opera")) || (bb() ? 0 : C("Edge")) || (bb() ? ab(
-    "Microsoft Edge"
-  ) : C("Edg/")) || (bb() ? ab("Opera") : C("OPR")) || C("Firefox") || C("FxiOS") || C(
-    "Silk"
-  ) || C("Android")) && !(C("iPhone") && !C("iPod") && !C("iPad") || C("iPad") || C("iPod"));
-  var ib = {}, jb = null;
-  var kb = typeof Uint8Array !== "undefined", lb = typeof btoa === "function", mb = {}, nb = typeof structuredClone != "undefined";
-  function ob(a, b) {
-    if (b !== mb) throw Error("illegal external caller");
-    this.j = a;
-    if (a != null && a.length === 0) throw Error("ByteString should be constructed with non-empty values");
-  }
-  __name(ob, "ob");
-  function pb() {
-    return qb || (qb = new ob(null, mb));
-  }
-  __name(pb, "pb");
-  var qb;
-  function rb(a, b, c) {
-    a.__closure__error__context__984382 || (a.__closure__error__context__984382 = {});
-    a.__closure__error__context__984382[b] = c;
-  }
-  __name(rb, "rb");
-  function sb(a) {
-    return a.__closure__error__context__984382 || {};
-  }
-  __name(sb, "sb");
-  ;
-  var tb = void 0;
-  function ub(a, b) {
-    if (a != null) {
-      var c;
-      var d = (c = tb) != null ? c : tb = {};
-      c = d[a] || 0;
-      c >= b || (d[a] = c + 1, a = Error(), rb(a, "severity", "incident"), Va(a));
+  __name(removeArrayValue, "removeArrayValue");
+  function extendArray(target, values) {
+    for (var index = 1; index < arguments.length; index++) {
+      var intermediate = arguments[index];
+      if (isArrayLike(intermediate)) {
+        var intermediate2 = target.length || 0, intermediate3 = intermediate.length || 0;
+        target.length = intermediate2 + intermediate3;
+        for (var index2 = 0; index2 < intermediate3; index2++)
+          target[intermediate2 + index2] = intermediate[index2];
+      } else target.push(intermediate);
     }
   }
-  __name(ub, "ub");
-  ;
-  function vb() {
+  __name(extendArray, "extendArray");
+  var isFirefox = userAgentContains("Firefox") || userAgentContains("FxiOS"), isSafariLike = userAgentContains("Safari") && !((hasUserAgentBrands() ? hasUserAgentBrand("Chromium") : (userAgentContains("Chrome") || userAgentContains("CriOS")) && (hasUserAgentBrands() || !userAgentContains("Edge")) || userAgentContains("Silk")) || (hasUserAgentBrands() ? 0 : userAgentContains("Coast")) || (hasUserAgentBrands() ? 0 : userAgentContains("Opera")) || (hasUserAgentBrands() ? 0 : userAgentContains("Edge")) || (hasUserAgentBrands() ? hasUserAgentBrand("Microsoft Edge") : userAgentContains("Edg/")) || (hasUserAgentBrands() ? hasUserAgentBrand("Opera") : userAgentContains("OPR")) || userAgentContains("Firefox") || userAgentContains("FxiOS") || userAgentContains("Silk") || userAgentContains("Android")) && !(userAgentContains("iPhone") && !userAgentContains("iPod") && !userAgentContains("iPad") || userAgentContains("iPad") || userAgentContains("iPod"));
+  var base64DecodeTable = {}, base64EncodeTables = null;
+  var supportsUint8Array = typeof Uint8Array !== "undefined", supportsBtoa = typeof btoa === "function", byteStringConstructionToken = {}, supportsStructuredClone = typeof structuredClone != "undefined";
+  function ByteString(value, constructionToken) {
+    if (constructionToken !== byteStringConstructionToken) throw Error("illegal external caller");
+    this.j = value;
+    if (value != null && value.length === 0)
+      throw Error("ByteString should be constructed with non-empty values");
+  }
+  __name(ByteString, "ByteString");
+  function emptyByteString() {
+    return emptyByteStringInstance || (emptyByteStringInstance = new ByteString(null, byteStringConstructionToken));
+  }
+  __name(emptyByteString, "emptyByteString");
+  var emptyByteStringInstance;
+  function attachErrorContext(error, key, value) {
+    error.__closure__error__context__984382 || (error.__closure__error__context__984382 = {});
+    error.__closure__error__context__984382[key] = value;
+  }
+  __name(attachErrorContext, "attachErrorContext");
+  function readErrorContext(error) {
+    return error.__closure__error__context__984382 || {};
+  }
+  __name(readErrorContext, "readErrorContext");
+  var incidentCounts = void 0;
+  function reportLimitedIncident(incidentKey, maximum) {
+    if (incidentKey != null) {
+      var intermediate;
+      var intermediate2 = (intermediate = incidentCounts) != null ? intermediate : incidentCounts = {};
+      intermediate = intermediate2[incidentKey] || 0;
+      intermediate >= maximum || (intermediate2[incidentKey] = intermediate + 1, incidentKey = Error(), attachErrorContext(incidentKey, "severity", "incident"), throwAsynchronously(incidentKey));
+    }
+  }
+  __name(reportLimitedIncident, "reportLimitedIncident");
+  function supportsBigInt() {
     return typeof BigInt === "function";
   }
-  __name(vb, "vb");
-  ;
-  var wb = typeof Symbol === "function" && typeof /* @__PURE__ */ Symbol() === "symbol";
-  function xb(a, b, c) {
-    return typeof Symbol === "function" && typeof /* @__PURE__ */ Symbol() === "symbol" ? (c === void 0 ? 0 : c) && Symbol.for && a ? Symbol.for(a) : a != null ? Symbol(a) : /* @__PURE__ */ Symbol() : b;
+  __name(supportsBigInt, "supportsBigInt");
+  var supportsNativeSymbols = typeof Symbol === "function" && typeof /* @__PURE__ */ Symbol() === "symbol";
+  function createInternalSymbol(description, fallback, useRegistry) {
+    return typeof Symbol === "function" && typeof /* @__PURE__ */ Symbol() === "symbol" ? (useRegistry === void 0 ? 0 : useRegistry) && Symbol.for && description ? Symbol.for(description) : description != null ? Symbol(description) : /* @__PURE__ */ Symbol() : fallback;
   }
-  __name(xb, "xb");
-  var yb = xb("jas", void 0, true), zb = xb(void 0, "0di"), Ab = xb(void 0, "1oa"), Bb = xb(void 0, /* @__PURE__ */ Symbol()), Cb = xb(void 0, "0ubs"), Db = xb(void 0, "0actk"), Eb = xb("m_m", "Ic", true);
-  Math.max.apply(Math, pa(Object.values({
-    fc: 1,
-    cc: 2,
-    Zb: 4,
-    rc: 8,
-    Bc: 16,
-    mc: 32,
-    Lb: 64,
-    Xb: 128,
-    Vb: 256,
-    yc: 512,
-    Wb: 1024,
-    Yb: 2048,
-    nc: 4096,
-    hc: 8192
-  })));
-  var Fb = {
-    qb: {
-      value: 0,
-      configurable: true,
-      writable: true,
-      enumerable: false
-    }
-  }, Gb = Object.defineProperties, D = wb ? yb : "qb", Hb, Ib = [];
-  Jb(Ib, 7);
-  Hb = Object.freeze(Ib);
-  function Kb(a, b) {
-    wb || D in a || Gb(a, Fb);
-    a[D] |= b;
+  __name(createInternalSymbol, "createInternalSymbol");
+  var arrayFlagsSymbol = createInternalSymbol("jas", void 0, true), defaultMessageSymbol = createInternalSymbol(void 0, "0di"), oneofCasesSymbol = createInternalSymbol(void 0, "1oa"), unknownFieldsSymbol = createInternalSymbol(void 0, /* @__PURE__ */ Symbol()), unknownFieldIncidentSymbol = createInternalSymbol(void 0, "0ubs"), arrayConstructorIncidentSymbol = createInternalSymbol(void 0, "0actk"), messageMarkerSymbol = createInternalSymbol("m_m", "Ic", true);
+  Math.max.apply(
+    Math,
+    iterableToArray(
+      Object.values({
+        fc: 1,
+        cc: 2,
+        Zb: 4,
+        rc: 8,
+        Bc: 16,
+        mc: 32,
+        Lb: 64,
+        Xb: 128,
+        Vb: 256,
+        yc: 512,
+        Wb: 1024,
+        Yb: 2048,
+        nc: 4096,
+        hc: 8192
+      })
+    )
+  );
+  var arrayFlagsDescriptor = {
+    qb: { value: 0, configurable: true, writable: true, enumerable: false }
+  }, defineProperties = Object.defineProperties, arrayFlagsKey = supportsNativeSymbols ? arrayFlagsSymbol : "qb", emptyRepeatedField, emptyRepeatedFieldStorage = [];
+  setArrayFlags(emptyRepeatedFieldStorage, 7);
+  emptyRepeatedField = Object.freeze(emptyRepeatedFieldStorage);
+  function addArrayFlags(array, flags) {
+    supportsNativeSymbols || arrayFlagsKey in array || defineProperties(array, arrayFlagsDescriptor);
+    array[arrayFlagsKey] |= flags;
   }
-  __name(Kb, "Kb");
-  function Jb(a, b) {
-    wb || D in a || Gb(a, Fb);
-    a[D] = b;
+  __name(addArrayFlags, "addArrayFlags");
+  function setArrayFlags(array, flags) {
+    supportsNativeSymbols || arrayFlagsKey in array || defineProperties(array, arrayFlagsDescriptor);
+    array[arrayFlagsKey] = flags;
   }
-  __name(Jb, "Jb");
-  function Lb(a) {
-    Kb(a, 34);
-    return a;
+  __name(setArrayFlags, "setArrayFlags");
+  function markImmutableMessageArray(array) {
+    addArrayFlags(array, 34);
+    return array;
   }
-  __name(Lb, "Lb");
-  ;
-  var Mb = {};
-  function Nb(a, b) {
-    return b === void 0 ? a.j !== Ob && !!(2 & (a.B[D] | 0)) : !!(2 & b) && a.j !== Ob;
+  __name(markImmutableMessageArray, "markImmutableMessageArray");
+  var messageMarkerToken = {};
+  function isImmutableMessage(message, flags) {
+    return flags === void 0 ? message.j !== copyOnWriteToken && !!(2 & (message.B[arrayFlagsKey] | 0)) : !!(2 & flags) && message.j !== copyOnWriteToken;
   }
-  __name(Nb, "Nb");
-  var Ob = {}, Pb = Object.freeze({}), Qb = Object.freeze({});
-  function Rb(a) {
-    a.Hc = true;
-    return a;
+  __name(isImmutableMessage, "isImmutableMessage");
+  var copyOnWriteToken = {}, repeatedFieldModeToken = Object.freeze({}), nestedFieldModeToken = Object.freeze({});
+  function markTypePredicate(predicate) {
+    predicate.Hc = true;
+    return predicate;
   }
-  __name(Rb, "Rb");
-  ;
-  var Sb = Rb(function(a) {
-    return typeof a === "number";
-  }), Tb = Rb(function(a) {
-    return typeof a === "string";
-  }), Ub = Rb(function(a) {
-    return typeof a === "boolean";
-  }), Vb = Rb(function(a) {
-    return typeof a === "bigint";
+  __name(markTypePredicate, "markTypePredicate");
+  var isNumberValue = markTypePredicate(function(value) {
+    return typeof value === "number";
+  }), isStringValue = markTypePredicate(function(value) {
+    return typeof value === "string";
+  }), isBooleanValue = markTypePredicate(function(value) {
+    return typeof value === "boolean";
+  }), isBigIntValue = markTypePredicate(function(value) {
+    return typeof value === "bigint";
   });
-  var Wb = typeof z.BigInt === "function" && typeof z.BigInt(0) === "bigint";
-  function Xb(a) {
-    var b = a;
-    if (Tb(b)) {
-      if (!/^\s*(?:-?[1-9]\d*|0)?\s*$/.test(b)) throw Error(String(b));
-    } else if (Sb(b) && !Number.isSafeInteger(b)) throw Error(String(b));
-    return Wb ? BigInt(a) : a = Ub(a) ? a ? "1" : "0" : Tb(a) ? a.trim() || "0" : String(a);
+  var supportsNativeBigIntValue = typeof runtimeGlobal.BigInt === "function" && typeof runtimeGlobal.BigInt(0) === "bigint";
+  function normalizeBigInt(value) {
+    var value2 = value;
+    if (isStringValue(value2)) {
+      if (!/^\s*(?:-?[1-9]\d*|0)?\s*$/.test(value2)) throw Error(String(value2));
+    } else if (isNumberValue(value2) && !Number.isSafeInteger(value2)) throw Error(String(value2));
+    return supportsNativeBigIntValue ? BigInt(value) : value = isBooleanValue(value) ? value ? "1" : "0" : isStringValue(value) ? value.trim() || "0" : String(value);
   }
-  __name(Xb, "Xb");
-  var Yb = Rb(function(a) {
-    return Wb ? Vb(a) : Tb(a) && /^(?:-?[1-9]\d*|0)$/.test(a);
-  }), dc = Rb(function(a) {
-    return Wb ? a >= Zb && a <= $b : a[0] === "-" ? ac(a, bc) : ac(a, cc);
-  }), bc = Number.MIN_SAFE_INTEGER.toString(), Zb = Wb ? BigInt(Number.MIN_SAFE_INTEGER) : void 0, cc = Number.MAX_SAFE_INTEGER.toString(), $b = Wb ? BigInt(Number.MAX_SAFE_INTEGER) : void 0;
-  function ac(a, b) {
-    if (a.length > b.length) return false;
-    if (a.length < b.length || a === b) return true;
-    for (var c = 0; c < a.length; c++) {
-      var d = a[c], e = b[c];
-      if (d > e) return false;
-      if (d < e) return true;
+  __name(normalizeBigInt, "normalizeBigInt");
+  var isInt64Representation = markTypePredicate(function(value) {
+    return supportsNativeBigIntValue ? isBigIntValue(value) : isStringValue(value) && /^(?:-?[1-9]\d*|0)$/.test(value);
+  }), isSafeInt64Representation = markTypePredicate(function(value) {
+    return supportsNativeBigIntValue ? value >= minimumSafeIntegerBigInt && value <= maximumSafeIntegerBigInt : value[0] === "-" ? decimalMagnitudeWithin(value, minimumSafeIntegerText) : decimalMagnitudeWithin(value, maximumSafeIntegerText);
+  }), minimumSafeIntegerText = Number.MIN_SAFE_INTEGER.toString(), minimumSafeIntegerBigInt = supportsNativeBigIntValue ? BigInt(Number.MIN_SAFE_INTEGER) : void 0, maximumSafeIntegerText = Number.MAX_SAFE_INTEGER.toString(), maximumSafeIntegerBigInt = supportsNativeBigIntValue ? BigInt(Number.MAX_SAFE_INTEGER) : void 0;
+  function decimalMagnitudeWithin(value, limit) {
+    if (value.length > limit.length) return false;
+    if (value.length < limit.length || value === limit) return true;
+    for (var index = 0; index < value.length; index++) {
+      var intermediate = value[index], intermediate2 = limit[index];
+      if (intermediate > intermediate2) return false;
+      if (intermediate < intermediate2) return true;
     }
   }
-  __name(ac, "ac");
-  ;
-  var F = 0, ec = 0;
-  function fc(a) {
-    var b = a >>> 0;
-    F = b;
-    ec = (a - b) / 4294967296 >>> 0;
+  __name(decimalMagnitudeWithin, "decimalMagnitudeWithin");
+  var int64LowWord = 0, int64HighWord = 0;
+  function splitUnsigned64(value) {
+    var intermediate = value >>> 0;
+    int64LowWord = intermediate;
+    int64HighWord = (value - intermediate) / 4294967296 >>> 0;
   }
-  __name(fc, "fc");
-  function hc(a) {
-    if (a < 0) {
-      fc(0 - a);
-      var b = w(ic(F, ec));
-      a = b.next().value;
-      b = b.next().value;
-      F = a >>> 0;
-      ec = b >>> 0;
-    } else fc(a);
+  __name(splitUnsigned64, "splitUnsigned64");
+  function splitSigned64(value) {
+    if (value < 0) {
+      splitUnsigned64(0 - value);
+      var iterator = getIterator(negate64Words(int64LowWord, int64HighWord));
+      value = iterator.next().value;
+      iterator = iterator.next().value;
+      int64LowWord = value >>> 0;
+      int64HighWord = iterator >>> 0;
+    } else splitUnsigned64(value);
   }
-  __name(hc, "hc");
-  function jc(a, b) {
-    b >>>= 0;
-    a >>>= 0;
-    if (b <= 2097151) var c = "" + (4294967296 * b + a);
-    else vb() ? c = "" + (BigInt(b) << BigInt(32) | BigInt(a)) : (c = (a >>> 24 | b << 8) & 16777215, b = b >> 16 & 65535, a = (a & 16777215) + c * 6777216 + b * 6710656, c += b * 8147497, b *= 2, a >= 1e7 && (c += a / 1e7 >>> 0, a %= 1e7), c >= 1e7 && (b += c / 1e7 >>> 0, c %= 1e7), c = b + kc(c) + kc(a));
-    return c;
+  __name(splitSigned64, "splitSigned64");
+  function unsigned64ToDecimal(low, high) {
+    high >>>= 0;
+    low >>>= 0;
+    if (high <= 2097151) var intermediate = "" + (4294967296 * high + low);
+    else
+      supportsBigInt() ? intermediate = "" + (BigInt(high) << BigInt(32) | BigInt(low)) : (intermediate = (low >>> 24 | high << 8) & 16777215, high = high >> 16 & 65535, low = (low & 16777215) + intermediate * 6777216 + high * 6710656, intermediate += high * 8147497, high *= 2, low >= 1e7 && (intermediate += low / 1e7 >>> 0, low %= 1e7), intermediate >= 1e7 && (high += intermediate / 1e7 >>> 0, intermediate %= 1e7), intermediate = high + padDecimalChunk(intermediate) + padDecimalChunk(low));
+    return intermediate;
   }
-  __name(jc, "jc");
-  function kc(a) {
-    a = String(a);
-    return "0000000".slice(a.length) + a;
+  __name(unsigned64ToDecimal, "unsigned64ToDecimal");
+  function padDecimalChunk(value) {
+    value = String(value);
+    return "0000000".slice(value.length) + value;
   }
-  __name(kc, "kc");
-  function lc() {
-    var a = F, b = ec;
-    b & 2147483648 ? vb() ? a = "" + (BigInt(b | 0) << BigInt(32) | BigInt(a >>> 0)) : (b = w(ic(a, b)), a = b.next().value, b = b.next().value, a = "-" + jc(a, b)) : a = jc(a, b);
-    return a;
+  __name(padDecimalChunk, "padDecimalChunk");
+  function signed64WordsToDecimal() {
+    var int64LowWord2 = int64LowWord, int64HighWord2 = int64HighWord;
+    int64HighWord2 & 2147483648 ? supportsBigInt() ? int64LowWord2 = "" + (BigInt(int64HighWord2 | 0) << BigInt(32) | BigInt(int64LowWord2 >>> 0)) : (int64HighWord2 = getIterator(negate64Words(int64LowWord2, int64HighWord2)), int64LowWord2 = int64HighWord2.next().value, int64HighWord2 = int64HighWord2.next().value, int64LowWord2 = "-" + unsigned64ToDecimal(int64LowWord2, int64HighWord2)) : int64LowWord2 = unsigned64ToDecimal(int64LowWord2, int64HighWord2);
+    return int64LowWord2;
   }
-  __name(lc, "lc");
-  function ic(a, b) {
-    b = ~b;
-    a ? a = ~a + 1 : b += 1;
-    return [a, b];
+  __name(signed64WordsToDecimal, "signed64WordsToDecimal");
+  function negate64Words(low, high) {
+    high = ~high;
+    low ? low = ~low + 1 : high += 1;
+    return [low, high];
   }
-  __name(ic, "ic");
-  ;
-  var mc = typeof BigInt === "function" ? BigInt.asIntN : void 0, nc = Number.isSafeInteger, oc = Number.isFinite, pc = Math.trunc;
-  function qc(a) {
-    if (a == null || typeof a === "number") return a;
-    if (a === "NaN" || a === "Infinity" || a === "-Infinity") return Number(a);
+  __name(negate64Words, "negate64Words");
+  var bigIntAsIntN = typeof BigInt === "function" ? BigInt.asIntN : void 0, isSafeInteger = Number.isSafeInteger, isFiniteNumber = Number.isFinite, truncateNumber = Math.trunc;
+  function coerceSpecialNumber(value) {
+    if (value == null || typeof value === "number") return value;
+    if (value === "NaN" || value === "Infinity" || value === "-Infinity") return Number(value);
   }
-  __name(qc, "qc");
-  function rc(a) {
-    return a.displayName || a.name || "unknown type name";
+  __name(coerceSpecialNumber, "coerceSpecialNumber");
+  function getTypeDisplayName(constructor) {
+    return constructor.displayName || constructor.name || "unknown type name";
   }
-  __name(rc, "rc");
-  function sc(a) {
-    if (typeof a !== "boolean") throw Error("Expected boolean but got " + Ja(a) + ": " + a);
-    return a;
+  __name(getTypeDisplayName, "getTypeDisplayName");
+  function requireBoolean(value) {
+    if (typeof value !== "boolean")
+      throw Error("Expected boolean but got " + getValueType(value) + ": " + value);
+    return value;
   }
-  __name(sc, "sc");
-  var tc = /^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;
-  function uc(a) {
-    switch (typeof a) {
+  __name(requireBoolean, "requireBoolean");
+  var decimalNumberPattern = /^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;
+  function isNumericRepresentation(value) {
+    switch (typeof value) {
       case "bigint":
         return true;
       case "number":
-        return oc(a);
+        return isFiniteNumber(value);
       case "string":
-        return tc.test(a);
+        return decimalNumberPattern.test(value);
       default:
         return false;
     }
   }
-  __name(uc, "uc");
-  function vc(a) {
-    return a == null ? a : oc(a) ? a | 0 : void 0;
+  __name(isNumericRepresentation, "isNumericRepresentation");
+  function coerceInt32(value) {
+    return value == null ? value : isFiniteNumber(value) ? value | 0 : void 0;
   }
-  __name(vc, "vc");
-  function wc(a) {
-    if (a == null) return a;
-    if (typeof a === "string" && a) a = +a;
-    else if (typeof a !== "number") return;
-    return oc(a) ? a | 0 : void 0;
+  __name(coerceInt32, "coerceInt32");
+  function coerceNumericInt32(value) {
+    if (value == null) return value;
+    if (typeof value === "string" && value) value = +value;
+    else if (typeof value !== "number") return;
+    return isFiniteNumber(value) ? value | 0 : void 0;
   }
-  __name(wc, "wc");
-  function xc(a) {
-    var b = a.length;
-    if (a[0] === "-" ? b < 20 || b === 20 && a <= "-9223372036854775808" : b < 19 || b === 19 && a <= "9223372036854775807") return a;
-    if (a.length < 16) hc(Number(a));
-    else if (vb()) a = BigInt(a), F = Number(a & BigInt(4294967295)) >>> 0, ec = Number(a >> BigInt(32) & BigInt(4294967295));
-    else {
-      b = +(a[0] === "-");
-      ec = F = 0;
-      for (var c = a.length, d = 0 + b, e = (c - b) % 6 + b; e <= c; d = e, e += 6) d = Number(a.slice(d, e)), ec *= 1e6, F = F * 1e6 + d, F >= 4294967296 && (ec += Math.trunc(F / 4294967296), ec >>>= 0, F >>>= 0);
-      b && (b = w(ic(F, ec)), a = b.next().value, b = b.next().value, F = a, ec = b);
+  __name(coerceNumericInt32, "coerceNumericInt32");
+  function normalizeInt64String(value) {
+    var length = value.length;
+    if (value[0] === "-" ? length < 20 || length === 20 && value <= "-9223372036854775808" : length < 19 || length === 19 && value <= "9223372036854775807")
+      return value;
+    if (value.length < 16) splitSigned64(Number(value));
+    else if (supportsBigInt()) {
+      value = BigInt(value);
+      int64LowWord = Number(value & BigInt(4294967295)) >>> 0;
+      int64HighWord = Number(value >> BigInt(32) & BigInt(4294967295));
+    } else {
+      length = +(value[0] === "-");
+      int64HighWord = int64LowWord = 0;
+      for (var length2 = value.length, intermediate = 0 + length, intermediate2 = (length2 - length) % 6 + length; intermediate2 <= length2; intermediate = intermediate2, intermediate2 += 6) {
+        intermediate = Number(value.slice(intermediate, intermediate2));
+        int64HighWord *= 1e6;
+        int64LowWord = int64LowWord * 1e6 + intermediate;
+        int64LowWord >= 4294967296 && (int64HighWord += Math.trunc(int64LowWord / 4294967296), int64HighWord >>>= 0, int64LowWord >>>= 0);
+      }
+      length && (length = getIterator(negate64Words(int64LowWord, int64HighWord)), value = length.next().value, length = length.next().value, int64LowWord = value, int64HighWord = length);
     }
-    return lc();
+    return signed64WordsToDecimal();
   }
-  __name(xc, "xc");
-  function yc(a) {
-    uc(a);
-    a = pc(a);
-    if (!nc(a)) {
-      hc(a);
-      var b = F, c = ec;
-      if (a = c & 2147483648) b = ~b + 1 >>> 0, c = ~c >>> 0, b == 0 && (c = c + 1 >>> 0);
-      var d = c * 4294967296 + (b >>> 0);
-      b = Number.isSafeInteger(d) ? d : jc(b, c);
-      a = typeof b === "number" ? a ? -b : b : a ? "-" + b : b;
+  __name(normalizeInt64String, "normalizeInt64String");
+  function numberToInt64Representation(value) {
+    isNumericRepresentation(value);
+    value = truncateNumber(value);
+    if (!isSafeInteger(value)) {
+      splitSigned64(value);
+      var int64LowWord2 = int64LowWord, int64HighWord2 = int64HighWord;
+      if (value = int64HighWord2 & 2147483648) {
+        int64LowWord2 = ~int64LowWord2 + 1 >>> 0;
+        int64HighWord2 = ~int64HighWord2 >>> 0;
+        int64LowWord2 == 0 && (int64HighWord2 = int64HighWord2 + 1 >>> 0);
+      }
+      var intermediate = int64HighWord2 * 4294967296 + (int64LowWord2 >>> 0);
+      int64LowWord2 = Number.isSafeInteger(intermediate) ? intermediate : unsigned64ToDecimal(int64LowWord2, int64HighWord2);
+      value = typeof int64LowWord2 === "number" ? value ? -int64LowWord2 : int64LowWord2 : value ? "-" + int64LowWord2 : int64LowWord2;
     }
-    return a;
+    return value;
   }
-  __name(yc, "yc");
-  function zc(a) {
-    uc(a);
-    a = pc(a);
-    nc(a) ? a = String(a) : (hc(a), a = lc());
-    return a;
+  __name(numberToInt64Representation, "numberToInt64Representation");
+  function numberToInt64String(value) {
+    isNumericRepresentation(value);
+    value = truncateNumber(value);
+    isSafeInteger(value) ? value = String(value) : (splitSigned64(value), value = signed64WordsToDecimal());
+    return value;
   }
-  __name(zc, "zc");
-  function Ac(a) {
-    var b = typeof a;
-    if (a == null) return a;
-    if (b === "bigint") return Xb(mc(64, a));
-    if (uc(a)) return b === "string" ? (b = pc(Number(a)), nc(b) ? a = Xb(b) : (b = a.indexOf("."), b !== -1 && (a = a.substring(0, b)), a = vb() ? Xb(mc(64, BigInt(a))) : Xb(xc(a)))) : a = nc(a) ? Xb(yc(a)) : Xb(
-      zc(a)
-    ), a;
+  __name(numberToInt64String, "numberToInt64String");
+  function coerceInt64(value) {
+    var intermediate = typeof value;
+    if (value == null) return value;
+    if (intermediate === "bigint") return normalizeBigInt(bigIntAsIntN(64, value));
+    if (isNumericRepresentation(value))
+      return intermediate === "string" ? (intermediate = truncateNumber(Number(value)), isSafeInteger(intermediate) ? value = normalizeBigInt(intermediate) : (intermediate = value.indexOf("."), intermediate !== -1 && (value = value.substring(0, intermediate)), value = supportsBigInt() ? normalizeBigInt(bigIntAsIntN(64, BigInt(value))) : normalizeBigInt(normalizeInt64String(value)))) : value = isSafeInteger(value) ? normalizeBigInt(numberToInt64Representation(value)) : normalizeBigInt(numberToInt64String(value)), value;
   }
-  __name(Ac, "Ac");
-  function Bc(a) {
-    return a == null || typeof a === "string" ? a : void 0;
+  __name(coerceInt64, "coerceInt64");
+  function coerceString(value) {
+    return value == null || typeof value === "string" ? value : void 0;
   }
-  __name(Bc, "Bc");
-  function Cc(a, b, c, d) {
-    if (a != null && a[Eb] === Mb) return a;
-    if (!Array.isArray(a)) return c ? d & 2 ? b[zb] || (b[zb] = Dc(b)) : new b() : void 0;
-    c = a[D] | 0;
-    d = c | d & 32 | d & 2;
-    d !== c && Jb(a, d);
-    return new b(a);
+  __name(coerceString, "coerceString");
+  function coerceMessage(value, MessageType, createDefault, parentFlags) {
+    if (value != null && value[messageMarkerSymbol] === messageMarkerToken) return value;
+    if (!Array.isArray(value))
+      return createDefault ? parentFlags & 2 ? MessageType[defaultMessageSymbol] || (MessageType[defaultMessageSymbol] = createFrozenDefaultMessage(MessageType)) : new MessageType() : void 0;
+    createDefault = value[arrayFlagsKey] | 0;
+    parentFlags = createDefault | parentFlags & 32 | parentFlags & 2;
+    parentFlags !== createDefault && setArrayFlags(value, parentFlags);
+    return new MessageType(value);
   }
-  __name(Cc, "Cc");
-  function Dc(a) {
-    a = new a();
-    Lb(a.B);
-    return a;
+  __name(coerceMessage, "coerceMessage");
+  function createFrozenDefaultMessage(MessageType) {
+    MessageType = new MessageType();
+    markImmutableMessageArray(MessageType.B);
+    return MessageType;
   }
-  __name(Dc, "Dc");
-  ;
-  function Ec(a) {
-    return a;
+  __name(createFrozenDefaultMessage, "createFrozenDefaultMessage");
+  function identityMessageValue(value) {
+    return value;
   }
-  __name(Ec, "Ec");
-  ;
-  function Fc() {
+  __name(identityMessageValue, "identityMessageValue");
+  function UnknownFieldSet() {
   }
-  __name(Fc, "Fc");
-  function Gc(a, b) {
-    for (var c in a) !isNaN(c) && b(a, +c, a[c]);
+  __name(UnknownFieldSet, "UnknownFieldSet");
+  function forEachUnknownField(fields, callback) {
+    for (var intermediate in fields)
+      !isNaN(intermediate) && callback(fields, +intermediate, fields[intermediate]);
   }
-  __name(Gc, "Gc");
-  function Hc(a) {
-    var b = new Fc();
-    Gc(a, function(c, d, e) {
-      b[d] = Array.prototype.slice.call(e);
+  __name(forEachUnknownField, "forEachUnknownField");
+  function cloneUnknownFields(fields) {
+    var unknownFieldSet = new UnknownFieldSet();
+    forEachUnknownField(fields, function(value, other, options) {
+      unknownFieldSet[other] = Array.prototype.slice.call(options);
     });
-    b.j = a.j;
-    return b;
+    unknownFieldSet.j = fields.j;
+    return unknownFieldSet;
   }
-  __name(Hc, "Hc");
-  function Ic(a, b) {
-    b < 100 || ub(Cb, 1);
+  __name(cloneUnknownFields, "cloneUnknownFields");
+  function checkUnknownFieldBudget(fields, fieldNumber) {
+    fieldNumber < 100 || reportLimitedIncident(unknownFieldIncidentSymbol, 1);
   }
-  __name(Ic, "Ic");
-  ;
-  function Jc(a, b, c, d) {
-    var e = d !== void 0;
-    d = !!d;
-    var f = Ta(Bb), g;
-    !e && wb && f && (g = a[f]) && Gc(g, Ic);
-    f = [];
-    var h = a.length;
-    g = 4294967295;
-    var k = false, l = !!(b & 64), m = l ? b & 128 ? 0 : -1 : void 0;
-    if (!(b & 1)) {
-      var q = h && a[h - 1];
-      q != null && typeof q === "object" && q.constructor === Object ? (h--, g = h) : q = void 0;
-      if (l && !(b & 128) && !e) {
-        k = true;
-        var t;
-        g = ((t = Kc) != null ? t : Ec)(g - m, m, a, q, void 0) + m;
+  __name(checkUnknownFieldBudget, "checkUnknownFieldBudget");
+  function transformMessageArray(array, flags, transformValue, forceCopy) {
+    var intermediate = forceCopy !== void 0;
+    forceCopy = !!forceCopy;
+    var intermediate2 = identity(unknownFieldsSymbol), intermediate3;
+    !intermediate && supportsNativeSymbols && intermediate2 && (intermediate3 = array[intermediate2]) && forEachUnknownField(intermediate3, checkUnknownFieldBudget);
+    intermediate2 = [];
+    var length = array.length;
+    intermediate3 = 4294967295;
+    var intermediate4 = false, intermediate5 = !!(flags & 64), intermediate6 = intermediate5 ? flags & 128 ? 0 : -1 : void 0;
+    if (!(flags & 1)) {
+      var intermediate7 = length && array[length - 1];
+      intermediate7 != null && typeof intermediate7 === "object" && intermediate7.constructor === Object ? (length--, intermediate3 = length) : intermediate7 = void 0;
+      if (intermediate5 && !(flags & 128) && !intermediate) {
+        intermediate4 = true;
+        var index;
+        intermediate3 = ((index = jsonConversionState) != null ? index : identityMessageValue)(
+          intermediate3 - intermediate6,
+          intermediate6,
+          array,
+          intermediate7,
+          void 0
+        ) + intermediate6;
       }
     }
-    b = void 0;
-    for (t = 0; t < h; t++) {
-      var x = a[t];
-      if (x != null && (x = c(x, d)) != null)
-        if (l && t >= g) {
-          var u = t - m, N = void 0;
-          ((N = b) != null ? N : b = {})[u] = x;
-        } else f[t] = x;
+    flags = void 0;
+    for (index = 0; index < length; index++) {
+      var intermediate8 = array[index];
+      if (intermediate8 != null && (intermediate8 = transformValue(intermediate8, forceCopy)) != null)
+        if (intermediate5 && index >= intermediate3) {
+          var intermediate9 = index - intermediate6, intermediate10 = void 0;
+          ((intermediate10 = flags) != null ? intermediate10 : flags = {})[intermediate9] = intermediate8;
+        } else intermediate2[index] = intermediate8;
     }
-    if (q)
-      for (var E in q) h = q[E], h != null && (h = c(h, d)) != null && (t = +E, x = void 0, l && !Number.isNaN(t) && (x = t + m) < g ? f[x] = h : (t = void 0, ((t = b) != null ? t : b = {})[E] = h));
-    b && (k ? f.push(b) : f[g] = b);
-    e && Ta(Bb) && (a = (c = Ta(Bb)) ? a[c] : void 0) && a instanceof Fc && (f[Bb] = Hc(a));
-    return f;
+    if (intermediate7)
+      for (var intermediate11 in intermediate7) {
+        length = intermediate7[intermediate11];
+        length != null && (length = transformValue(length, forceCopy)) != null && (index = +intermediate11, intermediate8 = void 0, intermediate5 && !Number.isNaN(index) && (intermediate8 = index + intermediate6) < intermediate3 ? intermediate2[intermediate8] = length : (index = void 0, ((index = flags) != null ? index : flags = {})[intermediate11] = length));
+      }
+    flags && (intermediate4 ? intermediate2.push(flags) : intermediate2[intermediate3] = flags);
+    intermediate && identity(unknownFieldsSymbol) && (array = (transformValue = identity(unknownFieldsSymbol)) ? array[transformValue] : void 0) && array instanceof UnknownFieldSet && (intermediate2[unknownFieldsSymbol] = cloneUnknownFields(array));
+    return intermediate2;
   }
-  __name(Jc, "Jc");
-  function Lc(a) {
-    switch (typeof a) {
+  __name(transformMessageArray, "transformMessageArray");
+  function toJsonFieldValue(value) {
+    switch (typeof value) {
       case "number":
-        return Number.isFinite(a) ? a : "" + a;
+        return Number.isFinite(value) ? value : "" + value;
       case "bigint":
-        return dc(a) ? Number(a) : "" + a;
+        return isSafeInt64Representation(value) ? Number(value) : "" + value;
       case "boolean":
-        return a ? 1 : 0;
+        return value ? 1 : 0;
       case "object":
-        if (Array.isArray(a)) {
-          var b = a[D] | 0;
-          return a.length === 0 && b & 1 ? void 0 : Jc(a, b, Lc);
+        if (Array.isArray(value)) {
+          var intermediate = value[arrayFlagsKey] | 0;
+          return value.length === 0 && intermediate & 1 ? void 0 : transformMessageArray(value, intermediate, toJsonFieldValue);
         }
-        if (a != null && a[Eb] === Mb) return Mc(a);
-        if (a instanceof ob) {
-          b = a.j;
-          if (b == null) a = "";
-          else if (typeof b === "string") a = b;
+        if (value != null && value[messageMarkerSymbol] === messageMarkerToken)
+          return serializeMessage(value);
+        if (value instanceof ByteString) {
+          intermediate = value.j;
+          if (intermediate == null) value = "";
+          else if (typeof intermediate === "string") value = intermediate;
           else {
-            if (lb) {
-              for (var c = "", d = 0, e = b.length - 10240; d < e; ) c += String.fromCharCode.apply(null, b.subarray(d, d += 10240));
-              c += String.fromCharCode.apply(null, d ? b.subarray(d) : b);
-              b = btoa(c);
+            if (supportsBtoa) {
+              for (var intermediate2 = "", intermediate3 = 0, intermediate4 = intermediate.length - 10240; intermediate3 < intermediate4; )
+                intermediate2 += String.fromCharCode.apply(
+                  null,
+                  intermediate.subarray(intermediate3, intermediate3 += 10240)
+                );
+              intermediate2 += String.fromCharCode.apply(
+                null,
+                intermediate3 ? intermediate.subarray(intermediate3) : intermediate
+              );
+              intermediate = btoa(intermediate2);
             } else {
-              c === void 0 && (c = 0);
-              if (!jb) {
-                jb = {};
-                d = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");
-                e = ["+/=", "+/", "-_=", "-_.", "-_"];
-                for (var f = 0; f < 5; f++) {
-                  var g = d.concat(e[f].split(""));
-                  ib[f] = g;
-                  for (var h = 0; h < g.length; h++) {
-                    var k = g[h];
-                    jb[k] === void 0 && (jb[k] = h);
+              intermediate2 === void 0 && (intermediate2 = 0);
+              if (!base64EncodeTables) {
+                base64EncodeTables = {};
+                intermediate3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");
+                intermediate4 = ["+/=", "+/", "-_=", "-_.", "-_"];
+                for (var index = 0; index < 5; index++) {
+                  var values = intermediate3.concat(intermediate4[index].split(""));
+                  base64DecodeTable[index] = values;
+                  for (var index2 = 0; index2 < values.length; index2++) {
+                    var intermediate5 = values[index2];
+                    base64EncodeTables[intermediate5] === void 0 && (base64EncodeTables[intermediate5] = index2);
                   }
                 }
               }
-              c = ib[c];
-              d = Array(Math.floor(b.length / 3));
-              e = c[64] || "";
-              for (f = g = 0; g < b.length - 2; g += 3) {
-                var l = b[g], m = b[g + 1];
-                k = b[g + 2];
-                h = c[l >> 2];
-                l = c[(l & 3) << 4 | m >> 4];
-                m = c[(m & 15) << 2 | k >> 6];
-                k = c[k & 63];
-                d[f++] = "" + h + l + m + k;
+              intermediate2 = base64DecodeTable[intermediate2];
+              intermediate3 = Array(Math.floor(intermediate.length / 3));
+              intermediate4 = intermediate2[64] || "";
+              for (index = values = 0; values < intermediate.length - 2; values += 3) {
+                var intermediate6 = intermediate[values], intermediate7 = intermediate[values + 1];
+                intermediate5 = intermediate[values + 2];
+                index2 = intermediate2[intermediate6 >> 2];
+                intermediate6 = intermediate2[(intermediate6 & 3) << 4 | intermediate7 >> 4];
+                intermediate7 = intermediate2[(intermediate7 & 15) << 2 | intermediate5 >> 6];
+                intermediate5 = intermediate2[intermediate5 & 63];
+                intermediate3[index++] = "" + index2 + intermediate6 + intermediate7 + intermediate5;
               }
-              h = 0;
-              k = e;
-              switch (b.length - g) {
-                case 2:
-                  h = b[g + 1], k = c[(h & 15) << 2] || e;
-                case 1:
-                  b = b[g], d[f] = "" + c[b >> 2] + c[(b & 3) << 4 | h >> 4] + k + e;
+              index2 = 0;
+              intermediate5 = intermediate4;
+              switch (intermediate.length - values) {
+                case 2: {
+                  index2 = intermediate[values + 1];
+                  intermediate5 = intermediate2[(index2 & 15) << 2] || intermediate4;
+                }
+                case 1: {
+                  intermediate = intermediate[values];
+                  intermediate3[index] = "" + intermediate2[intermediate >> 2] + intermediate2[(intermediate & 3) << 4 | index2 >> 4] + intermediate5 + intermediate4;
+                }
               }
-              b = d.join("");
+              intermediate = intermediate3.join("");
             }
-            a = a.j = b;
+            value = value.j = intermediate;
           }
-          return a;
+          return value;
         }
         return;
     }
-    return a;
+    return value;
   }
-  __name(Lc, "Lc");
-  var Nc = nb ? structuredClone : function(a) {
-    return Jc(a, 0, Lc);
-  }, Kc;
-  function Mc(a) {
-    a = a.B;
-    return Jc(a, a[D] | 0, Lc);
+  __name(toJsonFieldValue, "toJsonFieldValue");
+  var cloneJsonValue = supportsStructuredClone ? structuredClone : function(value) {
+    return transformMessageArray(value, 0, toJsonFieldValue);
+  }, jsonConversionState;
+  function serializeMessage(message) {
+    message = message.B;
+    return transformMessageArray(message, message[arrayFlagsKey] | 0, toJsonFieldValue);
   }
-  __name(Mc, "Mc");
-  ;
-  function G(a, b, c) {
-    return Oc(a, b, c, 2048);
+  __name(serializeMessage, "serializeMessage");
+  function initializeMessageArray(array, pivot, messageId) {
+    return initializeMessageArrayWithFlags(array, pivot, messageId, 2048);
   }
-  __name(G, "G");
-  function Oc(a, b, c, d) {
-    d = d === void 0 ? 0 : d;
-    if (a == null) {
-      var e = 32;
-      c ? (a = [c], e |= 128) : a = [];
-      b && (e = e & -16760833 | (b & 1023) << 14);
+  __name(initializeMessageArray, "initializeMessageArray");
+  function initializeMessageArrayWithFlags(array, pivot, messageId, extraFlags) {
+    extraFlags = extraFlags === void 0 ? 0 : extraFlags;
+    if (array == null) {
+      var intermediate = 32;
+      messageId ? (array = [messageId], intermediate |= 128) : array = [];
+      pivot && (intermediate = intermediate & -16760833 | (pivot & 1023) << 14);
     } else {
-      if (!Array.isArray(a)) throw Error("narr");
-      e = a[D] | 0;
-      if (Ya && 1 & e) throw Error("rfarr");
-      2048 & e && !(2 & e) && Pc();
-      if (e & 256) throw Error("farr");
-      if (e & 64) return (e | d) !== e && Jb(a, e | d), a;
-      if (c && (e |= 128, c !== a[0])) throw Error("mid");
+      if (!Array.isArray(array)) throw Error("narr");
+      intermediate = array[arrayFlagsKey] | 0;
+      if (strictArrayValidation && 1 & intermediate) throw Error("rfarr");
+      2048 & intermediate && !(2 & intermediate) && reportInvalidMessageArray();
+      if (intermediate & 256) throw Error("farr");
+      if (intermediate & 64)
+        return (intermediate | extraFlags) !== intermediate && setArrayFlags(array, intermediate | extraFlags), array;
+      if (messageId && (intermediate |= 128, messageId !== array[0])) throw Error("mid");
       a: {
-        c = a;
-        e |= 64;
-        var f = c.length;
-        if (f) {
-          var g = f - 1, h = c[g];
-          if (h != null && typeof h === "object" && h.constructor === Object) {
-            b = e & 128 ? 0 : -1;
-            g -= b;
-            if (g >= 1024) throw Error("pvtlmt");
-            for (var k in h) f = +k, f < g && (c[f + b] = h[k], delete h[k]);
-            e = e & -16760833 | (g & 1023) << 14;
+        messageId = array;
+        intermediate |= 64;
+        var length = messageId.length;
+        if (length) {
+          var intermediate2 = length - 1, intermediate3 = messageId[intermediate2];
+          if (intermediate3 != null && typeof intermediate3 === "object" && intermediate3.constructor === Object) {
+            pivot = intermediate & 128 ? 0 : -1;
+            intermediate2 -= pivot;
+            if (intermediate2 >= 1024) throw Error("pvtlmt");
+            for (var intermediate4 in intermediate3) {
+              length = +intermediate4;
+              length < intermediate2 && (messageId[length + pivot] = intermediate3[intermediate4], delete intermediate3[intermediate4]);
+            }
+            intermediate = intermediate & -16760833 | (intermediate2 & 1023) << 14;
             break a;
           }
         }
-        if (b) {
-          k = Math.max(b, f - (e & 128 ? 0 : -1));
-          if (k > 1024) throw Error("spvt");
-          e = e & -16760833 | (k & 1023) << 14;
+        if (pivot) {
+          intermediate4 = Math.max(pivot, length - (intermediate & 128 ? 0 : -1));
+          if (intermediate4 > 1024) throw Error("spvt");
+          intermediate = intermediate & -16760833 | (intermediate4 & 1023) << 14;
         }
       }
     }
-    Jb(a, e | 64 | d);
-    return a;
+    setArrayFlags(array, intermediate | 64 | extraFlags);
+    return array;
   }
-  __name(Oc, "Oc");
-  function Pc() {
-    if (Ya) throw Error("carr");
-    ub(Db, 5);
+  __name(initializeMessageArrayWithFlags, "initializeMessageArrayWithFlags");
+  function reportInvalidMessageArray() {
+    if (strictArrayValidation) throw Error("carr");
+    reportLimitedIncident(arrayConstructorIncidentSymbol, 5);
   }
-  __name(Pc, "Pc");
-  ;
-  function Qc(a, b) {
-    if (typeof a !== "object") return a;
-    if (Array.isArray(a)) {
-      var c = a[D] | 0;
-      a.length === 0 && c & 1 ? a = void 0 : c & 2 || (!b || 4096 & c || 16 & c ? a = Rc(a, c, false, b && !(c & 16)) : (Kb(a, 34), c & 4 && Object.freeze(a)));
-      return a;
+  __name(reportInvalidMessageArray, "reportInvalidMessageArray");
+  function cloneFieldValue(value, forceCopy) {
+    if (typeof value !== "object") return value;
+    if (Array.isArray(value)) {
+      var intermediate = value[arrayFlagsKey] | 0;
+      value.length === 0 && intermediate & 1 ? value = void 0 : intermediate & 2 || (!forceCopy || 4096 & intermediate || 16 & intermediate ? value = cloneMessageArray(
+        value,
+        intermediate,
+        false,
+        forceCopy && !(intermediate & 16)
+      ) : (addArrayFlags(value, 34), intermediate & 4 && Object.freeze(value)));
+      return value;
     }
-    if (a != null && a[Eb] === Mb) return b = a.B, c = b[D] | 0, Nb(a, c) ? a : Sc(a, b, c) ? Tc(a, b) : Rc(
-      b,
-      c
+    if (value != null && value[messageMarkerSymbol] === messageMarkerToken)
+      return forceCopy = value.B, intermediate = forceCopy[arrayFlagsKey] | 0, isImmutableMessage(value, intermediate) ? value : freezeMessageArrayIfShareable(value, forceCopy, intermediate) ? cloneMessageWrapper(value, forceCopy) : cloneMessageArray(forceCopy, intermediate);
+    if (value instanceof ByteString) return value;
+  }
+  __name(cloneFieldValue, "cloneFieldValue");
+  function cloneMessageWrapper(message, array, copyOnWrite) {
+    message = new message.constructor(array);
+    copyOnWrite && (message.j = copyOnWriteToken);
+    message.l = copyOnWriteToken;
+    return message;
+  }
+  __name(cloneMessageWrapper, "cloneMessageWrapper");
+  function cloneMessageArray(array, flags, immutable, forceCopy) {
+    forceCopy != null || (forceCopy = !!(34 & flags));
+    array = transformMessageArray(array, flags, cloneFieldValue, forceCopy);
+    forceCopy = 32;
+    immutable && (forceCopy |= 2);
+    flags = flags & 16769217 | forceCopy;
+    setArrayFlags(array, flags);
+    return array;
+  }
+  __name(cloneMessageArray, "cloneMessageArray");
+  function mutableMessageCopy(message) {
+    var backingArray = message.B, flags = backingArray[arrayFlagsKey] | 0;
+    return isImmutableMessage(message, flags) ? freezeMessageArrayIfShareable(message, backingArray, flags) ? cloneMessageWrapper(message, backingArray, true) : new message.constructor(cloneMessageArray(backingArray, flags, false)) : message;
+  }
+  __name(mutableMessageCopy, "mutableMessageCopy");
+  function detachCopyOnWriteArray(message) {
+    if (message.j !== copyOnWriteToken) return false;
+    var backingOrStateValue = message.B;
+    backingOrStateValue = cloneMessageArray(
+      backingOrStateValue,
+      backingOrStateValue[arrayFlagsKey] | 0
     );
-    if (a instanceof ob) return a;
-  }
-  __name(Qc, "Qc");
-  function Tc(a, b, c) {
-    a = new a.constructor(b);
-    c && (a.j = Ob);
-    a.l = Ob;
-    return a;
-  }
-  __name(Tc, "Tc");
-  function Rc(a, b, c, d) {
-    d != null || (d = !!(34 & b));
-    a = Jc(a, b, Qc, d);
-    d = 32;
-    c && (d |= 2);
-    b = b & 16769217 | d;
-    Jb(a, b);
-    return a;
-  }
-  __name(Rc, "Rc");
-  function Uc(a) {
-    var b = a.B, c = b[D] | 0;
-    return Nb(a, c) ? Sc(a, b, c) ? Tc(a, b, true) : new a.constructor(Rc(b, c, false)) : a;
-  }
-  __name(Uc, "Uc");
-  function Vc(a) {
-    if (a.j !== Ob) return false;
-    var b = a.B;
-    b = Rc(b, b[D] | 0);
-    Kb(b, 2048);
-    a.B = b;
-    a.j = void 0;
-    a.l = void 0;
+    addArrayFlags(backingOrStateValue, 2048);
+    message.B = backingOrStateValue;
+    message.j = void 0;
+    message.l = void 0;
     return true;
   }
-  __name(Vc, "Vc");
-  function Wc(a) {
-    if (!Vc(a) && Nb(a, a.B[D] | 0)) throw Error();
+  __name(detachCopyOnWriteArray, "detachCopyOnWriteArray");
+  function assertMessageMutable(message) {
+    if (!detachCopyOnWriteArray(message) && isImmutableMessage(message, message.B[arrayFlagsKey] | 0))
+      throw Error();
   }
-  __name(Wc, "Wc");
-  function Xc(a, b) {
-    b === void 0 && (b = a[D] | 0);
-    b & 32 && !(b & 4096) && Jb(a, b | 4096);
+  __name(assertMessageMutable, "assertMessageMutable");
+  function markArrayContainsMutableValues(array, flags) {
+    flags === void 0 && (flags = array[arrayFlagsKey] | 0);
+    flags & 32 && !(flags & 4096) && setArrayFlags(array, flags | 4096);
   }
-  __name(Xc, "Xc");
-  function Sc(a, b, c) {
-    return c & 2 ? true : c & 32 && !(c & 4096) ? (Jb(b, c | 2), a.j = Ob, true) : false;
+  __name(markArrayContainsMutableValues, "markArrayContainsMutableValues");
+  function freezeMessageArrayIfShareable(message, array, flags) {
+    return flags & 2 ? true : flags & 32 && !(flags & 4096) ? (setArrayFlags(array, flags | 2), message.j = copyOnWriteToken, true) : false;
   }
-  __name(Sc, "Sc");
-  ;
-  var Yc = Xb(0), Zc = {};
-  function H(a, b, c, d, e) {
-    Object.isExtensible(a);
-    b = $c(a.B, b, c, e);
-    if (b !== null || d && a.l !== Ob) return b;
+  __name(freezeMessageArrayIfShareable, "freezeMessageArrayIfShareable");
+  var zeroInt64 = normalizeBigInt(0), preserveNullFieldToken = {};
+  function getMessageField(message, fieldNumber, hasMessageId, preserveNull, transform) {
+    Object.isExtensible(message);
+    fieldNumber = getArrayField(message.B, fieldNumber, hasMessageId, transform);
+    if (fieldNumber !== null || preserveNull && message.l !== copyOnWriteToken) return fieldNumber;
   }
-  __name(H, "H");
-  function $c(a, b, c, d) {
-    if (b === -1) return null;
-    var e = b + (c ? 0 : -1), f = a.length - 1;
-    if (!(f < 1 + (c ? 0 : -1))) {
-      if (e >= f) {
-        var g = a[f];
-        if (g != null && typeof g === "object" && g.constructor === Object) {
-          c = g[b];
-          var h = true;
-        } else if (e === f) c = g;
+  __name(getMessageField, "getMessageField");
+  function getArrayField(array, fieldNumber, hasMessageId, transform) {
+    if (fieldNumber === -1) return null;
+    var intermediate = fieldNumber + (hasMessageId ? 0 : -1), intermediate2 = array.length - 1;
+    if (!(intermediate2 < 1 + (hasMessageId ? 0 : -1))) {
+      if (intermediate >= intermediate2) {
+        var intermediate3 = array[intermediate2];
+        if (intermediate3 != null && typeof intermediate3 === "object" && intermediate3.constructor === Object) {
+          hasMessageId = intermediate3[fieldNumber];
+          var intermediate4 = true;
+        } else if (intermediate === intermediate2) hasMessageId = intermediate3;
         else return;
-      } else c = a[e];
-      if (d && c != null) {
-        d = d(c);
-        if (d == null) return d;
-        if (!Object.is(d, c)) return h ? g[b] = d : a[e] = d, d;
+      } else hasMessageId = array[intermediate];
+      if (transform && hasMessageId != null) {
+        transform = transform(hasMessageId);
+        if (transform == null) return transform;
+        if (!Object.is(transform, hasMessageId))
+          return intermediate4 ? intermediate3[fieldNumber] = transform : array[intermediate] = transform, transform;
       }
-      return c;
+      return hasMessageId;
     }
   }
-  __name($c, "$c");
-  function ad(a, b, c) {
-    Wc(a);
-    var d = a.B;
-    bd(d, d[D] | 0, b, c);
-    return a;
+  __name(getArrayField, "getArrayField");
+  function setMessageField(message, fieldNumber, value) {
+    assertMessageMutable(message);
+    var backingArray = message.B;
+    setArrayField(backingArray, backingArray[arrayFlagsKey] | 0, fieldNumber, value);
+    return message;
   }
-  __name(ad, "ad");
-  function bd(a, b, c, d) {
-    var e = c + -1, f = a.length - 1;
-    if (f >= 0 && e >= f) {
-      var g = a[f];
-      if (g != null && typeof g === "object" && g.constructor === Object) return g[c] = d, b;
+  __name(setMessageField, "setMessageField");
+  function setArrayField(array, flags, fieldNumber, value) {
+    var intermediate = fieldNumber + -1, intermediate2 = array.length - 1;
+    if (intermediate2 >= 0 && intermediate >= intermediate2) {
+      var intermediate3 = array[intermediate2];
+      if (intermediate3 != null && typeof intermediate3 === "object" && intermediate3.constructor === Object)
+        return intermediate3[fieldNumber] = value, flags;
     }
-    if (e <= f) return a[e] = d, b;
-    if (d !== void 0) {
-      var h;
-      f = ((h = b) != null ? h : b = a[D] | 0) >> 14 & 1023 || 536870912;
-      c >= f ? d != null && (e = {}, a[f + -1] = (e[c] = d, e)) : a[e] = d;
+    if (intermediate <= intermediate2) return array[intermediate] = value, flags;
+    if (value !== void 0) {
+      var intermediate4;
+      intermediate2 = ((intermediate4 = flags) != null ? intermediate4 : flags = array[arrayFlagsKey] | 0) >> 14 & 1023 || 536870912;
+      fieldNumber >= intermediate2 ? value != null && (intermediate = {}, array[intermediate2 + -1] = (intermediate[fieldNumber] = value, intermediate)) : array[intermediate] = value;
     }
-    return b;
+    return flags;
   }
-  __name(bd, "bd");
-  function cd(a, b, c, d, e, f, g, h) {
-    var k = b;
-    f === 1 || (f !== 4 ? 0 : 2 & b || !(16 & b) && 32 & d) ? dd(b) || (b |= !a.length || g && !(4096 & b) || 32 & d && !(4096 & b || 16 & b) ? 2 : 256, b !== k && Jb(a, b), Object.freeze(a)) : (f === 2 && dd(b) && (a = Array.prototype.slice.call(a), k = 0, b = ed(b, d), d = bd(c, d, e, a)), dd(b) || (h || (b |= 16), b !== k && Jb(a, b)));
-    2 & b || !(4096 & b || 16 & b) || Xc(c, d);
-    return a;
+  __name(setArrayField, "setArrayField");
+  function prepareRepeatedArray(array, flags, parentArray, parentFlags, fieldNumber, mode, converted, forceCopy) {
+    var flags2 = flags;
+    mode === 1 || (mode !== 4 ? 0 : 2 & flags || !(16 & flags) && 32 & parentFlags) ? isFrozenRepeatedArray(flags) || (flags |= !array.length || converted && !(4096 & flags) || 32 & parentFlags && !(4096 & flags || 16 & flags) ? 2 : 256, flags !== flags2 && setArrayFlags(array, flags), Object.freeze(array)) : (mode === 2 && isFrozenRepeatedArray(flags) && (array = Array.prototype.slice.call(array), flags2 = 0, flags = copyRepeatedArrayFlags(flags, parentFlags), parentFlags = setArrayField(parentArray, parentFlags, fieldNumber, array)), isFrozenRepeatedArray(flags) || (forceCopy || (flags |= 16), flags !== flags2 && setArrayFlags(array, flags)));
+    2 & flags || !(4096 & flags || 16 & flags) || markArrayContainsMutableValues(parentArray, parentFlags);
+    return array;
   }
-  __name(cd, "cd");
-  function fd(a, b) {
-    a = $c(a, b);
-    return Array.isArray(a) ? a : Hb;
+  __name(prepareRepeatedArray, "prepareRepeatedArray");
+  function getRepeatedArray(array, fieldNumber) {
+    array = getArrayField(array, fieldNumber);
+    return Array.isArray(array) ? array : emptyRepeatedField;
   }
-  __name(fd, "fd");
-  function gd(a, b) {
-    2 & b && (a |= 2);
-    return a | 1;
+  __name(getRepeatedArray, "getRepeatedArray");
+  function inheritRepeatedArrayFlags(flags, parentFlags) {
+    2 & parentFlags && (flags |= 2);
+    return flags | 1;
   }
-  __name(gd, "gd");
-  function dd(a) {
-    return !!(2 & a) && !!(4 & a) || !!(256 & a);
+  __name(inheritRepeatedArrayFlags, "inheritRepeatedArrayFlags");
+  function isFrozenRepeatedArray(flags) {
+    return !!(2 & flags) && !!(4 & flags) || !!(256 & flags);
   }
-  __name(dd, "dd");
-  function hd(a) {
-    return a == null ? a : typeof a === "string" ? a ? new ob(a, mb) : pb() : a.constructor === ob ? a : kb && a != null && a instanceof Uint8Array ? a.length ? new ob(new Uint8Array(a), mb) : pb() : void 0;
+  __name(isFrozenRepeatedArray, "isFrozenRepeatedArray");
+  function coerceByteString(value) {
+    return value == null ? value : typeof value === "string" ? value ? new ByteString(value, byteStringConstructionToken) : emptyByteString() : value.constructor === ByteString ? value : supportsUint8Array && value != null && value instanceof Uint8Array ? value.length ? new ByteString(new Uint8Array(value), byteStringConstructionToken) : emptyByteString() : void 0;
   }
-  __name(hd, "hd");
-  function id(a, b) {
-    Wc(a);
-    var c = a.B;
-    jd(c, c[D] | 0, b, 0);
-    return a;
+  __name(coerceByteString, "coerceByteString");
+  function clearOneof(message, fieldNumbers) {
+    assertMessageMutable(message);
+    var backingOrStateValue = message.B;
+    setOneofCase(backingOrStateValue, backingOrStateValue[arrayFlagsKey] | 0, fieldNumbers, 0);
+    return message;
   }
-  __name(id, "id");
-  function kd(a, b, c) {
-    return ld(a, b) === c ? c : -1;
+  __name(clearOneof, "clearOneof");
+  function getActiveOneofField(message, fieldNumbers, fieldNumber) {
+    return computeOneofCase(message, fieldNumbers) === fieldNumber ? fieldNumber : -1;
   }
-  __name(kd, "kd");
-  function ld(a, b) {
-    a = a.B;
-    return md(nd(a), a, void 0, b);
+  __name(getActiveOneofField, "getActiveOneofField");
+  function computeOneofCase(message, fieldNumbers) {
+    message = message.B;
+    return computeArrayOneofCase(getOneofCaseCache(message), message, void 0, fieldNumbers);
   }
-  __name(ld, "ld");
-  function nd(a) {
-    if (wb) {
-      var b;
-      return (b = a[Ab]) != null ? b : a[Ab] = /* @__PURE__ */ new Map();
+  __name(computeOneofCase, "computeOneofCase");
+  function getOneofCaseCache(array) {
+    if (supportsNativeSymbols) {
+      var intermediate;
+      return (intermediate = array[oneofCasesSymbol]) != null ? intermediate : array[oneofCasesSymbol] = /* @__PURE__ */ new Map();
     }
-    if (Ab in a) return a[Ab];
-    b = /* @__PURE__ */ new Map();
-    Object.defineProperty(a, Ab, {
-      value: b
+    if (oneofCasesSymbol in array) return array[oneofCasesSymbol];
+    intermediate = /* @__PURE__ */ new Map();
+    Object.defineProperty(array, oneofCasesSymbol, { value: intermediate });
+    return intermediate;
+  }
+  __name(getOneofCaseCache, "getOneofCaseCache");
+  function setOneofCase(array, flags, fieldNumbers, fieldNumber) {
+    fieldNumber === 0 || fieldNumbers.includes(fieldNumber);
+    var oneofCaseCache = getOneofCaseCache(array), arrayOneofCase = computeArrayOneofCase(oneofCaseCache, array, flags, fieldNumbers);
+    arrayOneofCase !== fieldNumber && (arrayOneofCase && setArrayField(array, flags, arrayOneofCase), oneofCaseCache.set(fieldNumbers, fieldNumber));
+  }
+  __name(setOneofCase, "setOneofCase");
+  function computeArrayOneofCase(cases, array, flags, fieldNumbers) {
+    var value = cases.get(fieldNumbers);
+    if (value != null) return value;
+    for (var index = value = 0; index < fieldNumbers.length; index++) {
+      var intermediate = fieldNumbers[index];
+      getArrayField(array, intermediate) != null && (value !== 0 && (flags = setArrayField(array, flags, value)), value = intermediate);
+    }
+    cases.set(fieldNumbers, value);
+    return value;
+  }
+  __name(computeArrayOneofCase, "computeArrayOneofCase");
+  function getMutableNestedMessage(message, MessageType, fieldNumber) {
+    assertMessageMutable(message);
+    message = message.B;
+    var intermediate = message[arrayFlagsKey] | 0, arrayField = getArrayField(message, fieldNumber), intermediate2 = void 0 === nestedFieldModeToken;
+    MessageType = coerceMessage(arrayField, MessageType, !intermediate2, intermediate);
+    if (!intermediate2 || MessageType)
+      return MessageType = mutableMessageCopy(MessageType), arrayField !== MessageType && (intermediate = setArrayField(message, intermediate, fieldNumber, MessageType), markArrayContainsMutableValues(message, intermediate)), MessageType;
+  }
+  __name(getMutableNestedMessage, "getMutableNestedMessage");
+  function getNestedArrayMessage(array, flags, MessageType, fieldNumber) {
+    var intermediate = false;
+    fieldNumber = getArrayField(array, fieldNumber, void 0, function(value) {
+      var message = coerceMessage(value, MessageType, false, flags);
+      intermediate = message !== value && message != null;
+      return message;
     });
-    return b;
+    if (fieldNumber != null)
+      return intermediate && !isImmutableMessage(fieldNumber) && markArrayContainsMutableValues(array, flags), fieldNumber;
   }
-  __name(nd, "nd");
-  function jd(a, b, c, d) {
-    d === 0 || c.includes(d);
-    var e = nd(a), f = md(e, a, b, c);
-    f !== d && (f && bd(a, b, f), e.set(c, d));
+  __name(getNestedArrayMessage, "getNestedArrayMessage");
+  function getNestedMessageOrDefault(message, MessageType, fieldNumber) {
+    message = message.B;
+    return getNestedArrayMessage(message, message[arrayFlagsKey] | 0, MessageType, fieldNumber) || MessageType[defaultMessageSymbol] || (MessageType[defaultMessageSymbol] = createFrozenDefaultMessage(MessageType));
   }
-  __name(jd, "jd");
-  function md(a, b, c, d) {
-    var e = a.get(d);
-    if (e != null) return e;
-    for (var f = e = 0; f < d.length; f++) {
-      var g = d[f];
-      $c(b, g) != null && (e !== 0 && (c = bd(b, c, e)), e = g);
+  __name(getNestedMessageOrDefault, "getNestedMessageOrDefault");
+  function readNestedMessage(message, MessageType, fieldNumber) {
+    var backingOrStateValue = message.B, intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+    MessageType = getNestedArrayMessage(backingOrStateValue, intermediate, MessageType, fieldNumber);
+    if (MessageType == null) return MessageType;
+    intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+    if (!isImmutableMessage(message, intermediate)) {
+      var intermediate2 = mutableMessageCopy(MessageType);
+      intermediate2 !== MessageType && (detachCopyOnWriteArray(message) && (backingOrStateValue = message.B, intermediate = backingOrStateValue[arrayFlagsKey] | 0), MessageType = intermediate2, intermediate = setArrayField(backingOrStateValue, intermediate, fieldNumber, MessageType), markArrayContainsMutableValues(backingOrStateValue, intermediate));
     }
-    a.set(d, e);
-    return e;
+    return MessageType;
   }
-  __name(md, "md");
-  function od(a, b, c) {
-    Wc(a);
-    a = a.B;
-    var d = a[D] | 0, e = $c(a, c), f = void 0 === Qb;
-    b = Cc(e, b, !f, d);
-    if (!f || b) return b = Uc(b), e !== b && (d = bd(a, d, c, b), Xc(a, d)), b;
-  }
-  __name(od, "od");
-  function pd(a, b, c, d) {
-    var e = false;
-    d = $c(a, d, void 0, function(f) {
-      var g = Cc(f, c, false, b);
-      e = g !== f && g != null;
-      return g;
-    });
-    if (d != null) return e && !Nb(d) && Xc(a, b), d;
-  }
-  __name(pd, "pd");
-  function qd(a, b, c) {
-    a = a.B;
-    return pd(a, a[D] | 0, b, c) || b[zb] || (b[zb] = Dc(b));
-  }
-  __name(qd, "qd");
-  function I(a, b, c) {
-    var d = a.B, e = d[D] | 0;
-    b = pd(d, e, b, c);
-    if (b == null) return b;
-    e = d[D] | 0;
-    if (!Nb(a, e)) {
-      var f = Uc(b);
-      f !== b && (Vc(a) && (d = a.B, e = d[D] | 0), b = f, e = bd(d, e, c, b), Xc(d, e));
-    }
-    return b;
-  }
-  __name(I, "I");
-  function rd(a, b, c) {
-    var d = void 0 === Pb ? 2 : 4, e = a.B, f = e;
-    e = e[D] | 0;
-    var g = Nb(a, e), h = g ? 1 : d;
-    d = h === 3;
-    var k = !g;
-    (h === 2 || k) && Vc(a) && (f = a.B, e = f[D] | 0);
-    a = fd(f, c);
-    var l = a === Hb ? 7 : a[D] | 0, m = gd(l, e);
-    if (g = !(4 & m)) {
-      var q = a, t = e, x = !!(2 & m);
-      x && (t |= 2);
-      for (var u = !x, N = true, E = 0, ma = 0; E < q.length; E++) {
-        var U = Cc(q[E], b, false, t);
-        if (U instanceof b) {
-          if (!x) {
-            var Ma = Nb(U);
-            u && (u = !Ma);
-            N && (N = Ma);
+  __name(readNestedMessage, "readNestedMessage");
+  function readRepeatedMessages(message, MessageType, fieldNumber) {
+    var modeOrForceCopy = void 0 === repeatedFieldModeToken ? 2 : 4, parentFlags = message.B, parentArray = parentFlags;
+    parentFlags = parentFlags[arrayFlagsKey] | 0;
+    var immutableOrConverted = isImmutableMessage(message, parentFlags), mode = immutableOrConverted ? 1 : modeOrForceCopy;
+    modeOrForceCopy = mode === 3;
+    var mutableOrFlags = !immutableOrConverted;
+    (mode === 2 || mutableOrFlags) && detachCopyOnWriteArray(message) && (parentArray = message.B, parentFlags = parentArray[arrayFlagsKey] | 0);
+    message = getRepeatedArray(parentArray, fieldNumber);
+    var originalFlagsOrIndex = message === emptyRepeatedField ? 7 : message[arrayFlagsKey] | 0, flagsOrMessage = inheritRepeatedArrayFlags(originalFlagsOrIndex, parentFlags);
+    if (immutableOrConverted = !(4 & flagsOrMessage)) {
+      var entryOrArray = message, conversionFlags = parentFlags, freezeChildren = !!(2 & flagsOrMessage);
+      freezeChildren && (conversionFlags |= 2);
+      for (var allMutable = !freezeChildren, allImmutable = true, readIndex = 0, writeIndex = 0; readIndex < entryOrArray.length; readIndex++) {
+        var childMessage = coerceMessage(
+          entryOrArray[readIndex],
+          MessageType,
+          false,
+          conversionFlags
+        );
+        if (childMessage instanceof MessageType) {
+          if (!freezeChildren) {
+            var childImmutable = isImmutableMessage(childMessage);
+            allMutable && (allMutable = !childImmutable);
+            allImmutable && (allImmutable = childImmutable);
           }
-          q[ma++] = U;
+          entryOrArray[writeIndex++] = childMessage;
         }
       }
-      ma < E && (q.length = ma);
-      m |= 4;
-      m = N ? m & -4097 : m | 4096;
-      m = u ? m | 8 : m & -9;
+      writeIndex < readIndex && (entryOrArray.length = writeIndex);
+      flagsOrMessage |= 4;
+      flagsOrMessage = allImmutable ? flagsOrMessage & -4097 : flagsOrMessage | 4096;
+      flagsOrMessage = allMutable ? flagsOrMessage | 8 : flagsOrMessage & -9;
     }
-    m !== l && (Jb(a, m), 2 & m && Object.freeze(a));
-    if (k && !(8 & m || !a.length && (h === 1 || (h !== 4 ? 0 : 2 & m || !(16 & m) && 32 & e)))) {
-      dd(m) && (a = Array.prototype.slice.call(a), m = ed(m, e), e = bd(f, e, c, a));
-      b = a;
-      k = m;
-      for (l = 0; l < b.length; l++) q = b[l], m = Uc(q), q !== m && (b[l] = m);
-      k |= 8;
-      m = k = b.length ? k | 4096 : k & -4097;
-      Jb(a, m);
+    flagsOrMessage !== originalFlagsOrIndex && (setArrayFlags(message, flagsOrMessage), 2 & flagsOrMessage && Object.freeze(message));
+    if (mutableOrFlags && !(8 & flagsOrMessage || !message.length && (mode === 1 || (mode !== 4 ? 0 : 2 & flagsOrMessage || !(16 & flagsOrMessage) && 32 & parentFlags)))) {
+      isFrozenRepeatedArray(flagsOrMessage) && (message = Array.prototype.slice.call(message), flagsOrMessage = copyRepeatedArrayFlags(flagsOrMessage, parentFlags), parentFlags = setArrayField(parentArray, parentFlags, fieldNumber, message));
+      MessageType = message;
+      mutableOrFlags = flagsOrMessage;
+      for (originalFlagsOrIndex = 0; originalFlagsOrIndex < MessageType.length; originalFlagsOrIndex++) {
+        entryOrArray = MessageType[originalFlagsOrIndex];
+        flagsOrMessage = mutableMessageCopy(entryOrArray);
+        entryOrArray !== flagsOrMessage && (MessageType[originalFlagsOrIndex] = flagsOrMessage);
+      }
+      mutableOrFlags |= 8;
+      flagsOrMessage = mutableOrFlags = MessageType.length ? mutableOrFlags | 4096 : mutableOrFlags & -4097;
+      setArrayFlags(message, flagsOrMessage);
     }
-    return a = cd(a, m, f, e, c, h, g, d);
+    return message = prepareRepeatedArray(
+      message,
+      flagsOrMessage,
+      parentArray,
+      parentFlags,
+      fieldNumber,
+      mode,
+      immutableOrConverted,
+      modeOrForceCopy
+    );
   }
-  __name(rd, "rd");
-  function sd(a, b, c, d) {
-    if (d != null) {
-      if (!(d instanceof b)) throw Error("Expected instanceof " + rc(b) + " but got " + (d && rc(d.constructor)));
-    } else d = void 0;
-    ad(a, c, d);
-    d && !Nb(d) && Xc(a.B);
-    return a;
+  __name(readRepeatedMessages, "readRepeatedMessages");
+  function setNestedMessage(message, MessageType, fieldNumber, value) {
+    if (value != null) {
+      if (!(value instanceof MessageType))
+        throw Error(
+          "Expected instanceof " + getTypeDisplayName(MessageType) + " but got " + (value && getTypeDisplayName(value.constructor))
+        );
+    } else value = void 0;
+    setMessageField(message, fieldNumber, value);
+    value && !isImmutableMessage(value) && markArrayContainsMutableValues(message.B);
+    return message;
   }
-  __name(sd, "sd");
-  function ed(a, b) {
-    return a = (2 & b ? a | 2 : a & -3) & -273;
+  __name(setNestedMessage, "setNestedMessage");
+  function copyRepeatedArrayFlags(flags, parentFlags) {
+    return flags = (2 & parentFlags ? flags | 2 : flags & -3) & -273;
   }
-  __name(ed, "ed");
-  function td(a, b) {
-    var c = c === void 0 ? false : c;
-    a = H(a, b);
-    a = a == null || typeof a === "boolean" ? a : typeof a === "number" ? !!a : void 0;
-    return a != null ? a : c;
+  __name(copyRepeatedArrayFlags, "copyRepeatedArrayFlags");
+  function readBooleanField(message, fieldNumber) {
+    var intermediate = intermediate === void 0 ? false : intermediate;
+    message = getMessageField(message, fieldNumber);
+    message = message == null || typeof message === "boolean" ? message : typeof message === "number" ? !!message : void 0;
+    return message != null ? message : intermediate;
   }
-  __name(td, "td");
-  function ud(a, b, c) {
-    c = c === void 0 ? 0 : c;
-    var d;
-    return (d = wc(H(a, b))) != null ? d : c;
+  __name(readBooleanField, "readBooleanField");
+  function readCoercedNumberField(message, fieldNumber, fallback) {
+    fallback = fallback === void 0 ? 0 : fallback;
+    var intermediate;
+    return (intermediate = coerceNumericInt32(getMessageField(message, fieldNumber))) != null ? intermediate : fallback;
   }
-  __name(ud, "ud");
-  function vd(a, b) {
-    var c = c === void 0 ? Yc : c;
-    a = H(a, b, void 0, void 0, Ac);
-    return a != null ? a : c;
+  __name(readCoercedNumberField, "readCoercedNumberField");
+  function readInt64Field(message, fieldNumber) {
+    var intermediate = intermediate === void 0 ? zeroInt64 : intermediate;
+    message = getMessageField(message, fieldNumber, void 0, void 0, coerceInt64);
+    return message != null ? message : intermediate;
   }
-  __name(vd, "vd");
-  function wd(a, b) {
-    var c = c === void 0 ? "" : c;
-    var d;
-    return (d = Bc(H(a, b))) != null ? d : c;
+  __name(readInt64Field, "readInt64Field");
+  function readStringOrDefault(message, fieldNumber) {
+    var intermediate = intermediate === void 0 ? "" : intermediate;
+    var intermediate2;
+    return (intermediate2 = coerceString(getMessageField(message, fieldNumber))) != null ? intermediate2 : intermediate;
   }
-  __name(wd, "wd");
-  function xd(a, b) {
-    var c = c === void 0 ? 0 : c;
-    var d;
-    return (d = vc(H(a, b))) != null ? d : c;
+  __name(readStringOrDefault, "readStringOrDefault");
+  function readNumberField(message, fieldNumber) {
+    var intermediate = intermediate === void 0 ? 0 : intermediate;
+    var intermediate2;
+    return (intermediate2 = coerceInt32(getMessageField(message, fieldNumber))) != null ? intermediate2 : intermediate;
   }
-  __name(xd, "xd");
-  function yd(a, b) {
-    return Bc(H(a, b, void 0, Zc));
+  __name(readNumberField, "readNumberField");
+  function readStringField(message, fieldNumber) {
+    return coerceString(getMessageField(message, fieldNumber, void 0, preserveNullFieldToken));
   }
-  __name(yd, "yd");
-  function zd(a) {
-    return vc(H(a, 1, void 0, Zc));
+  __name(readStringField, "readStringField");
+  function readMessageType(message) {
+    return coerceInt32(getMessageField(message, 1, void 0, preserveNullFieldToken));
   }
-  __name(zd, "zd");
-  function Ad(a, b, c) {
-    if (c != null && typeof c !== "string") throw Error();
-    return ad(a, b, c);
+  __name(readMessageType, "readMessageType");
+  function setStringField(message, fieldNumber, value) {
+    if (value != null && typeof value !== "string") throw Error();
+    return setMessageField(message, fieldNumber, value);
   }
-  __name(Ad, "Ad");
-  function Bd(a, b, c) {
-    if (c != null) {
-      if (!oc(c)) throw a = Error("enum"), rb(a, "severity", "warning"), a;
-      c |= 0;
+  __name(setStringField, "setStringField");
+  function setNumberField(message, fieldNumber, value) {
+    if (value != null) {
+      if (!isFiniteNumber(value))
+        throw message = Error("enum"), attachErrorContext(message, "severity", "warning"), message;
+      value |= 0;
     }
-    return ad(a, b, c);
+    return setMessageField(message, fieldNumber, value);
   }
-  __name(Bd, "Bd");
-  ;
-  function J(a, b, c) {
-    this.B = G(a, b, c);
+  __name(setNumberField, "setNumberField");
+  function ArrayMessage(array, pivot, messageId) {
+    this.B = initializeMessageArray(array, pivot, messageId);
   }
-  __name(J, "J");
-  J.prototype.toJSON = function() {
-    return Mc(this);
+  __name(ArrayMessage, "ArrayMessage");
+  ArrayMessage.prototype.toJSON = function() {
+    return serializeMessage(this);
   };
-  function Cd(a, b) {
-    if (b == null || b == "") return new a();
-    b = JSON.parse(b);
-    if (!Array.isArray(b)) throw Error("dnarr");
-    Kb(b, 32);
-    return new a(b);
+  function parseMessageJson(MessageType, json) {
+    if (json == null || json == "") return new MessageType();
+    json = JSON.parse(json);
+    if (!Array.isArray(json)) throw Error("dnarr");
+    addArrayFlags(json, 32);
+    return new MessageType(json);
   }
-  __name(Cd, "Cd");
-  J.prototype.clone = function() {
-    var a = this.B, b = a[D] | 0;
-    return Sc(this, a, b) ? Tc(this, a, true) : new this.constructor(Rc(a, b, false));
+  __name(parseMessageJson, "parseMessageJson");
+  ArrayMessage.prototype.clone = function() {
+    var backingOrStateValue = this.B, intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+    return freezeMessageArrayIfShareable(this, backingOrStateValue, intermediate) ? cloneMessageWrapper(this, backingOrStateValue, true) : new this.constructor(cloneMessageArray(backingOrStateValue, intermediate, false));
   };
-  function Dd() {
-    var a = z;
-    a = a === void 0 ? window : a;
-    var b = new Ed(Fd("K1cgmc", a));
-    a = Gd;
-    var c = new Gd();
-    b = Hd(b);
-    a = b === null ? c : Cd(a, "[" + b.substring(4));
-    c = a.B;
-    b = c[D] | 0;
-    return Nb(a, b) ? a : Sc(a, c, b) ? Tc(a, c) : new a.constructor(Rc(c, b, true));
+  function readTelemetryBootstrapMessage() {
+    var runtimeGlobal2 = runtimeGlobal;
+    runtimeGlobal2 = runtimeGlobal2 === void 0 ? window : runtimeGlobal2;
+    var bootstrapString = new BootstrapString(readWizGlobalData("K1cgmc", runtimeGlobal2));
+    runtimeGlobal2 = TelemetryBootstrapMessage;
+    var telemetryBootstrapMessage = new TelemetryBootstrapMessage();
+    bootstrapString = unwrapBootstrapString(bootstrapString);
+    runtimeGlobal2 = bootstrapString === null ? telemetryBootstrapMessage : parseMessageJson(runtimeGlobal2, "[" + bootstrapString.substring(4));
+    telemetryBootstrapMessage = runtimeGlobal2.B;
+    bootstrapString = telemetryBootstrapMessage[arrayFlagsKey] | 0;
+    return isImmutableMessage(runtimeGlobal2, bootstrapString) ? runtimeGlobal2 : freezeMessageArrayIfShareable(runtimeGlobal2, telemetryBootstrapMessage, bootstrapString) ? cloneMessageWrapper(runtimeGlobal2, telemetryBootstrapMessage) : new runtimeGlobal2.constructor(
+      cloneMessageArray(telemetryBootstrapMessage, bootstrapString, true)
+    );
   }
-  __name(Dd, "Dd");
-  J.prototype[Eb] = Mb;
-  J.prototype.toString = function() {
+  __name(readTelemetryBootstrapMessage, "readTelemetryBootstrapMessage");
+  ArrayMessage.prototype[messageMarkerSymbol] = messageMarkerToken;
+  ArrayMessage.prototype.toString = function() {
     return this.B.toString();
   };
-  function Id(a, b) {
-    if (b == null) b = a.constructor, b = b[zb] || (b[zb] = Dc(b));
-    else {
-      a = a.constructor;
-      if (!Array.isArray(b)) throw Error();
-      if (Object.isFrozen(b) || Object.isSealed(b) || !Object.isExtensible(b)) throw Error();
-      b = new a(Lb(b));
+  function immutableMessageFromArray(message, array) {
+    if (array == null) {
+      array = message.constructor;
+      array = array[defaultMessageSymbol] || (array[defaultMessageSymbol] = createFrozenDefaultMessage(array));
+    } else {
+      message = message.constructor;
+      if (!Array.isArray(array)) throw Error();
+      if (Object.isFrozen(array) || Object.isSealed(array) || !Object.isExtensible(array))
+        throw Error();
+      array = new message(markImmutableMessageArray(array));
     }
-    return b;
+    return array;
   }
-  __name(Id, "Id");
-  ;
-  function Jd(a) {
-    return function(b) {
-      return Cd(a, b);
+  __name(immutableMessageFromArray, "immutableMessageFromArray");
+  function createMessageJsonParser(MessageType) {
+    return function(value) {
+      return parseMessageJson(MessageType, value);
     };
   }
-  __name(Jd, "Jd");
-  ;
-  function Kd(a) {
-    this.B = G(a);
+  __name(createMessageJsonParser, "createMessageJsonParser");
+  function AnyMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Kd, "Kd");
-  v(Kd, J);
-  Kd.prototype.getTypeName = function() {
-    return wd(this, 1).split("/").pop();
+  __name(AnyMessage, "AnyMessage");
+  inheritCompiledClass(AnyMessage, ArrayMessage);
+  AnyMessage.prototype.getTypeName = function() {
+    return readStringOrDefault(this, 1).split("/").pop();
   };
-  var Ld = (function(a) {
-    return Rb(function(b) {
-      return b instanceof a && !Nb(b);
+  var isMutableAnyMessage = (function(value) {
+    return markTypePredicate(function(value2) {
+      return value2 instanceof value && !isImmutableMessage(value2);
     });
-  })(Kd);
-  function Md(a) {
-    var b = 2;
-    b = b === void 0 ? 2 : b;
-    this.key = a;
+  })(AnyMessage);
+  function BooleanFeatureFlag(key) {
+    var intermediate = 2;
+    intermediate = intermediate === void 0 ? 2 : intermediate;
+    this.key = key;
     this.defaultValue = false;
-    this.phase = b;
+    this.phase = intermediate;
     this.flagNameForDebugging = void 0;
   }
-  __name(Md, "Md");
-  Md.prototype.ctor = function(a) {
-    return typeof a === "boolean" ? a : this.defaultValue;
+  __name(BooleanFeatureFlag, "BooleanFeatureFlag");
+  BooleanFeatureFlag.prototype.ctor = function(value) {
+    return typeof value === "boolean" ? value : this.defaultValue;
   };
-  function Nd() {
-    var a = Od('[["feature named `pageObserver` was not found","feature named `hover` was not found"]]'), b = Pd, c = 2;
-    c = c === void 0 ? 2 : c;
+  function IgnoredErrorsFeatureFlag() {
+    var ignoredErrors = parseIgnoredErrors(
+      '[["feature named `pageObserver` was not found","feature named `hover` was not found"]]'
+    ), IgnoredErrorsMessage2 = IgnoredErrorsMessage, intermediate = 2;
+    intermediate = intermediate === void 0 ? 2 : intermediate;
     this.key = "45696263";
-    this.defaultValue = a;
-    this.j = b;
-    this.phase = c;
+    this.defaultValue = ignoredErrors;
+    this.j = IgnoredErrorsMessage2;
+    this.phase = intermediate;
     this.flagNameForDebugging = void 0;
   }
-  __name(Nd, "Nd");
-  Nd.prototype.ctor = function(a) {
-    if (typeof a === "string" && a) return Cd(this.j, a);
-    if (!Ld(a)) return this.defaultValue.clone();
-    var b;
+  __name(IgnoredErrorsFeatureFlag, "IgnoredErrorsFeatureFlag");
+  IgnoredErrorsFeatureFlag.prototype.ctor = function(value) {
+    if (typeof value === "string" && value) return parseMessageJson(this.j, value);
+    if (!isMutableAnyMessage(value)) return this.defaultValue.clone();
+    var intermediate;
     try {
-      var c, d = this.j, e = (c = a.getTypeName()) != null ? c : "";
-      if (wd(a, 1).split("/").pop() != e) var f = null;
+      var intermediate2, intermediate3 = this.j, intermediate4 = (intermediate2 = value.getTypeName()) != null ? intermediate2 : "";
+      if (readStringOrDefault(value, 1).split("/").pop() != intermediate4) var intermediate5 = null;
       else {
-        var g = typeof d === "function" ? d : d.constructor, h = a.B, k = h[D] | 0, l = $c(h, 2);
-        Vc(a) && (h = a.B, k = h[D] | 0);
-        a = h;
-        if (l != null && !(Array.isArray(l) || l != null && l[Eb] === Mb)) throw Error(
-          "saw an invalid value of type '" + Ja(l) + "' in the Any.value field"
-        );
-        var m = Cc(l, g, true, k);
-        if (!(m instanceof g)) throw Error("incorrect type in any value: got " + m.constructor.displayName + ", expected " + g.displayName);
-        (g = !!(2 & k)) || (m = Uc(m));
-        l !== m && (bd(a, k, 2, m), g || Xc(a));
-        f = m;
+        var intermediate6 = typeof intermediate3 === "function" ? intermediate3 : intermediate3.constructor, backingOrStateValue = value.B, intermediate7 = backingOrStateValue[arrayFlagsKey] | 0, arrayField = getArrayField(backingOrStateValue, 2);
+        detachCopyOnWriteArray(value) && (backingOrStateValue = value.B, intermediate7 = backingOrStateValue[arrayFlagsKey] | 0);
+        value = backingOrStateValue;
+        if (arrayField != null && !(Array.isArray(arrayField) || arrayField != null && arrayField[messageMarkerSymbol] === messageMarkerToken))
+          throw Error(
+            "saw an invalid value of type '" + getValueType(arrayField) + "' in the Any.value field"
+          );
+        var message = coerceMessage(arrayField, intermediate6, true, intermediate7);
+        if (!(message instanceof intermediate6))
+          throw Error(
+            "incorrect type in any value: got " + message.constructor.displayName + ", expected " + intermediate6.displayName
+          );
+        (intermediate6 = !!(2 & intermediate7)) || (message = mutableMessageCopy(message));
+        arrayField !== message && (setArrayField(value, intermediate7, 2, message), intermediate6 || markArrayContainsMutableValues(value));
+        intermediate5 = message;
       }
-    } catch (q) {
-      f = null;
+    } catch (caughtError) {
+      intermediate5 = null;
     }
-    return (b = f) != null ? b : this.defaultValue.clone();
+    return (intermediate = intermediate5) != null ? intermediate : this.defaultValue.clone();
   };
-  function Qd(a) {
-    this.B = G(a);
+  function StringFlagValueMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Qd, "Qd");
-  v(Qd, J);
-  Qd.prototype.clearValue = function() {
-    return id(this, Rd);
+  __name(StringFlagValueMessage, "StringFlagValueMessage");
+  inheritCompiledClass(StringFlagValueMessage, ArrayMessage);
+  StringFlagValueMessage.prototype.clearValue = function() {
+    return clearOneof(this, stringFlagOneofFields);
   };
-  var Rd = [1, 2];
-  function Sd(a) {
-    this.B = G(a);
+  var stringFlagOneofFields = [1, 2];
+  function FeatureFlagValueMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Sd, "Sd");
-  v(Sd, J);
-  Sd.prototype.clearValue = function() {
-    return id(this, Td);
+  __name(FeatureFlagValueMessage, "FeatureFlagValueMessage");
+  inheritCompiledClass(FeatureFlagValueMessage, ArrayMessage);
+  FeatureFlagValueMessage.prototype.clearValue = function() {
+    return clearOneof(this, featureFlagOneofFields);
   };
-  var Td = [2, 3, 4, 5, 6, 8];
-  function Ud(a) {
-    this.B = G(a);
+  var featureFlagOneofFields = [2, 3, 4, 5, 6, 8];
+  function FeatureFlagSetMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Ud, "Ud");
-  v(Ud, J);
-  Ud.prototype.La = function() {
-    var a = H(this, 3, void 0, void 0, hd);
-    return a == null ? pb() : a;
+  __name(FeatureFlagSetMessage, "FeatureFlagSetMessage");
+  inheritCompiledClass(FeatureFlagSetMessage, ArrayMessage);
+  FeatureFlagSetMessage.prototype.La = function() {
+    var messageField = getMessageField(this, 3, void 0, void 0, coerceByteString);
+    return messageField == null ? emptyByteString() : messageField;
   };
-  function Vd(a) {
-    this.B = G(a);
+  function FeatureFlagBootstrapMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Vd, "Vd");
-  v(Vd, J);
-  var Wd = Jd(Vd);
-  function Pd(a) {
-    this.B = G(a);
+  __name(FeatureFlagBootstrapMessage, "FeatureFlagBootstrapMessage");
+  inheritCompiledClass(FeatureFlagBootstrapMessage, ArrayMessage);
+  var parseFeatureFlagBootstrap = createMessageJsonParser(FeatureFlagBootstrapMessage);
+  function IgnoredErrorsMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Pd, "Pd");
-  v(Pd, J);
-  var Od = Jd(Pd);
-  function Xd(a, b) {
-    this.K = a | 0;
-    this.I = b | 0;
+  __name(IgnoredErrorsMessage, "IgnoredErrorsMessage");
+  inheritCompiledClass(IgnoredErrorsMessage, ArrayMessage);
+  var parseIgnoredErrors = createMessageJsonParser(IgnoredErrorsMessage);
+  function Int64(low, high) {
+    this.K = low | 0;
+    this.I = high | 0;
   }
-  __name(Xd, "Xd");
-  function Yd(a) {
-    return a.I * 4294967296 + (a.K >>> 0);
+  __name(Int64, "Int64");
+  function int64ToNumber(value) {
+    return value.I * 4294967296 + (value.K >>> 0);
   }
-  __name(Yd, "Yd");
-  p = Xd.prototype;
-  p.isSafeInteger = function() {
-    var a = this.I >> 21;
-    return a == 0 || a == -1 && !(this.K == 0 && this.I == -2097152);
+  __name(int64ToNumber, "int64ToNumber");
+  prototypeAlias = Int64.prototype;
+  prototypeAlias.isSafeInteger = function() {
+    var intermediate = this.I >> 21;
+    return intermediate == 0 || intermediate == -1 && !(this.K == 0 && this.I == -2097152);
   };
-  p.toString = function(a) {
-    a = a || 10;
-    if (a < 2 || 36 < a) throw Error("radix out of range: " + a);
+  prototypeAlias.toString = function(radix) {
+    radix = radix || 10;
+    if (radix < 2 || 36 < radix) throw Error("radix out of range: " + radix);
     if (this.isSafeInteger()) {
-      var b = Yd(this);
-      return a == 10 ? "" + b : b.toString(a);
+      var intermediate = int64ToNumber(this);
+      return radix == 10 ? "" + intermediate : intermediate.toString(radix);
     }
-    b = 14 - (a >> 2);
-    var c = Math.pow(a, b), d = K(c, c / 4294967296);
-    c = this.div(d);
-    var e = Math, f = e.abs;
-    d = c.multiply(d);
-    d = this.add(Zd(d));
-    e = f.call(e, Yd(d));
-    f = a == 10 ? "" + e : e.toString(a);
-    f.length < b && (f = "0000000000000".slice(f.length - b) + f);
-    e = Yd(c);
-    return (a == 10 ? e : e.toString(a)) + f;
+    intermediate = 14 - (radix >> 2);
+    var intermediate2 = Math.pow(radix, intermediate), intermediate3 = int64FromWords(intermediate2, intermediate2 / 4294967296);
+    intermediate2 = this.div(intermediate3);
+    var Math2 = Math, abs = Math2.abs;
+    intermediate3 = intermediate2.multiply(intermediate3);
+    intermediate3 = this.add(negateInt64(intermediate3));
+    Math2 = abs.call(Math2, int64ToNumber(intermediate3));
+    abs = radix == 10 ? "" + Math2 : Math2.toString(radix);
+    abs.length < intermediate && (abs = "0000000000000".slice(abs.length - intermediate) + abs);
+    Math2 = int64ToNumber(intermediate2);
+    return (radix == 10 ? Math2 : Math2.toString(radix)) + abs;
   };
-  function $d(a) {
-    return a.K == 0 && a.I == 0;
+  function isZeroInt64(value) {
+    return value.K == 0 && value.I == 0;
   }
-  __name($d, "$d");
-  p.ya = function() {
+  __name(isZeroInt64, "isZeroInt64");
+  prototypeAlias.ya = function() {
     return this.K ^ this.I;
   };
-  p.equals = function(a) {
-    return a == null ? false : this.K == a.K && this.I == a.I;
+  prototypeAlias.equals = function(other) {
+    return other == null ? false : this.K == other.K && this.I == other.I;
   };
-  p.compare = function(a) {
-    return this.I == a.I ? this.K == a.K ? 0 : this.K >>> 0 > a.K >>> 0 ? 1 : -1 : this.I > a.I ? 1 : -1;
+  prototypeAlias.compare = function(other) {
+    return this.I == other.I ? this.K == other.K ? 0 : this.K >>> 0 > other.K >>> 0 ? 1 : -1 : this.I > other.I ? 1 : -1;
   };
-  function Zd(a) {
-    var b = ~a.K + 1 | 0;
-    return K(b, ~a.I + !b | 0);
+  function negateInt64(value) {
+    var negatedLow = ~value.K + 1 | 0;
+    return int64FromWords(negatedLow, ~value.I + !negatedLow | 0);
   }
-  __name(Zd, "Zd");
-  p.add = function(a) {
-    var b = this.I >>> 16, c = this.I & 65535, d = this.K >>> 16, e = a.I >>> 16, f = a.I & 65535, g = a.K >>> 16;
-    a = (this.K & 65535) + (a.K & 65535);
-    g = (a >>> 16) + (d + g);
-    d = g >>> 16;
-    d += c + f;
-    return K((g & 65535) << 16 | a & 65535, ((d >>> 16) + (b + e) & 65535) << 16 | d & 65535);
+  __name(negateInt64, "negateInt64");
+  prototypeAlias.add = function(other) {
+    var leftHighUpper16 = this.I >>> 16, leftHighLower16 = this.I & 65535, leftLowUpper16OrCarry = this.K >>> 16, rightHighUpper16 = other.I >>> 16, rightHighLower16 = other.I & 65535, lowUpperSum = other.K >>> 16;
+    other = (this.K & 65535) + (other.K & 65535);
+    lowUpperSum = (other >>> 16) + (leftLowUpper16OrCarry + lowUpperSum);
+    leftLowUpper16OrCarry = lowUpperSum >>> 16;
+    leftLowUpper16OrCarry += leftHighLower16 + rightHighLower16;
+    return int64FromWords(
+      (lowUpperSum & 65535) << 16 | other & 65535,
+      ((leftLowUpper16OrCarry >>> 16) + (leftHighUpper16 + rightHighUpper16) & 65535) << 16 | leftLowUpper16OrCarry & 65535
+    );
   };
-  p.multiply = function(a) {
-    if ($d(this)) return this;
-    if ($d(a)) return a;
-    var b = this.I >>> 16, c = this.I & 65535, d = this.K >>> 16, e = this.K & 65535, f = a.I >>> 16, g = a.I & 65535, h = a.K >>> 16;
-    a = a.K & 65535;
-    var k = e * a;
-    var l = (k >>> 16) + d * a;
-    var m = l >>> 16;
-    l = (l & 65535) + e * h;
-    m += l >>> 16;
-    m += c * a;
-    var q = m >>> 16;
-    m = (m & 65535) + d * h;
-    q += m >>> 16;
-    m = (m & 65535) + e * g;
-    q = q + (m >>> 16) + (b * a + c * h + d * g + e * f) & 65535;
-    return K((l & 65535) << 16 | k & 65535, q << 16 | m & 65535);
+  prototypeAlias.multiply = function(other) {
+    if (isZeroInt64(this)) return this;
+    if (isZeroInt64(other)) return other;
+    var intermediate = this.I >>> 16, intermediate2 = this.I & 65535, intermediate3 = this.K >>> 16, intermediate4 = this.K & 65535, intermediate5 = other.I >>> 16, intermediate6 = other.I & 65535, intermediate7 = other.K >>> 16;
+    other = other.K & 65535;
+    var intermediate8 = intermediate4 * other;
+    var intermediate9 = (intermediate8 >>> 16) + intermediate3 * other;
+    var intermediate10 = intermediate9 >>> 16;
+    intermediate9 = (intermediate9 & 65535) + intermediate4 * intermediate7;
+    intermediate10 += intermediate9 >>> 16;
+    intermediate10 += intermediate2 * other;
+    var intermediate11 = intermediate10 >>> 16;
+    intermediate10 = (intermediate10 & 65535) + intermediate3 * intermediate7;
+    intermediate11 += intermediate10 >>> 16;
+    intermediate10 = (intermediate10 & 65535) + intermediate4 * intermediate6;
+    intermediate11 = intermediate11 + (intermediate10 >>> 16) + (intermediate * other + intermediate2 * intermediate7 + intermediate3 * intermediate6 + intermediate4 * intermediate5) & 65535;
+    return int64FromWords(
+      (intermediate9 & 65535) << 16 | intermediate8 & 65535,
+      intermediate11 << 16 | intermediate10 & 65535
+    );
   };
-  p.div = function(a) {
-    if ($d(a)) throw Error("division by zero");
+  prototypeAlias.div = function(divisor) {
+    if (isZeroInt64(divisor)) throw Error("division by zero");
     if (this.I < 0) {
-      if (this.equals(ae)) {
-        if (a.equals(be) || a.equals(ce)) return ae;
-        if (a.equals(ae)) return be;
-        var b = this.I;
-        b = K(this.K >>> 1 | b << 31, b >> 1);
-        b = b.div(a).shiftLeft(1);
-        if (b.equals(de)) return a.I < 0 ? be : ce;
-        var c = a.multiply(b);
-        c = this.add(Zd(c));
-        return b.add(c.div(a));
+      if (this.equals(INT64_MIN)) {
+        if (divisor.equals(INT64_ONE) || divisor.equals(INT64_NEGATIVE_ONE)) return INT64_MIN;
+        if (divisor.equals(INT64_MIN)) return INT64_ONE;
+        var intermediate = this.I;
+        intermediate = int64FromWords(this.K >>> 1 | intermediate << 31, intermediate >> 1);
+        intermediate = intermediate.div(divisor).shiftLeft(1);
+        if (intermediate.equals(INT64_ZERO)) return divisor.I < 0 ? INT64_ONE : INT64_NEGATIVE_ONE;
+        var intermediate2 = divisor.multiply(intermediate);
+        intermediate2 = this.add(negateInt64(intermediate2));
+        return intermediate.add(intermediate2.div(divisor));
       }
-      return a.I < 0 ? Zd(this).div(Zd(a)) : Zd(Zd(this).div(a));
+      return divisor.I < 0 ? negateInt64(this).div(negateInt64(divisor)) : negateInt64(negateInt64(this).div(divisor));
     }
-    if ($d(this)) return de;
-    if (a.I < 0) return a.equals(ae) ? de : Zd(this.div(Zd(a)));
-    b = de;
-    for (c = this; c.compare(a) >= 0; ) {
-      var d = Math.max(1, Math.floor(Yd(c) / Yd(a))), e = Math.ceil(Math.log(d) / Math.LN2);
-      e = e <= 48 ? 1 : Math.pow(2, e - 48);
-      for (var f = ee(d), g = f.multiply(a); g.I < 0 || g.compare(c) > 0; ) d -= e, f = ee(d), g = f.multiply(
-        a
-      );
-      $d(f) && (f = be);
-      b = b.add(f);
-      c = c.add(Zd(g));
+    if (isZeroInt64(this)) return INT64_ZERO;
+    if (divisor.I < 0)
+      return divisor.equals(INT64_MIN) ? INT64_ZERO : negateInt64(this.div(negateInt64(divisor)));
+    intermediate = INT64_ZERO;
+    for (intermediate2 = this; intermediate2.compare(divisor) >= 0; ) {
+      var intermediate3 = Math.max(
+        1,
+        Math.floor(int64ToNumber(intermediate2) / int64ToNumber(divisor))
+      ), intermediate4 = Math.ceil(Math.log(intermediate3) / Math.LN2);
+      intermediate4 = intermediate4 <= 48 ? 1 : Math.pow(2, intermediate4 - 48);
+      for (var intermediate5 = int64FromNumber(intermediate3), intermediate6 = intermediate5.multiply(divisor); intermediate6.I < 0 || intermediate6.compare(intermediate2) > 0; ) {
+        intermediate3 -= intermediate4;
+        intermediate5 = int64FromNumber(intermediate3);
+        intermediate6 = intermediate5.multiply(divisor);
+      }
+      isZeroInt64(intermediate5) && (intermediate5 = INT64_ONE);
+      intermediate = intermediate.add(intermediate5);
+      intermediate2 = intermediate2.add(negateInt64(intermediate6));
     }
-    return b;
+    return intermediate;
   };
-  p.and = function(a) {
-    return K(this.K & a.K, this.I & a.I);
+  prototypeAlias.and = function(other) {
+    return int64FromWords(this.K & other.K, this.I & other.I);
   };
-  p.or = function(a) {
-    return K(this.K | a.K, this.I | a.I);
+  prototypeAlias.or = function(other) {
+    return int64FromWords(this.K | other.K, this.I | other.I);
   };
-  p.xor = function(a) {
-    return K(this.K ^ a.K, this.I ^ a.I);
+  prototypeAlias.xor = function(other) {
+    return int64FromWords(this.K ^ other.K, this.I ^ other.I);
   };
-  p.shiftLeft = function(a) {
-    a &= 63;
-    if (a == 0) return this;
-    var b = this.K;
-    return a < 32 ? K(b << a, this.I << a | b >>> 32 - a) : K(0, b << a - 32);
+  prototypeAlias.shiftLeft = function(bits) {
+    bits &= 63;
+    if (bits == 0) return this;
+    var intermediate = this.K;
+    return bits < 32 ? int64FromWords(intermediate << bits, this.I << bits | intermediate >>> 32 - bits) : int64FromWords(0, intermediate << bits - 32);
   };
-  function ee(a) {
-    return a > 0 ? a >= 9223372036854776e3 ? fe : new Xd(a, a / 4294967296) : a < 0 ? a <= -9223372036854776e3 ? ae : Zd(new Xd(-a, -a / 4294967296)) : de;
+  function int64FromNumber(value) {
+    return value > 0 ? value >= 9223372036854776e3 ? INT64_MAX : new Int64(value, value / 4294967296) : value < 0 ? value <= -9223372036854776e3 ? INT64_MIN : negateInt64(new Int64(-value, -value / 4294967296)) : INT64_ZERO;
   }
-  __name(ee, "ee");
-  function K(a, b) {
-    return new Xd(a, b);
+  __name(int64FromNumber, "int64FromNumber");
+  function int64FromWords(low, high) {
+    return new Int64(low, high);
   }
-  __name(K, "K");
-  var de = K(0, 0), be = K(1, 0), ce = K(-1, -1), fe = K(4294967295, 2147483647), ae = K(0, 2147483648);
-  function Fd(a, b) {
-    b = b === void 0 ? window : b;
-    b = b === void 0 ? window : b;
-    return (b = b.WIZ_global_data) && a in b ? b[a] : null;
+  __name(int64FromWords, "int64FromWords");
+  var INT64_ZERO = int64FromWords(0, 0), INT64_ONE = int64FromWords(1, 0), INT64_NEGATIVE_ONE = int64FromWords(-1, -1), INT64_MAX = int64FromWords(4294967295, 2147483647), INT64_MIN = int64FromWords(0, 2147483648);
+  function readWizGlobalData(key, windowObject) {
+    windowObject = windowObject === void 0 ? window : windowObject;
+    windowObject = windowObject === void 0 ? window : windowObject;
+    return (windowObject = windowObject.WIZ_global_data) && key in windowObject ? windowObject[key] : null;
   }
-  __name(Fd, "Fd");
-  ;
-  var ge;
-  function he() {
-    return ge = ge || new ie();
+  __name(readWizGlobalData, "readWizGlobalData");
+  var featureFlagStoreInstance;
+  function getFeatureFlagStore() {
+    return featureFlagStoreInstance = featureFlagStoreInstance || new FeatureFlagStore();
   }
-  __name(he, "he");
-  function ie() {
-    var a = null;
-    var b = Fd("TSDtV", window);
-    if (b = typeof b !== "string" ? null : b) a = Wd("[" + b.substring(4)), a = rd(a, Ud, 1)[0];
-    if (a) {
-      b = w(rd(a, Sd, 2));
-      var c = b.next(), d;
+  __name(getFeatureFlagStore, "getFeatureFlagStore");
+  function FeatureFlagStore() {
+    var intermediate = null;
+    var wizGlobalData = readWizGlobalData("TSDtV", window);
+    if (wizGlobalData = typeof wizGlobalData !== "string" ? null : wizGlobalData) {
+      intermediate = parseFeatureFlagBootstrap("[" + wizGlobalData.substring(4));
+      intermediate = readRepeatedMessages(intermediate, FeatureFlagSetMessage, 1)[0];
+    }
+    if (intermediate) {
+      wizGlobalData = getIterator(readRepeatedMessages(intermediate, FeatureFlagValueMessage, 2));
+      var iteration = wizGlobalData.next(), intermediate2;
       try {
-        for (; !c.done; c = b.next()) {
-          var e = c.value, f = e.B;
-          if (pd(f, f[D] | 0, Kd, kd(e, Td, 6)) !== void 0) throw Error();
+        for (; !iteration.done; iteration = wizGlobalData.next()) {
+          var value = iteration.value, backingOrStateValue = value.B;
+          if (getNestedArrayMessage(
+            backingOrStateValue,
+            backingOrStateValue[arrayFlagsKey] | 0,
+            AnyMessage,
+            getActiveOneofField(value, featureFlagOneofFields, 6)
+          ) !== void 0)
+            throw Error();
         }
       } finally {
-        c && !c.done && (d = b.return) && d.call(b);
+        iteration && !iteration.done && (intermediate2 = wizGlobalData.return) && intermediate2.call(wizGlobalData);
       }
     }
-    var g;
-    if (a) {
-      d = {};
-      e = w(rd(a, Sd, 2));
-      f = e.next();
+    var intermediate3;
+    if (intermediate) {
+      intermediate2 = {};
+      value = getIterator(readRepeatedMessages(intermediate, FeatureFlagValueMessage, 2));
+      backingOrStateValue = value.next();
       try {
-        for (; !f.done; f = e.next()) {
-          var h = f.value, k = vd(h, 1).toString();
-          switch (ld(h, Td)) {
+        for (; !backingOrStateValue.done; backingOrStateValue = value.next()) {
+          var value2 = backingOrStateValue.value, intermediate4 = readInt64Field(value2, 1).toString();
+          switch (computeOneofCase(value2, featureFlagOneofFields)) {
             case 3:
-              d[k] = td(h, kd(h, Td, 3));
+              intermediate2[intermediate4] = readBooleanField(
+                value2,
+                getActiveOneofField(value2, featureFlagOneofFields, 3)
+              );
               break;
             case 2:
-              var l = vd(h, kd(h, Td, 2));
-              Yb(l);
-              dc(l);
-              var m = dc(l) ? Number(l) : String(l);
-              d[k] = m;
+              var int64Field = readInt64Field(
+                value2,
+                getActiveOneofField(value2, featureFlagOneofFields, 2)
+              );
+              isInt64Representation(int64Field);
+              isSafeInt64Representation(int64Field);
+              var intermediate5 = isSafeInt64Representation(int64Field) ? Number(int64Field) : String(int64Field);
+              intermediate2[intermediate4] = intermediate5;
               break;
             case 4:
-              b = void 0;
-              c = h;
-              var q = kd(h, Td, 4), t = void 0;
-              t = t === void 0 ? 0 : t;
-              var x = (b = H(c, q, void 0, void 0, qc)) != null ? b : t;
-              d[k] = x;
+              wizGlobalData = void 0;
+              iteration = value2;
+              var activeOneofField = getActiveOneofField(value2, featureFlagOneofFields, 4), intermediate6 = void 0;
+              intermediate6 = intermediate6 === void 0 ? 0 : intermediate6;
+              var intermediate7 = (wizGlobalData = getMessageField(
+                iteration,
+                activeOneofField,
+                void 0,
+                void 0,
+                coerceSpecialNumber
+              )) != null ? wizGlobalData : intermediate6;
+              intermediate2[intermediate4] = intermediate7;
               break;
             case 5:
-              d[k] = wd(h, kd(h, Td, 5));
+              intermediate2[intermediate4] = readStringOrDefault(
+                value2,
+                getActiveOneofField(value2, featureFlagOneofFields, 5)
+              );
               break;
             case 6:
-              d[k] = I(h, Kd, kd(h, Td, 6));
+              intermediate2[intermediate4] = readNestedMessage(
+                value2,
+                AnyMessage,
+                getActiveOneofField(value2, featureFlagOneofFields, 6)
+              );
               break;
             case 8:
-              var u = qd(h, Qd, kd(h, Td, 8));
-              switch (ld(u, Rd)) {
+              var nestedMessageOrDefault = getNestedMessageOrDefault(
+                value2,
+                StringFlagValueMessage,
+                getActiveOneofField(value2, featureFlagOneofFields, 8)
+              );
+              switch (computeOneofCase(nestedMessageOrDefault, stringFlagOneofFields)) {
                 case 1:
-                  d[k] = wd(u, kd(u, Rd, 1));
+                  intermediate2[intermediate4] = readStringOrDefault(
+                    nestedMessageOrDefault,
+                    getActiveOneofField(nestedMessageOrDefault, stringFlagOneofFields, 1)
+                  );
                   break;
                 default:
-                  throw Error("case " + ld(u, Rd));
+                  throw Error(
+                    "case " + computeOneofCase(nestedMessageOrDefault, stringFlagOneofFields)
+                  );
               }
               break;
             default:
-              throw Error("case " + ld(h, Td));
+              throw Error("case " + computeOneofCase(value2, featureFlagOneofFields));
           }
         }
       } finally {
-        f && !f.done && (g = e.return) && g.call(e);
+        backingOrStateValue && !backingOrStateValue.done && (intermediate3 = value.return) && intermediate3.call(value);
       }
-      g = d;
-    } else g = {};
-    this.j = g;
-    this.l = a ? a.La() : null;
+      intermediate3 = intermediate2;
+    } else intermediate3 = {};
+    this.j = intermediate3;
+    this.l = intermediate ? intermediate.La() : null;
   }
-  __name(ie, "ie");
-  function je(a, b) {
-    return b.phase !== 1 && b.key in a.j ? b.ctor(a.j[b.key]) : b.defaultValue;
+  __name(FeatureFlagStore, "FeatureFlagStore");
+  function readFeatureFlag(store, flag) {
+    return flag.phase !== 1 && flag.key in store.j ? flag.ctor(store.j[flag.key]) : flag.defaultValue;
   }
-  __name(je, "je");
-  ie.prototype.La = ba("l");
-  function ke(a) {
-    this.B = G(a);
+  __name(readFeatureFlag, "readFeatureFlag");
+  FeatureFlagStore.prototype.La = createPropertyGetter("l");
+  function ExperimentConfigMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(ke, "ke");
-  v(ke, J);
-  var le = new Nd();
-  var me = new Md("45723104");
-  var ne = new Md("45765314");
-  function oe(a) {
-    this.B = G(a);
+  __name(ExperimentConfigMessage, "ExperimentConfigMessage");
+  inheritCompiledClass(ExperimentConfigMessage, ArrayMessage);
+  var ignoredErrorsFlag = new IgnoredErrorsFeatureFlag();
+  var crashStorageFlag = new BooleanFeatureFlag("45723104");
+  var telemetryIntegrationFlag = new BooleanFeatureFlag("45765314");
+  function ExperimentSamplingMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(oe, "oe");
-  v(oe, J);
-  var pe = /* @__PURE__ */ (function(a) {
+  __name(ExperimentSamplingMessage, "ExperimentSamplingMessage");
+  inheritCompiledClass(ExperimentSamplingMessage, ArrayMessage);
+  var getDefaultExperimentSamplingMessage = /* @__PURE__ */ (function(value) {
     return function() {
-      return a[zb] || (a[zb] = Dc(a));
+      return value[defaultMessageSymbol] || (value[defaultMessageSymbol] = createFrozenDefaultMessage(value));
     };
-  })(oe);
+  })(ExperimentSamplingMessage);
   /* @__PURE__ */ Object.create(null);
-  function L() {
+  function JavaObject() {
   }
-  __name(L, "L");
-  L.prototype.equals = function(a) {
-    return qe(this, a);
+  __name(JavaObject, "JavaObject");
+  JavaObject.prototype.equals = function(value) {
+    return javaObjectEquals(this, value);
   };
-  L.prototype.ya = function() {
+  JavaObject.prototype.ya = function() {
     return this.D || (Object.defineProperties(this, {
-      D: {
-        value: re = re + 1 | 0,
-        enumerable: false
-      }
+      D: { value: nextJavaIdentityHash = nextJavaIdentityHash + 1 | 0, enumerable: false }
     }), this.D);
   };
-  L.prototype.toString = function() {
-    return M(se(O(te(this)))) + "@" + M((this.ya() >>> 0).toString(16));
+  JavaObject.prototype.toString = function() {
+    return javaString(getJavaClassName(getJavaClassMetadata(getConstructor(this)))) + "@" + javaString((this.ya() >>> 0).toString(16));
   };
-  L.prototype.F = ["java.lang.Object", 0];
-  function ue() {
+  JavaObject.prototype.F = ["java.lang.Object", 0];
+  function JavaThrowable() {
   }
-  __name(ue, "ue");
-  v(ue, L);
-  function P(a, b) {
-    a.j = b;
-    ve(b, a);
+  __name(JavaThrowable, "JavaThrowable");
+  inheritCompiledClass(JavaThrowable, JavaObject);
+  function associateNativeError(throwable, nativeError) {
+    throwable.j = nativeError;
+    linkNativeErrorToThrowable(nativeError, throwable);
   }
-  __name(P, "P");
-  function Q(a) {
-    we(a.j) && (Error.captureStackTrace ? Error.captureStackTrace(R(a.j, we, xe)) : R(a.j, we, xe).stack = Error().stack);
+  __name(associateNativeError, "associateNativeError");
+  function captureJavaStack(throwable) {
+    isNativeError(throwable.j) && (Error.captureStackTrace ? Error.captureStackTrace(checkedJavaCast(throwable.j, isNativeError, NativeErrorClass)) : checkedJavaCast(throwable.j, isNativeError, NativeErrorClass).stack = Error().stack);
   }
-  __name(Q, "Q");
-  ue.prototype.toString = function() {
-    var a = se(O(te(this))), b = this.l;
-    return b == null ? a : M(a) + ": " + M(b);
+  __name(captureJavaStack, "captureJavaStack");
+  JavaThrowable.prototype.toString = function() {
+    var javaClassName = getJavaClassName(getJavaClassMetadata(getConstructor(this))), intermediate = this.l;
+    return intermediate == null ? javaClassName : javaString(javaClassName) + ": " + javaString(intermediate);
   };
-  function ye(a) {
-    if (a != null) {
-      var b = a.Za;
-      if (b != null) return b;
+  function wrapJavaThrowable(error) {
+    if (error != null) {
+      var intermediate = error.Za;
+      if (intermediate != null) return intermediate;
     }
-    a instanceof TypeError ? b = ze() : (b = new Ae(), Q(b), P(b, Error(b)));
-    b.l = a == null ? "null" : a.toString();
-    P(b, a);
-    return b;
+    error instanceof TypeError ? intermediate = createNullPointerException() : (intermediate = new JavaJsException(), captureJavaStack(intermediate), associateNativeError(intermediate, Error(intermediate)));
+    intermediate.l = error == null ? "null" : error.toString();
+    associateNativeError(intermediate, error);
+    return intermediate;
   }
-  __name(ye, "ye");
-  function Be(a) {
-    return a instanceof ue;
+  __name(wrapJavaThrowable, "wrapJavaThrowable");
+  function isJavaThrowable(value) {
+    return value instanceof JavaThrowable;
   }
-  __name(Be, "Be");
-  ue.prototype.F = ["java.lang.Throwable", 0];
-  function Ce() {
+  __name(isJavaThrowable, "isJavaThrowable");
+  JavaThrowable.prototype.F = ["java.lang.Throwable", 0];
+  function JavaException() {
   }
-  __name(Ce, "Ce");
-  v(Ce, ue);
-  Ce.prototype.F = ["java.lang.Exception", 0];
-  function De() {
+  __name(JavaException, "JavaException");
+  inheritCompiledClass(JavaException, JavaThrowable);
+  JavaException.prototype.F = ["java.lang.Exception", 0];
+  function JavaRuntimeException() {
   }
-  __name(De, "De");
-  v(De, Ce);
-  De.prototype.F = ["java.lang.RuntimeException", 0];
-  function Ee() {
+  __name(JavaRuntimeException, "JavaRuntimeException");
+  inheritCompiledClass(JavaRuntimeException, JavaException);
+  JavaRuntimeException.prototype.F = ["java.lang.RuntimeException", 0];
+  function JavaIndexOutOfBoundsException() {
   }
-  __name(Ee, "Ee");
-  v(Ee, De);
-  Ee.prototype.F = ["java.lang.IndexOutOfBoundsException", 0];
-  var Fe;
-  function Ge() {
-    Ge = n();
-    for (var a = He(), b = 0; b < 256; b = b + 1 | 0) Ie(a, b, Je(b - 128 | 0));
-    Fe = a;
+  __name(JavaIndexOutOfBoundsException, "JavaIndexOutOfBoundsException");
+  inheritCompiledClass(JavaIndexOutOfBoundsException, JavaRuntimeException);
+  JavaIndexOutOfBoundsException.prototype.F = ["java.lang.IndexOutOfBoundsException", 0];
+  var boxedIntegerCache;
+  function initializeIntegerCache() {
+    initializeIntegerCache = createNoopFunction();
+    for (var integerCacheArray = createIntegerCacheArray(), intermediate = 0; intermediate < 256; intermediate = intermediate + 1 | 0)
+      setJavaArrayElement(
+        integerCacheArray,
+        intermediate,
+        createBoxedInteger(intermediate - 128 | 0)
+      );
+    boxedIntegerCache = integerCacheArray;
   }
-  __name(Ge, "Ge");
-  ;
-  function Ke() {
+  __name(initializeIntegerCache, "initializeIntegerCache");
+  function JavaArithmeticException() {
   }
-  __name(Ke, "Ke");
-  v(Ke, De);
-  Ke.prototype.F = ["java.lang.ArithmeticException", 0];
-  function Le() {
+  __name(JavaArithmeticException, "JavaArithmeticException");
+  inheritCompiledClass(JavaArithmeticException, JavaRuntimeException);
+  JavaArithmeticException.prototype.F = ["java.lang.ArithmeticException", 0];
+  function JavaArrayStoreException() {
   }
-  __name(Le, "Le");
-  v(Le, De);
-  Le.prototype.F = ["java.lang.ArrayStoreException", 0];
-  function Me() {
+  __name(JavaArrayStoreException, "JavaArrayStoreException");
+  inheritCompiledClass(JavaArrayStoreException, JavaRuntimeException);
+  JavaArrayStoreException.prototype.F = ["java.lang.ArrayStoreException", 0];
+  function JavaClassCastException() {
   }
-  __name(Me, "Me");
-  v(Me, De);
-  Me.prototype.F = ["java.lang.ClassCastException", 0];
-  function Ne() {
+  __name(JavaClassCastException, "JavaClassCastException");
+  inheritCompiledClass(JavaClassCastException, JavaRuntimeException);
+  JavaClassCastException.prototype.F = ["java.lang.ClassCastException", 0];
+  function JavaIllegalArgumentException() {
   }
-  __name(Ne, "Ne");
-  v(Ne, De);
-  Ne.prototype.F = ["java.lang.IllegalArgumentException", 0];
-  function Oe() {
+  __name(JavaIllegalArgumentException, "JavaIllegalArgumentException");
+  inheritCompiledClass(JavaIllegalArgumentException, JavaRuntimeException);
+  JavaIllegalArgumentException.prototype.F = ["java.lang.IllegalArgumentException", 0];
+  function JavaIllegalStateException() {
   }
-  __name(Oe, "Oe");
-  v(Oe, De);
-  function Pe(a) {
-    var b = new Oe();
-    b.l = a;
-    Q(b);
-    P(b, Error(b));
-    return b;
+  __name(JavaIllegalStateException, "JavaIllegalStateException");
+  inheritCompiledClass(JavaIllegalStateException, JavaRuntimeException);
+  function createIllegalStateException(message) {
+    var javaIllegalStateException = new JavaIllegalStateException();
+    javaIllegalStateException.l = message;
+    captureJavaStack(javaIllegalStateException);
+    associateNativeError(javaIllegalStateException, Error(javaIllegalStateException));
+    return javaIllegalStateException;
   }
-  __name(Pe, "Pe");
-  Oe.prototype.F = ["java.lang.IllegalStateException", 0];
-  function Ae() {
+  __name(createIllegalStateException, "createIllegalStateException");
+  JavaIllegalStateException.prototype.F = ["java.lang.IllegalStateException", 0];
+  function JavaJsException() {
   }
-  __name(Ae, "Ae");
-  v(Ae, De);
-  Ae.prototype.F = ["java.lang.JsException", 0];
-  function Qe() {
+  __name(JavaJsException, "JavaJsException");
+  inheritCompiledClass(JavaJsException, JavaRuntimeException);
+  JavaJsException.prototype.F = ["java.lang.JsException", 0];
+  function JavaNullPointerException() {
   }
-  __name(Qe, "Qe");
-  v(Qe, Ae);
-  function ze() {
-    var a = new Qe();
-    Q(a);
-    P(a, new TypeError(a));
-    return a;
+  __name(JavaNullPointerException, "JavaNullPointerException");
+  inheritCompiledClass(JavaNullPointerException, JavaJsException);
+  function createNullPointerException() {
+    var javaNullPointerException = new JavaNullPointerException();
+    captureJavaStack(javaNullPointerException);
+    associateNativeError(javaNullPointerException, new TypeError(javaNullPointerException));
+    return javaNullPointerException;
   }
-  __name(ze, "ze");
-  Qe.prototype.F = ["java.lang.NullPointerException", 0];
-  function Re() {
+  __name(createNullPointerException, "createNullPointerException");
+  JavaNullPointerException.prototype.F = ["java.lang.NullPointerException", 0];
+  function JavaStringIndexOutOfBoundsException() {
   }
-  __name(Re, "Re");
-  v(Re, Ee);
-  Re.prototype.F = ["java.lang.StringIndexOutOfBoundsException", 0];
-  function Se() {
+  __name(JavaStringIndexOutOfBoundsException, "JavaStringIndexOutOfBoundsException");
+  inheritCompiledClass(JavaStringIndexOutOfBoundsException, JavaIndexOutOfBoundsException);
+  JavaStringIndexOutOfBoundsException.prototype.F = ["java.lang.StringIndexOutOfBoundsException", 0];
+  function JavaNumber() {
   }
-  __name(Se, "Se");
-  var Te;
-  v(Se, L);
-  Se.prototype.F = ["java.lang.Number", 0];
-  function Ue() {
+  __name(JavaNumber, "JavaNumber");
+  var javaDoublePattern;
+  inheritCompiledClass(JavaNumber, JavaObject);
+  JavaNumber.prototype.F = ["java.lang.Number", 0];
+  function JavaDouble() {
   }
-  __name(Ue, "Ue");
-  v(Ue, Se);
-  Ue.prototype.F = ["java.lang.Double", 0];
-  function Ve(a) {
-    return ee(a);
+  __name(JavaDouble, "JavaDouble");
+  inheritCompiledClass(JavaDouble, JavaNumber);
+  JavaDouble.prototype.F = ["java.lang.Double", 0];
+  function javaLongFromNumber(value) {
+    return int64FromNumber(value);
   }
-  __name(Ve, "Ve");
-  function We(a) {
-    if (!isFinite(a)) throw a = new Ke(), Q(a), P(a, Error(a)), a.j;
-    return a | 0;
+  __name(javaLongFromNumber, "javaLongFromNumber");
+  function javaNumberToInt(value) {
+    if (!isFinite(value))
+      throw value = new JavaArithmeticException(), captureJavaStack(value), associateNativeError(value, Error(value)), value.j;
+    return value | 0;
   }
-  __name(We, "We");
-  ;
-  function Xe() {
+  __name(javaNumberToInt, "javaNumberToInt");
+  function JavaBoolean() {
   }
-  __name(Xe, "Xe");
-  v(Xe, L);
-  Xe.prototype.F = ["java.lang.Boolean", 0];
-  function R(a, b, c) {
-    if (a != null && !b(a)) throw a = M(se(Ye(a))) + " cannot be cast to " + M(se(O(c))), b = new Me(), b.l = a, Q(b), P(b, Error(b)), b.j;
-    return a;
+  __name(JavaBoolean, "JavaBoolean");
+  inheritCompiledClass(JavaBoolean, JavaObject);
+  JavaBoolean.prototype.F = ["java.lang.Boolean", 0];
+  function checkedJavaCast(value, predicate, TargetType) {
+    if (value != null && !predicate(value))
+      throw value = javaString(getJavaClassName(getJavaClass(value))) + " cannot be cast to " + javaString(getJavaClassName(getJavaClassMetadata(TargetType))), predicate = new JavaClassCastException(), predicate.l = value, captureJavaStack(predicate), associateNativeError(predicate, Error(predicate)), predicate.j;
+    return value;
   }
-  __name(R, "R");
-  ;
-  function te(a) {
-    return a.constructor;
+  __name(checkedJavaCast, "checkedJavaCast");
+  function getConstructor(value) {
+    return value.constructor;
   }
-  __name(te, "te");
-  function Ze(a, b, c) {
-    if (Object.prototype.hasOwnProperty.call(a.prototype, b)) return a.prototype[b];
-    c = c();
-    return a.prototype[b] = c;
+  __name(getConstructor, "getConstructor");
+  function getOrCreateClassMetadata(constructor, key, create) {
+    if (Object.prototype.hasOwnProperty.call(constructor.prototype, key))
+      return constructor.prototype[key];
+    create = create();
+    return constructor.prototype[key] = create;
   }
-  __name(Ze, "Ze");
-  ;
-  function qe(a, b) {
-    return Object.is(a, b) || a == null && b == null;
+  __name(getOrCreateClassMetadata, "getOrCreateClassMetadata");
+  function javaObjectEquals(left, right) {
+    return Object.is(left, right) || left == null && right == null;
   }
-  __name(qe, "qe");
-  ;
-  var re = 0;
-  function Ye(a) {
-    switch (S(typeof a)) {
+  __name(javaObjectEquals, "javaObjectEquals");
+  var nextJavaIdentityHash = 0;
+  function getJavaClass(value) {
+    switch (requireNonNull(typeof value)) {
       case "number":
-        return O(Ue);
+        return getJavaClassMetadata(JavaDouble);
       case "boolean":
-        return O(Xe);
+        return getJavaClassMetadata(JavaBoolean);
       case "string":
-        return O($e);
+        return getJavaClassMetadata(JavaString);
       case "function":
-        return O(af);
+        return getJavaClassMetadata(NativenativefunctionType);
     }
-    if (a instanceof Xd) a = O(bf);
-    else if (a instanceof L) a = O(te(a));
-    else if (Array.isArray(a)) a = (a = a.ra) ? O(a.ca, a.ba) : O(L, 1);
-    else if (a != null) a = O(cf);
+    if (value instanceof Int64) value = getJavaClassMetadata(JavaLong);
+    else if (value instanceof JavaObject) value = getJavaClassMetadata(getConstructor(value));
+    else if (Array.isArray(value))
+      value = (value = value.ra) ? getJavaClassMetadata(value.ca, value.ba) : getJavaClassMetadata(JavaObject, 1);
+    else if (value != null) value = getJavaClassMetadata(NativenativeobjectType);
     else throw new TypeError("null.getClass()");
-    return a;
+    return value;
   }
-  __name(Ye, "Ye");
-  ;
-  function af() {
+  __name(getJavaClass, "getJavaClass");
+  function NativenativefunctionType() {
   }
-  __name(af, "af");
-  af.prototype.F = ["<native function>", 1];
-  function cf() {
+  __name(NativenativefunctionType, "NativenativefunctionType");
+  NativenativefunctionType.prototype.F = ["<native function>", 1];
+  function NativenativeobjectType() {
   }
-  __name(cf, "cf");
-  v(cf, L);
-  cf.prototype.F = ["<native object>", 0];
-  function df() {
+  __name(NativenativeobjectType, "NativenativeobjectType");
+  inheritCompiledClass(NativenativeobjectType, JavaObject);
+  NativenativeobjectType.prototype.F = ["<native object>", 0];
+  function JavaInteger() {
     this.Y = 0;
   }
-  __name(df, "df");
-  v(df, Se);
-  function ef(a) {
-    a > -129 && a < 128 ? (Ge(), a = Fe[a + 128 | 0]) : a = Je(a);
-    return a;
+  __name(JavaInteger, "JavaInteger");
+  inheritCompiledClass(JavaInteger, JavaNumber);
+  function boxInteger(value) {
+    value > -129 && value < 128 ? (initializeIntegerCache(), value = boxedIntegerCache[value + 128 | 0]) : value = createBoxedInteger(value);
+    return value;
   }
-  __name(ef, "ef");
-  function Je(a) {
-    var b = new df();
-    b.Y = a;
-    return b;
+  __name(boxInteger, "boxInteger");
+  function createBoxedInteger(value) {
+    var javaInteger = new JavaInteger();
+    javaInteger.Y = value;
+    return javaInteger;
   }
-  __name(Je, "Je");
-  df.prototype.equals = function(a) {
-    return ff(a) && R(a, ff, df).Y == this.Y;
+  __name(createBoxedInteger, "createBoxedInteger");
+  JavaInteger.prototype.equals = function(value) {
+    return isBoxedInteger(value) && checkedJavaCast(value, isBoxedInteger, JavaInteger).Y == this.Y;
   };
-  df.prototype.ya = ba("Y");
-  df.prototype.toString = function() {
+  JavaInteger.prototype.ya = createPropertyGetter("Y");
+  JavaInteger.prototype.toString = function() {
     return "" + this.Y;
   };
-  function ff(a) {
-    return a instanceof df;
+  function isBoxedInteger(value) {
+    return value instanceof JavaInteger;
   }
-  __name(ff, "ff");
-  df.prototype.F = ["java.lang.Integer", 0];
-  function bf() {
+  __name(isBoxedInteger, "isBoxedInteger");
+  JavaInteger.prototype.F = ["java.lang.Integer", 0];
+  function JavaLong() {
   }
-  __name(bf, "bf");
-  v(bf, Se);
-  bf.prototype.F = ["java.lang.Long", 0];
-  function gf() {
+  __name(JavaLong, "JavaLong");
+  inheritCompiledClass(JavaLong, JavaNumber);
+  JavaLong.prototype.F = ["java.lang.Long", 0];
+  function JavaNumberFormatException() {
   }
-  __name(gf, "gf");
-  v(gf, Ne);
-  gf.prototype.F = ["java.lang.NumberFormatException", 0];
-  function S(a) {
-    if (a == null) throw ze().j;
-    return a;
+  __name(JavaNumberFormatException, "JavaNumberFormatException");
+  inheritCompiledClass(JavaNumberFormatException, JavaIllegalArgumentException);
+  JavaNumberFormatException.prototype.F = ["java.lang.NumberFormatException", 0];
+  function requireNonNull(value) {
+    if (value == null) throw createNullPointerException().j;
+    return value;
   }
-  __name(S, "S");
-  ;
-  function He() {
-    var a = [256];
-    return hf(a, {
-      ca: df,
-      oa: ff,
-      ba: a.length
-    });
+  __name(requireNonNull, "requireNonNull");
+  function createIntegerCacheArray() {
+    var values = [256];
+    return createJavaArray(values, { ca: JavaInteger, oa: isBoxedInteger, ba: values.length });
   }
-  __name(He, "He");
-  function hf(a, b) {
-    var c = a[0];
-    if (c == null) return null;
-    var d = new globalThis.Array(c);
-    b && (d.ra = b);
-    if (a.length > 1) {
-      a = a.slice(1);
-      b = b && {
-        ca: b.ca,
-        oa: b.oa,
-        ba: b.ba - 1
-      };
-      for (var e = 0; e < c; e++) d[e] = hf(a, b);
-    } else if (b && (a = b.ca.Ib, a !== void 0))
-      for (b = 0; b < c; b++) d[b] = a;
-    return d;
+  __name(createIntegerCacheArray, "createIntegerCacheArray");
+  function createJavaArray(dimensions, metadata) {
+    var intermediate = dimensions[0];
+    if (intermediate == null) return null;
+    var array = new globalThis.Array(intermediate);
+    metadata && (array.ra = metadata);
+    if (dimensions.length > 1) {
+      dimensions = dimensions.slice(1);
+      metadata = metadata && { ca: metadata.ca, oa: metadata.oa, ba: metadata.ba - 1 };
+      for (var index = 0; index < intermediate; index++)
+        array[index] = createJavaArray(dimensions, metadata);
+    } else if (metadata && (dimensions = metadata.ca.Ib, dimensions !== void 0))
+      for (metadata = 0; metadata < intermediate; metadata++) array[metadata] = dimensions;
+    return array;
   }
-  __name(hf, "hf");
-  function Ie(a, b, c) {
-    var d;
-    if (!(d = c == null)) a: {
-      var e = a.ra;
-      if (e) {
-        if (e.ba > 1) {
-          d = e.ca;
-          var f = e.oa;
-          e = e.ba - 1;
-          if (c != null && Array.isArray(c)) {
-            var g = c.ra || {
-              ca: L,
-              ba: 1
-            }, h = g.ba;
-            h == e ? (e = g.ca, d = e === d ? true : d && d.prototype.Ra || e && e.prototype.Ra ? false : f(e.prototype)) : d = h > e ? L == d : false;
-          } else d = false;
-          if (!d) {
-            d = false;
+  __name(createJavaArray, "createJavaArray");
+  function setJavaArrayElement(array, index, value) {
+    var intermediate;
+    if (!(intermediate = value == null))
+      a: {
+        var intermediate2 = array.ra;
+        if (intermediate2) {
+          if (intermediate2.ba > 1) {
+            intermediate = intermediate2.ca;
+            var callback = intermediate2.oa;
+            intermediate2 = intermediate2.ba - 1;
+            if (value != null && Array.isArray(value)) {
+              var intermediate3 = value.ra || { ca: JavaObject, ba: 1 }, intermediate4 = intermediate3.ba;
+              intermediate4 == intermediate2 ? (intermediate2 = intermediate3.ca, intermediate = intermediate2 === intermediate ? true : intermediate && intermediate.prototype.Ra || intermediate2 && intermediate2.prototype.Ra ? false : callback(intermediate2.prototype)) : intermediate = intermediate4 > intermediate2 ? JavaObject == intermediate : false;
+            } else intermediate = false;
+            if (!intermediate) {
+              intermediate = false;
+              break a;
+            }
+          } else if (value != null && !intermediate2.oa(value)) {
+            intermediate = false;
             break a;
           }
-        } else if (c != null && !e.oa(c)) {
-          d = false;
-          break a;
         }
+        intermediate = true;
       }
-      d = true;
-    }
-    if (!d) throw a = new Le(), Q(a), P(a, Error(a)), a.j;
-    a[b] = c;
+    if (!intermediate)
+      throw array = new JavaArrayStoreException(), captureJavaStack(array), associateNativeError(array, Error(array)), array.j;
+    array[index] = value;
   }
-  __name(Ie, "Ie");
-  ;
-  function $e() {
+  __name(setJavaArrayElement, "setJavaArrayElement");
+  function JavaString() {
   }
-  __name($e, "$e");
-  v($e, L);
-  function M(a) {
-    return a == null ? "null" : a.toString();
+  __name(JavaString, "JavaString");
+  inheritCompiledClass(JavaString, JavaObject);
+  function javaString(value) {
+    return value == null ? "null" : value.toString();
   }
-  __name(M, "M");
-  function jf(a) {
-    if (!(a >= 0)) throw a = new Ne(), Q(a), P(a, Error(a)), a.j;
-    return "0".repeat(a);
+  __name(javaString, "javaString");
+  function zeroPadding(length) {
+    if (!(length >= 0))
+      throw length = new JavaIllegalArgumentException(), captureJavaStack(length), associateNativeError(length, Error(length)), length.j;
+    return "0".repeat(length);
   }
-  __name(jf, "jf");
-  $e.prototype.F = ["java.lang.String", 0];
-  function kf(a, b) {
-    this.j = a;
-    this.l = b;
+  __name(zeroPadding, "zeroPadding");
+  JavaString.prototype.F = ["java.lang.String", 0];
+  function JavaClass(constructor, dimensions) {
+    this.j = constructor;
+    this.l = dimensions;
   }
-  __name(kf, "kf");
-  v(kf, L);
-  function O(a, b) {
-    var c = b || 0;
-    return Ze(a, "$$class/" + c, function() {
-      return new kf(a, c);
+  __name(JavaClass, "JavaClass");
+  inheritCompiledClass(JavaClass, JavaObject);
+  function getJavaClassMetadata(constructor, dimensions) {
+    var intermediate = dimensions || 0;
+    return getOrCreateClassMetadata(constructor, "$$class/" + intermediate, function() {
+      return new JavaClass(constructor, intermediate);
     });
   }
-  __name(O, "O");
-  function se(a) {
-    return a.l != 0 ? M(lf("[", a.l)) + M(a.j.prototype.F[1] == 3 ? a.j.prototype.F[2] : "L" + M(a.j.prototype.F[0]) + ";") : a.j.prototype.F[0];
+  __name(getJavaClassMetadata, "getJavaClassMetadata");
+  function getJavaClassName(javaClass) {
+    return javaClass.l != 0 ? javaString(repeatJavaString("[", javaClass.l)) + javaString(
+      javaClass.j.prototype.F[1] == 3 ? javaClass.j.prototype.F[2] : "L" + javaString(javaClass.j.prototype.F[0]) + ";"
+    ) : javaClass.j.prototype.F[0];
   }
-  __name(se, "se");
-  function mf(a, b) {
-    b = a.lastIndexOf(b) + 1 | 0;
-    var c = a.length + 1 | 0;
-    if (b < 0 || b >= c) throw a = new Re(), a.l = "Index: " + b + ", Size: " + c, Q(a), P(a, Error(a)), a.j;
-    return a.substr(b);
+  __name(getJavaClassName, "getJavaClassName");
+  function substringAfterLast(text, delimiter) {
+    delimiter = text.lastIndexOf(delimiter) + 1 | 0;
+    var intermediate = text.length + 1 | 0;
+    if (delimiter < 0 || delimiter >= intermediate)
+      throw text = new JavaStringIndexOutOfBoundsException(), text.l = "Index: " + delimiter + ", Size: " + intermediate, captureJavaStack(text), associateNativeError(text, Error(text)), text.j;
+    return text.substr(delimiter);
   }
-  __name(mf, "mf");
-  kf.prototype.toString = function() {
-    return String(this.l == 0 && this.j.prototype.F[1] == 1 ? "interface " : this.l == 0 && this.j.prototype.F[1] == 3 ? "" : "class ") + M(se(this));
+  __name(substringAfterLast, "substringAfterLast");
+  JavaClass.prototype.toString = function() {
+    return String(
+      this.l == 0 && this.j.prototype.F[1] == 1 ? "interface " : this.l == 0 && this.j.prototype.F[1] == 3 ? "" : "class "
+    ) + javaString(getJavaClassName(this));
   };
-  function lf(a, b) {
-    for (var c = "", d = 0; d < b; d = d + 1 | 0) c = M(c) + M(a);
-    return c;
+  function repeatJavaString(text, count) {
+    for (var intermediate = "", intermediate2 = 0; intermediate2 < count; intermediate2 = intermediate2 + 1 | 0)
+      intermediate = javaString(intermediate) + javaString(text);
+    return intermediate;
   }
-  __name(lf, "lf");
-  kf.prototype.F = ["java.lang.Class", 0];
-  function xe() {
+  __name(repeatJavaString, "repeatJavaString");
+  JavaClass.prototype.F = ["java.lang.Class", 0];
+  function NativeErrorClass() {
   }
-  __name(xe, "xe");
-  function we(a) {
-    return a instanceof Error;
+  __name(NativeErrorClass, "NativeErrorClass");
+  function isNativeError(value) {
+    return value instanceof Error;
   }
-  __name(we, "we");
-  xe.prototype.F = ["Error", 0];
-  function ve(a, b) {
-    if (a instanceof Object) try {
-      a.Za = b, Object.defineProperties(a, {
-        cause: {
-          get: /* @__PURE__ */ __name(function() {
-            return b.o && b.o.j;
-          }, "get")
+  __name(isNativeError, "isNativeError");
+  NativeErrorClass.prototype.F = ["Error", 0];
+  function linkNativeErrorToThrowable(nativeError, throwable) {
+    if (nativeError instanceof Object)
+      try {
+        {
+          nativeError.Za = throwable;
+          Object.defineProperties(nativeError, {
+            cause: {
+              get: /* @__PURE__ */ __name(function() {
+                return throwable.o && throwable.o.j;
+              }, "get")
+            }
+          });
         }
-      });
-    } catch (c) {
-    }
+      } catch (caughtError) {
+      }
   }
-  __name(ve, "ve");
-  ;
-  function nf(a, b) {
-    this.o = b;
-    this.l = a;
-    Q(this);
-    P(this, Error(this));
+  __name(linkNativeErrorToThrowable, "linkNativeErrorToThrowable");
+  function XplatException(message, cause) {
+    this.o = cause;
+    this.l = message;
+    captureJavaStack(this);
+    associateNativeError(this, Error(this));
   }
-  __name(nf, "nf");
-  v(nf, De);
-  ha.Object.defineProperties(nf.prototype, {
+  __name(XplatException, "XplatException");
+  inheritCompiledClass(XplatException, JavaRuntimeException);
+  polyfillGlobal.Object.defineProperties(XplatException.prototype, {
     error: {
       configurable: true,
       enumerable: true,
       get: /* @__PURE__ */ __name(function() {
-        var a = Error(), b = this.j;
-        a.fileName = b.fileName;
-        a.lineNumber = b.lineNumber;
-        a.columnNumber = b.columnNumber;
-        a.message = b.message;
-        a.name = b.name;
-        a.stack = b.stack;
-        a.toSource = b.toSource;
-        a.cause = b.cause;
-        for (var c in b) c.indexOf("__java$") != 0 && (a[c] = b[c]);
-        return a;
+        var intermediate = Error(), intermediate2 = this.j;
+        intermediate.fileName = intermediate2.fileName;
+        intermediate.lineNumber = intermediate2.lineNumber;
+        intermediate.columnNumber = intermediate2.columnNumber;
+        intermediate.message = intermediate2.message;
+        intermediate.name = intermediate2.name;
+        intermediate.stack = intermediate2.stack;
+        intermediate.toSource = intermediate2.toSource;
+        intermediate.cause = intermediate2.cause;
+        for (var intermediate3 in intermediate2)
+          intermediate3.indexOf("__java$") != 0 && (intermediate[intermediate3] = intermediate2[intermediate3]);
+        return intermediate;
       }, "get")
     }
   });
-  nf.prototype.getMessage = ba("l");
-  nf.prototype.F = ["com.google.apps.docs.xplat.base.XplatException", 0];
-  function of() {
+  XplatException.prototype.getMessage = createPropertyGetter("l");
+  XplatException.prototype.F = ["com.google.apps.docs.xplat.base.XplatException", 0];
+  function NativeErrorValueClass() {
   }
-  __name(of, "of");
-  function pf(a) {
-    return a instanceof Error;
+  __name(NativeErrorValueClass, "NativeErrorValueClass");
+  function isNativeErrorValue(value) {
+    return value instanceof Error;
   }
-  __name(pf, "pf");
-  of.prototype.F = ["Error", 0];
-  function qf() {
-    var a = a == null ? function(c) {
-      return Math.max(Math.min(Math.floor(Math.random() * c), 2147483647), -2147483648) | 0;
-    } : a;
-    var b = (a(2147483647) >>> 0).toString(16);
-    b = M(jf(Math.max(0, 8 - b.length | 0))) + M(b);
-    a = (a(2147483647) >>> 0).toString(16);
-    return M(a) + M(b);
+  __name(isNativeErrorValue, "isNativeErrorValue");
+  NativeErrorValueClass.prototype.F = ["Error", 0];
+  function createSessionId() {
+    var callback = callback == null ? function(value) {
+      return Math.max(Math.min(Math.floor(Math.random() * value), 2147483647), -2147483648) | 0;
+    } : callback;
+    var intermediate = (callback(2147483647) >>> 0).toString(16);
+    intermediate = javaString(zeroPadding(Math.max(0, 8 - intermediate.length | 0))) + javaString(intermediate);
+    callback = (callback(2147483647) >>> 0).toString(16);
+    return javaString(callback) + javaString(intermediate);
   }
-  __name(qf, "qf");
-  ;
-  function rf() {
+  __name(createSessionId, "createSessionId");
+  function NativeArrayType() {
   }
-  __name(rf, "rf");
-  function sf(a) {
-    return a instanceof Array;
+  __name(NativeArrayType, "NativeArrayType");
+  function isNativeArray(value) {
+    return value instanceof Array;
   }
-  __name(sf, "sf");
-  rf.prototype.F = ["Array", 0];
-  function tf() {
+  __name(isNativeArray, "isNativeArray");
+  NativeArrayType.prototype.F = ["Array", 0];
+  function NativeObjectClass() {
   }
-  __name(tf, "tf");
-  function uf(a) {
-    return a instanceof Object;
+  __name(NativeObjectClass, "NativeObjectClass");
+  function isNativeObject(value) {
+    return value instanceof Object;
   }
-  __name(uf, "uf");
-  tf.prototype.F = ["Object", 0];
-  function vf() {
+  __name(isNativeObject, "isNativeObject");
+  NativeObjectClass.prototype.F = ["Object", 0];
+  function NativeObjectMapClass() {
   }
-  __name(vf, "vf");
-  function wf(a) {
-    return a instanceof Object;
+  __name(NativeObjectMapClass, "NativeObjectMapClass");
+  function isNativeObjectMap(value) {
+    return value instanceof Object;
   }
-  __name(wf, "wf");
-  vf.prototype.F = ["Object", 0];
-  var xf = {
+  __name(isNativeObjectMap, "isNativeObjectMap");
+  NativeObjectMapClass.prototype.F = ["Object", 0];
+  var telemetryContextKeys = {
     jc: "build-label",
     Jb: "buildLabel",
     Kb: "clientLog",
@@ -2988,678 +3064,723 @@
     ec: "isNestedDrawingsEnabled",
     Ub: "embeddedDrawingState"
   };
-  function yf() {
+  function JavaDisposable() {
     this.j = false;
   }
-  __name(yf, "yf");
-  var zf;
-  v(yf, L);
-  p = yf.prototype;
-  p.dispose = function() {
-    if (this.j) var a = null;
-    else this.j = true, a = this.v == null ? zf : this.v, this.v = null;
-    if (a != null) {
+  __name(JavaDisposable, "JavaDisposable");
+  var emptyDisposableChildren;
+  inheritCompiledClass(JavaDisposable, JavaObject);
+  prototypeAlias = JavaDisposable.prototype;
+  prototypeAlias.dispose = function() {
+    if (this.j) var intermediate = null;
+    else {
+      this.j = true;
+      intermediate = this.v == null ? emptyDisposableChildren : this.v;
+      this.v = null;
+    }
+    if (intermediate != null) {
       this.sa();
-      if (a.length != 0)
-        for (var b = 0; b < a.length; b++) a[b].dispose();
-      a = O(te(this));
-      mf(mf(M(a.j.prototype.F[0]) + M(lf("[]", a.l)), "."), "$");
+      if (intermediate.length != 0)
+        for (var index = 0; index < intermediate.length; index++) intermediate[index].dispose();
+      intermediate = getJavaClassMetadata(getConstructor(this));
+      substringAfterLast(
+        substringAfterLast(
+          javaString(intermediate.j.prototype.F[0]) + javaString(repeatJavaString("[]", intermediate.l)),
+          "."
+        ),
+        "$"
+      );
     }
   };
-  p.na = ba("j");
-  p.sa = n();
-  p.toString = function() {
-    return L.prototype.toString.call(this) || "";
+  prototypeAlias.na = createPropertyGetter("j");
+  prototypeAlias.sa = createNoopFunction();
+  prototypeAlias.toString = function() {
+    return JavaObject.prototype.toString.call(this) || "";
   };
-  function Af() {
-    Af = n();
-    zf = R([], sf, rf);
+  function initializeDisposableChildren() {
+    initializeDisposableChildren = createNoopFunction();
+    emptyDisposableChildren = checkedJavaCast([], isNativeArray, NativeArrayType);
   }
-  __name(Af, "Af");
-  p.F = ["com.google.apps.xplat.disposable.Disposable", 0];
-  function Bf(a) {
-    if (a == null) return a = new ue(), Q(a), P(a, Error(a)), a;
-    if (Be(a)) return R(a, Be, ue);
-    if (pf(a)) return a = R(a, pf, of), ye(a);
-    a = new Ne();
-    a.l = "Unsupported type cannot be used to create a Throwable.";
-    Q(a);
-    P(a, Error(a));
-    throw a.j;
+  __name(initializeDisposableChildren, "initializeDisposableChildren");
+  prototypeAlias.F = ["com.google.apps.xplat.disposable.Disposable", 0];
+  function toJavaThrowable(value) {
+    if (value == null)
+      return value = new JavaThrowable(), captureJavaStack(value), associateNativeError(value, Error(value)), value;
+    if (isJavaThrowable(value)) return checkedJavaCast(value, isJavaThrowable, JavaThrowable);
+    if (isNativeErrorValue(value))
+      return value = checkedJavaCast(value, isNativeErrorValue, NativeErrorValueClass), wrapJavaThrowable(value);
+    value = new JavaIllegalArgumentException();
+    value.l = "Unsupported type cannot be used to create a Throwable.";
+    captureJavaStack(value);
+    associateNativeError(value, Error(value));
+    throw value.j;
   }
-  __name(Bf, "Bf");
-  ;
-  function Cf(a) {
-    var b = z.onerror;
-    z.onerror = function(c, d, e, f, g) {
-      b && b(c, d, e, f, g);
-      a({
-        message: c,
-        fileName: d,
-        line: e,
-        lineNumber: e,
-        Gc: f,
-        error: g
+  __name(toJavaThrowable, "toJavaThrowable");
+  function installGlobalErrorListener(listener) {
+    var onerror = runtimeGlobal.onerror;
+    runtimeGlobal.onerror = function(value, other, options, context, extra) {
+      onerror && onerror(value, other, options, context, extra);
+      listener({
+        message: value,
+        fileName: other,
+        line: options,
+        lineNumber: options,
+        Gc: context,
+        error: extra
       });
       return true;
     };
   }
-  __name(Cf, "Cf");
-  function Df(a) {
-    var b = Ia("window.location.href");
-    a == null && (a = 'Unknown Error of type "null/undefined"');
-    if (typeof a === "string") return {
-      message: a,
-      name: "Unknown error",
-      lineNumber: "Not available",
-      fileName: b,
-      stack: "Not available"
-    };
-    var c = false;
+  __name(installGlobalErrorListener, "installGlobalErrorListener");
+  function normalizeErrorDetails(error) {
+    var locationOrStack = lookupGlobalPath("window.location.href");
+    error == null && (error = 'Unknown Error of type "null/undefined"');
+    if (typeof error === "string")
+      return {
+        message: error,
+        name: "Unknown error",
+        lineNumber: "Not available",
+        fileName: locationOrStack,
+        stack: "Not available"
+      };
+    var inaccessibleFieldOrMessage = false;
     try {
-      var d = a.lineNumber || a.line || "Not available";
-    } catch (f) {
-      d = "Not available", c = true;
+      var lineNumber = error.lineNumber || error.line || "Not available";
+    } catch (caughtError) {
+      {
+        lineNumber = "Not available";
+        inaccessibleFieldOrMessage = true;
+      }
     }
     try {
-      var e = a.fileName || a.filename || a.sourceURL || z.$googDebugFname || b;
-    } catch (f) {
-      e = "Not available", c = true;
+      var fileName = error.fileName || error.filename || error.sourceURL || runtimeGlobal.$googDebugFname || locationOrStack;
+    } catch (caughtError) {
+      {
+        fileName = "Not available";
+        inaccessibleFieldOrMessage = true;
+      }
     }
-    b = Ef(a);
-    return !c && a.lineNumber && a.fileName && a.stack && a.message && a.name ? {
-      message: a.message,
-      name: a.name,
-      lineNumber: a.lineNumber,
-      fileName: a.fileName,
-      stack: b
-    } : (c = a.message, c == null && (c = a.constructor && a.constructor instanceof Function ? 'Unknown Error of type "' + (a.constructor.name ? a.constructor.name : Ff(a.constructor)) + '"' : "Unknown Error of unknown type", typeof a.toString === "function" && Object.prototype.toString !== a.toString && (c += ": " + a.toString())), {
-      message: c,
-      name: a.name || "UnknownError",
-      lineNumber: d,
-      fileName: e,
-      stack: b || "Not available"
+    locationOrStack = formatErrorStack(error);
+    return !inaccessibleFieldOrMessage && error.lineNumber && error.fileName && error.stack && error.message && error.name ? {
+      message: error.message,
+      name: error.name,
+      lineNumber: error.lineNumber,
+      fileName: error.fileName,
+      stack: locationOrStack
+    } : (inaccessibleFieldOrMessage = error.message, inaccessibleFieldOrMessage == null && (inaccessibleFieldOrMessage = error.constructor && error.constructor instanceof Function ? 'Unknown Error of type "' + (error.constructor.name ? error.constructor.name : getFunctionName(error.constructor)) + '"' : "Unknown Error of unknown type", typeof error.toString === "function" && Object.prototype.toString !== error.toString && (inaccessibleFieldOrMessage += ": " + error.toString())), {
+      message: inaccessibleFieldOrMessage,
+      name: error.name || "UnknownError",
+      lineNumber,
+      fileName,
+      stack: locationOrStack || "Not available"
     });
   }
-  __name(Df, "Df");
-  function Ef(a, b) {
-    b || (b = {});
-    b[Gf(a)] = true;
-    var c = a.stack || "", d = a.cause;
-    d && !b[Gf(d)] && (c += "\nCaused by: ", d.stack && d.stack.indexOf(d.toString()) == 0 || (c += typeof d === "string" ? d : d.message + "\n"), c += Ef(d, b));
-    a = a.errors;
-    if (Array.isArray(a)) {
-      d = 1;
-      var e;
-      for (e = 0; e < a.length && !(d > 4); e++) b[Gf(a[e])] || (c += "\nInner error " + d++ + ": ", a[e].stack && a[e].stack.indexOf(a[e].toString()) == 0 || (c += typeof a[e] === "string" ? a[e] : a[e].message + "\n"), c += Ef(a[e], b));
-      e < a.length && (c += "\n... " + (a.length - e) + " more inner errors");
+  __name(normalizeErrorDetails, "normalizeErrorDetails");
+  function formatErrorStack(error, seen) {
+    seen || (seen = {});
+    seen[getErrorFingerprint(error)] = true;
+    var stackText = error.stack || "", causeOrInnerCount = error.cause;
+    causeOrInnerCount && !seen[getErrorFingerprint(causeOrInnerCount)] && (stackText += "\nCaused by: ", causeOrInnerCount.stack && causeOrInnerCount.stack.indexOf(causeOrInnerCount.toString()) == 0 || (stackText += typeof causeOrInnerCount === "string" ? causeOrInnerCount : causeOrInnerCount.message + "\n"), stackText += formatErrorStack(causeOrInnerCount, seen));
+    error = error.errors;
+    if (Array.isArray(error)) {
+      causeOrInnerCount = 1;
+      var index;
+      for (index = 0; index < error.length && !(causeOrInnerCount > 4); index++)
+        seen[getErrorFingerprint(error[index])] || (stackText += "\nInner error " + causeOrInnerCount++ + ": ", error[index].stack && error[index].stack.indexOf(error[index].toString()) == 0 || (stackText += typeof error[index] === "string" ? error[index] : error[index].message + "\n"), stackText += formatErrorStack(error[index], seen));
+      index < error.length && (stackText += "\n... " + (error.length - index) + " more inner errors");
     }
-    return c;
+    return stackText;
   }
-  __name(Ef, "Ef");
-  function Gf(a) {
-    var b = "";
-    typeof a.toString === "function" && (b = "" + a);
-    return b + a.stack;
+  __name(formatErrorStack, "formatErrorStack");
+  function getErrorFingerprint(error) {
+    var intermediate = "";
+    typeof error.toString === "function" && (intermediate = "" + error);
+    return intermediate + error.stack;
   }
-  __name(Gf, "Gf");
-  function T(a, b) {
-    a instanceof Error || (a = Error(a), Error.captureStackTrace && Error.captureStackTrace(a, T));
-    a.stack || (a.stack = Hf(T));
-    if (b) {
-      for (var c = 0; a["message" + c]; ) ++c;
-      a["message" + c] = String(b);
+  __name(getErrorFingerprint, "getErrorFingerprint");
+  function normalizeError(error, context) {
+    error instanceof Error || (error = Error(error), Error.captureStackTrace && Error.captureStackTrace(error, normalizeError));
+    error.stack || (error.stack = captureStackTrace(normalizeError));
+    if (context) {
+      for (var contextIndex = 0; error["message" + contextIndex]; ) ++contextIndex;
+      error["message" + contextIndex] = String(context);
     }
-    return a;
+    return error;
   }
-  __name(T, "T");
-  function If(a, b) {
-    a = T(a);
-    if (b)
-      for (var c in b) rb(a, c, b[c]);
-    return a;
+  __name(normalizeError, "normalizeError");
+  function normalizeErrorWithContext(error, context) {
+    error = normalizeError(error);
+    if (context)
+      for (var intermediate in context)
+        attachErrorContext(error, intermediate, context[intermediate]);
+    return error;
   }
-  __name(If, "If");
-  function Hf(a) {
-    var b = Error();
-    if (Error.captureStackTrace) Error.captureStackTrace(b, a || Hf), b = String(b.stack);
-    else {
+  __name(normalizeErrorWithContext, "normalizeErrorWithContext");
+  function captureStackTrace(excludeFunction) {
+    var intermediate = Error();
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(intermediate, excludeFunction || captureStackTrace);
+      intermediate = String(intermediate.stack);
+    } else {
       try {
-        throw b;
-      } catch (c) {
-        b = c;
+        throw intermediate;
+      } catch (caughtError) {
+        intermediate = caughtError;
       }
-      b = (b = b.stack) ? String(b) : null;
+      intermediate = (intermediate = intermediate.stack) ? String(intermediate) : null;
     }
-    b || (b = Kf(a || arguments.callee.caller, []));
-    return b;
+    intermediate || (intermediate = formatCallerChain(excludeFunction || arguments.callee.caller, []));
+    return intermediate;
   }
-  __name(Hf, "Hf");
-  function Kf(a, b) {
-    var c = [];
-    if (cb(b, a) >= 0) c.push("[...circular reference...]");
-    else if (a && b.length < 50) {
-      c.push(Ff(a) + "(");
-      for (var d = a.arguments, e = 0; d && e < d.length; e++) {
-        e > 0 && c.push(", ");
-        var f = d[e];
-        switch (typeof f) {
+  __name(captureStackTrace, "captureStackTrace");
+  function formatCallerChain(callback, seen) {
+    var values = [];
+    if (arrayIndexOf(seen, callback) >= 0) values.push("[...circular reference...]");
+    else if (callback && seen.length < 50) {
+      values.push(getFunctionName(callback) + "(");
+      for (var arguments2 = callback.arguments, index = 0; arguments2 && index < arguments2.length; index++) {
+        index > 0 && values.push(", ");
+        var intermediate = arguments2[index];
+        switch (typeof intermediate) {
           case "object":
-            f = f ? "object" : "null";
+            intermediate = intermediate ? "object" : "null";
             break;
           case "string":
             break;
           case "number":
-            f = String(f);
+            intermediate = String(intermediate);
             break;
           case "boolean":
-            f = f ? "true" : "false";
+            intermediate = intermediate ? "true" : "false";
             break;
           case "function":
-            f = (f = Ff(f)) ? f : "[fn]";
+            intermediate = (intermediate = getFunctionName(intermediate)) ? intermediate : "[fn]";
             break;
           default:
-            f = typeof f;
+            intermediate = typeof intermediate;
         }
-        f.length > 40 && (f = f.slice(0, 40) + "...");
-        c.push(f);
+        intermediate.length > 40 && (intermediate = intermediate.slice(0, 40) + "...");
+        values.push(intermediate);
       }
-      b.push(a);
-      c.push(")\n");
+      seen.push(callback);
+      values.push(")\n");
       try {
-        c.push(Kf(a.caller, b));
-      } catch (g) {
-        c.push("[exception trying to get caller]\n");
+        values.push(formatCallerChain(callback.caller, seen));
+      } catch (caughtError) {
+        values.push("[exception trying to get caller]\n");
       }
-    } else a ? c.push("[...long stack...]") : c.push("[end]");
-    return c.join("");
+    } else callback ? values.push("[...long stack...]") : values.push("[end]");
+    return values.join("");
   }
-  __name(Kf, "Kf");
-  function Ff(a) {
-    if (Lf[a]) return Lf[a];
-    a = String(a);
-    if (!Lf[a]) {
-      var b = /function\s+([^\(]+)/m.exec(a);
-      Lf[a] = b ? b[1] : "[Anonymous]";
+  __name(formatCallerChain, "formatCallerChain");
+  function getFunctionName(callback) {
+    if (functionNameCache[callback]) return functionNameCache[callback];
+    callback = String(callback);
+    if (!functionNameCache[callback]) {
+      var intermediate = /function\s+([^\(]+)/m.exec(callback);
+      functionNameCache[callback] = intermediate ? intermediate[1] : "[Anonymous]";
     }
-    return Lf[a];
+    return functionNameCache[callback];
   }
-  __name(Ff, "Ff");
-  var Lf = {};
-  function Mf(a, b) {
-    this.name = a;
-    this.value = b;
+  __name(getFunctionName, "getFunctionName");
+  var functionNameCache = {};
+  function LogLevel(name, value) {
+    this.name = name;
+    this.value = value;
   }
-  __name(Mf, "Mf");
-  Mf.prototype.toString = ba("name");
-  var Nf = new Mf("SEVERE", 1e3), Of = new Mf("WARNING", 900), Pf = new Mf("CONFIG", 700);
-  function Qf() {
+  __name(LogLevel, "LogLevel");
+  LogLevel.prototype.toString = createPropertyGetter("name");
+  var SEVERE_LOG_LEVEL = new LogLevel("SEVERE", 1e3), WARNING_LOG_LEVEL = new LogLevel("WARNING", 900), CONFIG_LOG_LEVEL = new LogLevel("CONFIG", 700);
+  function LogBuffer() {
     this.clear();
   }
-  __name(Qf, "Qf");
-  var Rf;
-  function Sf(a) {
-    var b = Tf(), c = b.j;
-    if (c[0]) {
-      var d = b.l;
-      b = b.o ? d : -1;
-      do
-        b = (b + 1) % 0, a(c[b]);
-      while (b !== d);
+  __name(LogBuffer, "LogBuffer");
+  var logBufferInstance;
+  function forEachBufferedLog(callback) {
+    var logBuffer = getLogBuffer(), intermediate = logBuffer.j;
+    if (intermediate[0]) {
+      var intermediate2 = logBuffer.l;
+      logBuffer = logBuffer.o ? intermediate2 : -1;
+      do {
+        logBuffer = (logBuffer + 1) % 0;
+        callback(intermediate[logBuffer]);
+      } while (logBuffer !== intermediate2);
     }
   }
-  __name(Sf, "Sf");
-  Qf.prototype.clear = function() {
+  __name(forEachBufferedLog, "forEachBufferedLog");
+  LogBuffer.prototype.clear = function() {
     this.j = [];
     this.l = -1;
     this.o = false;
   };
-  function Tf() {
-    Rf || (Rf = new Qf());
-    return Rf;
+  function getLogBuffer() {
+    logBufferInstance || (logBufferInstance = new LogBuffer());
+    return logBufferInstance;
   }
-  __name(Tf, "Tf");
-  ;
-  function Uf(a, b, c, d, e, f, g) {
-    var h = "";
-    a && (h += a + ":");
-    c && (h += "//", b && (h += b + "@"), h += c, d && (h += ":" + d));
-    e && (h += e);
-    f && (h += "?" + f);
-    g && (h += "#" + g);
-    return h;
+  __name(getLogBuffer, "getLogBuffer");
+  function buildUrl(scheme, userInfo, host, port, path, query, fragment) {
+    var url = "";
+    scheme && (url += scheme + ":");
+    host && (url += "//", userInfo && (url += userInfo + "@"), url += host, port && (url += ":" + port));
+    path && (url += path);
+    query && (url += "?" + query);
+    fragment && (url += "#" + fragment);
+    return url;
   }
-  __name(Uf, "Uf");
-  var Vf = RegExp(
+  __name(buildUrl, "buildUrl");
+  var urlPartsPattern = RegExp(
     "^(?:([^:/?#.]+):)?(?://(?:([^\\\\/?#]*)@)?([^\\\\/?#]*?)(?::([0-9]+))?(?=[\\\\/?#]|$))?([^?#]+)?(?:\\?([^#]*))?(?:#([\\s\\S]*))?$"
   );
-  function Wf(a, b) {
-    if (a) {
-      a = a.split("&");
-      for (var c = 0; c < a.length; c++) {
-        var d = a[c].indexOf("="), e = null;
-        if (d >= 0) {
-          var f = a[c].substring(0, d);
-          e = a[c].substring(d + 1);
-        } else f = a[c];
-        b(f, e ? decodeURIComponent(e.replace(/\+/g, " ")) : "");
+  function forEachQueryParameter(query, callback) {
+    if (query) {
+      query = query.split("&");
+      for (var index = 0; index < query.length; index++) {
+        var equalsIndex = query[index].indexOf("="), encodedValue = null;
+        if (equalsIndex >= 0) {
+          var encodedKey = query[index].substring(0, equalsIndex);
+          encodedValue = query[index].substring(equalsIndex + 1);
+        } else encodedKey = query[index];
+        callback(
+          encodedKey,
+          encodedValue ? decodeURIComponent(encodedValue.replace(/\+/g, " ")) : ""
+        );
       }
     }
   }
-  __name(Wf, "Wf");
-  function Xf(a, b) {
-    if (!b) return a;
-    var c = a.indexOf("#");
-    c < 0 && (c = a.length);
-    var d = a.indexOf("?");
-    if (d < 0 || d > c) {
-      d = c;
-      var e = "";
-    } else e = a.substring(d + 1, c);
-    a = [a.slice(0, d), e, a.slice(c)];
-    c = a[1];
-    a[1] = b ? c ? c + "&" + b : b : c;
-    return a[0] + (a[1] ? "?" + a[1] : "") + a[2];
+  __name(forEachQueryParameter, "forEachQueryParameter");
+  function appendEncodedQuery(url, query) {
+    if (!query) return url;
+    var fragmentIndex = url.indexOf("#");
+    fragmentIndex < 0 && (fragmentIndex = url.length);
+    var queryIndex = url.indexOf("?");
+    if (queryIndex < 0 || queryIndex > fragmentIndex) {
+      queryIndex = fragmentIndex;
+      var existingQuery = "";
+    } else existingQuery = url.substring(queryIndex + 1, fragmentIndex);
+    url = [url.slice(0, queryIndex), existingQuery, url.slice(fragmentIndex)];
+    fragmentIndex = url[1];
+    url[1] = query ? fragmentIndex ? fragmentIndex + "&" + query : query : fragmentIndex;
+    return url[0] + (url[1] ? "?" + url[1] : "") + url[2];
   }
-  __name(Xf, "Xf");
-  function Yf(a, b, c) {
-    if (Array.isArray(b))
-      for (var d = 0; d < b.length; d++) Yf(a, String(b[d]), c);
-    else b != null && c.push(a + (b === "" ? "" : "=" + encodeURIComponent(String(b))));
+  __name(appendEncodedQuery, "appendEncodedQuery");
+  function appendQueryValue(key, value, output) {
+    if (Array.isArray(value))
+      for (var index = 0; index < value.length; index++)
+        appendQueryValue(key, String(value[index]), output);
+    else
+      value != null && output.push(key + (value === "" ? "" : "=" + encodeURIComponent(String(value))));
   }
-  __name(Yf, "Yf");
-  function Zf(a, b) {
-    var c = [];
-    for (b = b || 0; b < a.length; b += 2) Yf(a[b], a[b + 1], c);
-    return c.join("&");
+  __name(appendQueryValue, "appendQueryValue");
+  function encodeQueryPairs(pairs, startIndex) {
+    var values = [];
+    for (startIndex = startIndex || 0; startIndex < pairs.length; startIndex += 2)
+      appendQueryValue(pairs[startIndex], pairs[startIndex + 1], values);
+    return values.join("&");
   }
-  __name(Zf, "Zf");
-  function $f(a) {
-    var b = [], c;
-    for (c in a) Yf(c, a[c], b);
-    return b.join("&");
+  __name(encodeQueryPairs, "encodeQueryPairs");
+  function encodeQueryObject(parameters) {
+    var values = [], intermediate;
+    for (intermediate in parameters) appendQueryValue(intermediate, parameters[intermediate], values);
+    return values.join("&");
   }
-  __name($f, "$f");
-  function V(a, b) {
-    var c = arguments.length == 2 ? Zf(arguments[1], 0) : Zf(arguments, 1);
-    return Xf(a, c);
+  __name(encodeQueryObject, "encodeQueryObject");
+  function appendQueryParameters(url, parameters) {
+    var intermediate = arguments.length == 2 ? encodeQueryPairs(arguments[1], 0) : encodeQueryPairs(arguments, 1);
+    return appendEncodedQuery(url, intermediate);
   }
-  __name(V, "V");
-  ;
-  var ag;
-  ag = /* @__PURE__ */ __name(function(a) {
-    if (!a) return a;
-    a = (typeof a === "object" ? a.href : a).match(Vf);
-    var b = a[1];
-    return b !== "http" && b !== "https" ? b || "" : Uf(a[1], "", a[3], a[4], a[5], a[6], "");
-  }, "ag");
-  function bg(a) {
-    a && typeof a.dispose == "function" && a.dispose();
+  __name(appendQueryParameters, "appendQueryParameters");
+  var sanitizeReportUrl;
+  sanitizeReportUrl = /* @__PURE__ */ __name(function(value) {
+    if (!value) return value;
+    value = (typeof value === "object" ? value.href : value).match(urlPartsPattern);
+    var intermediate = value[1];
+    return intermediate !== "http" && intermediate !== "https" ? intermediate || "" : buildUrl(value[1], "", value[3], value[4], value[5], value[6], "");
+  }, "sanitizeReportUrl");
+  function disposeIfPossible(disposable) {
+    disposable && typeof disposable.dispose == "function" && disposable.dispose();
   }
-  __name(bg, "bg");
-  ;
-  function cg(a) {
-    for (var b = 0, c = arguments.length; b < c; ++b) {
-      var d = arguments[b];
-      Ka(d) ? cg.apply(null, d) : bg(d);
+  __name(disposeIfPossible, "disposeIfPossible");
+  function disposeAll(disposables) {
+    for (var index = 0, length = arguments.length; index < length; ++index) {
+      var intermediate = arguments[index];
+      isArrayLike(intermediate) ? disposeAll.apply(null, intermediate) : disposeIfPossible(intermediate);
     }
   }
-  __name(cg, "cg");
-  ;
-  function W() {
+  __name(disposeAll, "disposeAll");
+  function Disposable() {
     this.J = this.J;
     this.D = this.D;
   }
-  __name(W, "W");
-  W.prototype.J = false;
-  W.prototype.na = ba("J");
-  W.prototype.dispose = function() {
+  __name(Disposable, "Disposable");
+  Disposable.prototype.J = false;
+  Disposable.prototype.na = createPropertyGetter("J");
+  Disposable.prototype.dispose = function() {
     this.J || (this.J = true, this.N());
   };
-  W.prototype[Symbol.dispose] = function() {
+  Disposable.prototype[Symbol.dispose] = function() {
     this.dispose();
   };
-  function dg(a, b) {
-    b = Ra(bg, b);
-    a.J ? b() : (a.D || (a.D = []), a.D.push(b));
+  function ownDisposable(owner, child) {
+    child = partialApply(disposeIfPossible, child);
+    owner.J ? child() : (owner.D || (owner.D = []), owner.D.push(child));
   }
-  __name(dg, "dg");
-  W.prototype.N = function() {
-    if (this.D)
-      for (; this.D.length; ) this.D.shift()();
+  __name(ownDisposable, "ownDisposable");
+  Disposable.prototype.N = function() {
+    if (this.D) for (; this.D.length; ) this.D.shift()();
   };
-  var eg = typeof AsyncContext !== "undefined" && typeof AsyncContext.Snapshot === "function" ? function(a) {
-    return a && AsyncContext.Snapshot.wrap(a);
-  } : aa();
-  function fg(a, b) {
-    this.o = a;
-    this.v = b;
+  var wrapAsyncContext = typeof AsyncContext !== "undefined" && typeof AsyncContext.Snapshot === "function" ? function(value) {
+    return value && AsyncContext.Snapshot.wrap(value);
+  } : createIdentityFunction();
+  function ObjectPool(create, reset) {
+    this.o = create;
+    this.v = reset;
     this.l = 0;
     this.j = null;
   }
-  __name(fg, "fg");
-  fg.prototype.get = function() {
+  __name(ObjectPool, "ObjectPool");
+  ObjectPool.prototype.get = function() {
     if (this.l > 0) {
       this.l--;
-      var a = this.j;
-      this.j = a.next;
-      a.next = null;
-    } else a = this.o();
-    return a;
+      var iterator = this.j;
+      this.j = iterator.next;
+      iterator.next = null;
+    } else iterator = this.o();
+    return iterator;
   };
-  function gg(a, b) {
-    a.v(b);
-    a.l < 100 && (a.l++, b.next = a.j, a.j = b);
+  function releaseToPool(pool, item) {
+    pool.v(item);
+    pool.l < 100 && (pool.l++, item.next = pool.j, pool.j = item);
   }
-  __name(gg, "gg");
-  ;
-  var hg = [], ig = [], jg = false;
-  function kg(a) {
-    hg[hg.length] = a;
-    if (jg)
-      for (var b = 0; b < ig.length; b++) a(A(ig[b].j, ig[b]));
+  __name(releaseToPool, "releaseToPool");
+  var entryPointCallbacks = [], entryPointMonitors = [], entryPointsMonitored = false;
+  function registerEntryPoint(callback) {
+    entryPointCallbacks[entryPointCallbacks.length] = callback;
+    if (entryPointsMonitored)
+      for (var index = 0; index < entryPointMonitors.length; index++)
+        callback(bindFunction(entryPointMonitors[index].j, entryPointMonitors[index]));
   }
-  __name(kg, "kg");
-  ;
-  kg(n());
-  function lg() {
+  __name(registerEntryPoint, "registerEntryPoint");
+  registerEntryPoint(createNoopFunction());
+  function CallbackQueue() {
     this.l = this.j = null;
   }
-  __name(lg, "lg");
-  lg.prototype.add = function(a, b) {
-    var c = mg.get();
-    c.set(a, b);
-    this.l ? this.l.next = c : this.j = c;
-    this.l = c;
+  __name(CallbackQueue, "CallbackQueue");
+  CallbackQueue.prototype.add = function(value, other) {
+    var value2 = callbackNodePool.get();
+    value2.set(value, other);
+    this.l ? this.l.next = value2 : this.j = value2;
+    this.l = value2;
   };
-  lg.prototype.remove = function() {
-    var a = null;
-    this.j && (a = this.j, this.j = this.j.next, this.j || (this.l = null), a.next = null);
-    return a;
+  CallbackQueue.prototype.remove = function() {
+    var iterator = null;
+    this.j && (iterator = this.j, this.j = this.j.next, this.j || (this.l = null), iterator.next = null);
+    return iterator;
   };
-  var mg = new fg(function() {
-    return new ng();
-  }, function(a) {
-    return a.reset();
-  });
-  function ng() {
+  var callbackNodePool = new ObjectPool(
+    function() {
+      return new CallbackQueueNode();
+    },
+    function(value) {
+      return value.reset();
+    }
+  );
+  function CallbackQueueNode() {
     this.next = this.scope = this.j = null;
   }
-  __name(ng, "ng");
-  ng.prototype.set = function(a, b) {
-    this.j = a;
-    this.scope = b;
+  __name(CallbackQueueNode, "CallbackQueueNode");
+  CallbackQueueNode.prototype.set = function(value, other) {
+    this.j = value;
+    this.scope = other;
     this.next = null;
   };
-  ng.prototype.reset = function() {
+  CallbackQueueNode.prototype.reset = function() {
     this.next = this.scope = this.j = null;
   };
-  var og, pg = false, qg = new lg();
-  function rg(a, b) {
-    og || sg();
-    pg || (og(), pg = true);
-    qg.add(a, b);
+  var scheduleMicrotaskFlush, microtaskFlushScheduled = false, microtaskQueue = new CallbackQueue();
+  function enqueueMicrotask(callback, receiver) {
+    scheduleMicrotaskFlush || initializeMicrotaskScheduler();
+    microtaskFlushScheduled || (scheduleMicrotaskFlush(), microtaskFlushScheduled = true);
+    microtaskQueue.add(callback, receiver);
   }
-  __name(rg, "rg");
-  function sg() {
-    var a = Promise.resolve(void 0);
-    og = /* @__PURE__ */ __name(function() {
-      a.then(tg);
-    }, "og");
+  __name(enqueueMicrotask, "enqueueMicrotask");
+  function initializeMicrotaskScheduler() {
+    var intermediate = Promise.resolve(void 0);
+    scheduleMicrotaskFlush = /* @__PURE__ */ __name(function() {
+      intermediate.then(flushMicrotasks);
+    }, "scheduleMicrotaskFlush");
   }
-  __name(sg, "sg");
-  function tg() {
-    for (var a; a = qg.remove(); ) {
+  __name(initializeMicrotaskScheduler, "initializeMicrotaskScheduler");
+  function flushMicrotasks() {
+    for (var intermediate; intermediate = microtaskQueue.remove(); ) {
       try {
-        a.j.call(a.scope);
-      } catch (b) {
-        Va(b);
+        intermediate.j.call(intermediate.scope);
+      } catch (caughtError) {
+        throwAsynchronously(caughtError);
       }
-      gg(mg, a);
+      releaseToPool(callbackNodePool, intermediate);
     }
-    pg = false;
+    microtaskFlushScheduled = false;
   }
-  __name(tg, "tg");
-  ;
-  function ug() {
+  __name(flushMicrotasks, "flushMicrotasks");
+  function internalPromiseExecutor() {
   }
-  __name(ug, "ug");
-  ;
-  function vg(a) {
-    if (!a) return false;
+  __name(internalPromiseExecutor, "internalPromiseExecutor");
+  function isClosureThenable(value) {
+    if (!value) return false;
     try {
-      return !!a.$goog_Thenable;
-    } catch (b) {
+      return !!value.$goog_Thenable;
+    } catch (caughtError) {
       return false;
     }
   }
-  __name(vg, "vg");
-  ;
-  function X(a) {
+  __name(isClosureThenable, "isClosureThenable");
+  function LegacyPromise(executor) {
     this.j = 0;
     this.J = void 0;
     this.v = this.l = this.o = null;
     this.D = this.A = false;
-    if (a != ug) try {
-      var b = this;
-      a.call(void 0, function(c) {
-        wg(b, 2, c);
-      }, function(c) {
-        wg(b, 3, c);
-      });
-    } catch (c) {
-      wg(this, 3, c);
-    }
+    if (executor != internalPromiseExecutor)
+      try {
+        var promise = this;
+        executor.call(
+          void 0,
+          function(settledValue) {
+            settlePromise(promise, 2, settledValue);
+          },
+          function(settledValue) {
+            settlePromise(promise, 3, settledValue);
+          }
+        );
+      } catch (caughtError) {
+        settlePromise(this, 3, caughtError);
+      }
   }
-  __name(X, "X");
-  function xg() {
+  __name(LegacyPromise, "LegacyPromise");
+  function PromiseCallbackNode() {
     this.next = this.o = this.l = this.v = this.j = null;
     this.D = false;
   }
-  __name(xg, "xg");
-  xg.prototype.reset = function() {
+  __name(PromiseCallbackNode, "PromiseCallbackNode");
+  PromiseCallbackNode.prototype.reset = function() {
     this.o = this.l = this.v = this.j = null;
     this.D = false;
   };
-  var yg = new fg(function() {
-    return new xg();
-  }, function(a) {
-    a.reset();
-  });
-  function zg(a, b, c) {
-    var d = yg.get();
-    d.v = a;
-    d.l = b;
-    d.o = c;
-    return d;
+  var promiseCallbackPool = new ObjectPool(
+    function() {
+      return new PromiseCallbackNode();
+    },
+    function(value) {
+      value.reset();
+    }
+  );
+  function allocatePromiseCallback(onFulfilled, onRejected, receiver) {
+    var callbackNode = promiseCallbackPool.get();
+    callbackNode.v = onFulfilled;
+    callbackNode.l = onRejected;
+    callbackNode.o = receiver;
+    return callbackNode;
   }
-  __name(zg, "zg");
-  function Ag(a) {
-    if (a instanceof X) return a;
-    var b = new X(ug);
-    wg(b, 2, a);
-    return b;
+  __name(allocatePromiseCallback, "allocatePromiseCallback");
+  function asLegacyPromise(value) {
+    if (value instanceof LegacyPromise) return value;
+    var promise = new LegacyPromise(internalPromiseExecutor);
+    settlePromise(promise, 2, value);
+    return promise;
   }
-  __name(Ag, "Ag");
-  function Bg() {
-    var a = Error("Requests cancelled because user has been opted out");
-    return new X(function(b, c) {
-      c(a);
+  __name(asLegacyPromise, "asLegacyPromise");
+  function rejectOptedOut() {
+    var error = Error("Requests cancelled because user has been opted out");
+    return new LegacyPromise(function(resolve, reject) {
+      reject(error);
     });
   }
-  __name(Bg, "Bg");
-  function Cg(a, b, c) {
-    Dg(a, b, c, null) || rg(Ra(b, a));
+  __name(rejectOptedOut, "rejectOptedOut");
+  function resolveThenable(value, onFulfilled, onRejected) {
+    assimilateThenable(value, onFulfilled, onRejected, null) || enqueueMicrotask(partialApply(onFulfilled, value));
   }
-  __name(Cg, "Cg");
-  function Hg() {
-    var a, b, c = new X(function(d, e) {
-      a = d;
-      b = e;
+  __name(resolveThenable, "resolveThenable");
+  function createDeferred() {
+    var resolve, reject, promise = new LegacyPromise(function(resolvePromise, rejectPromise) {
+      resolve = resolvePromise;
+      reject = rejectPromise;
     });
-    return new Ig(c, a, b);
+    return new PromiseResolver(promise, resolve, reject);
   }
-  __name(Hg, "Hg");
-  X.prototype.then = function(a, b, c) {
-    return Jg(this, eg(typeof a === "function" ? a : null), eg(typeof b === "function" ? b : null), c);
+  __name(createDeferred, "createDeferred");
+  LegacyPromise.prototype.then = function(onFulfilled, onRejected, receiver) {
+    return chainPromise(
+      this,
+      wrapAsyncContext(typeof onFulfilled === "function" ? onFulfilled : null),
+      wrapAsyncContext(typeof onRejected === "function" ? onRejected : null),
+      receiver
+    );
   };
-  X.prototype.$goog_Thenable = true;
-  p = X.prototype;
-  p.T = function(a, b) {
-    return Jg(this, null, eg(a), b);
+  LegacyPromise.prototype.$goog_Thenable = true;
+  prototypeAlias = LegacyPromise.prototype;
+  prototypeAlias.T = function(onRejected, receiver) {
+    return chainPromise(this, null, wrapAsyncContext(onRejected), receiver);
   };
-  p.catch = X.prototype.T;
-  p.cancel = function(a) {
+  prototypeAlias.catch = LegacyPromise.prototype.T;
+  prototypeAlias.cancel = function(reason) {
     if (this.j == 0) {
-      var b = new Kg(a);
-      rg(function() {
-        Lg(this, b);
+      var promiseCancellationError = new PromiseCancellationError(reason);
+      enqueueMicrotask(function() {
+        cancelPromise(this, promiseCancellationError);
       }, this);
     }
   };
-  function Lg(a, b) {
-    if (a.j == 0)
-      if (a.o) {
-        var c = a.o;
-        if (c.l) {
-          for (var d = 0, e = null, f = null, g = c.l; g && (g.D || (d++, g.j == a && (e = g), !(e && d > 1))); g = g.next) e || (f = g);
-          e && (c.j == 0 && d == 1 ? Lg(c, b) : (f ? (d = f, d.next == c.v && (c.v = d), d.next = d.next.next) : Mg(c), Ng(c, e, 3, b)));
+  function cancelPromise(promise, error) {
+    if (promise.j == 0)
+      if (promise.o) {
+        var parentPromise = promise.o;
+        if (parentPromise.l) {
+          for (var subscriberCountOrPreviousNode = 0, cancelledSubscription = null, previousNode = null, subscription = parentPromise.l; subscription && (subscription.D || (subscriberCountOrPreviousNode++, subscription.j == promise && (cancelledSubscription = subscription), !(cancelledSubscription && subscriberCountOrPreviousNode > 1))); subscription = subscription.next)
+            cancelledSubscription || (previousNode = subscription);
+          cancelledSubscription && (parentPromise.j == 0 && subscriberCountOrPreviousNode == 1 ? cancelPromise(parentPromise, error) : (previousNode ? (subscriberCountOrPreviousNode = previousNode, subscriberCountOrPreviousNode.next == parentPromise.v && (parentPromise.v = subscriberCountOrPreviousNode), subscriberCountOrPreviousNode.next = subscriberCountOrPreviousNode.next.next) : shiftPromiseCallback(parentPromise), executePromiseCallback(parentPromise, cancelledSubscription, 3, error)));
         }
-        a.o = null;
-      } else wg(a, 3, b);
+        promise.o = null;
+      } else settlePromise(promise, 3, error);
   }
-  __name(Lg, "Lg");
-  function Og(a, b) {
-    a.l || a.j != 2 && a.j != 3 || Pg(a);
-    a.v ? a.v.next = b : a.l = b;
-    a.v = b;
+  __name(cancelPromise, "cancelPromise");
+  function appendPromiseCallback(promise, callback) {
+    promise.l || promise.j != 2 && promise.j != 3 || schedulePromiseCallbacks(promise);
+    promise.v ? promise.v.next = callback : promise.l = callback;
+    promise.v = callback;
   }
-  __name(Og, "Og");
-  function Jg(a, b, c, d) {
-    var e = zg(null, null, null);
-    e.j = new X(function(f, g) {
-      e.v = b ? function(h) {
+  __name(appendPromiseCallback, "appendPromiseCallback");
+  function chainPromise(promise, onFulfilled, onRejected, receiver) {
+    var callbackNode = allocatePromiseCallback(null, null, null);
+    callbackNode.j = new LegacyPromise(function(resolveChild, rejectChild) {
+      callbackNode.v = onFulfilled ? function(settledValue) {
         try {
-          var k = b.call(d, h);
-          f(k);
-        } catch (l) {
-          g(l);
+          var callbackResult = onFulfilled.call(receiver, settledValue);
+          resolveChild(callbackResult);
+        } catch (caughtError) {
+          rejectChild(caughtError);
         }
-      } : f;
-      e.l = c ? function(h) {
+      } : resolveChild;
+      callbackNode.l = onRejected ? function(settledValue) {
         try {
-          var k = c.call(d, h);
-          k === void 0 && h instanceof Kg ? g(h) : f(k);
-        } catch (l) {
-          g(l);
+          var callbackResult = onRejected.call(receiver, settledValue);
+          callbackResult === void 0 && settledValue instanceof PromiseCancellationError ? rejectChild(settledValue) : resolveChild(callbackResult);
+        } catch (caughtError) {
+          rejectChild(caughtError);
         }
-      } : g;
+      } : rejectChild;
     });
-    e.j.o = a;
-    Og(a, e);
-    return e.j;
+    callbackNode.j.o = promise;
+    appendPromiseCallback(promise, callbackNode);
+    return callbackNode.j;
   }
-  __name(Jg, "Jg");
-  p.Eb = function(a) {
+  __name(chainPromise, "chainPromise");
+  prototypeAlias.Eb = function(value) {
     this.j = 0;
-    wg(this, 2, a);
+    settlePromise(this, 2, value);
   };
-  p.Fb = function(a) {
+  prototypeAlias.Fb = function(value) {
     this.j = 0;
-    wg(this, 3, a);
+    settlePromise(this, 3, value);
   };
-  function wg(a, b, c) {
-    a.j == 0 && (a === c && (b = 3, c = new TypeError("Promise cannot resolve to itself")), a.j = 1, Dg(
-      c,
-      a.Eb,
-      a.Fb,
-      a
-    ) || (a.J = c, a.j = b, a.o = null, Pg(a), b != 3 || c instanceof Kg || Qg(a, c)));
+  function settlePromise(promise, state, value) {
+    promise.j == 0 && (promise === value && (state = 3, value = new TypeError("Promise cannot resolve to itself")), promise.j = 1, assimilateThenable(value, promise.Eb, promise.Fb, promise) || (promise.J = value, promise.j = state, promise.o = null, schedulePromiseCallbacks(promise), state != 3 || value instanceof PromiseCancellationError || scheduleUnhandledRejection(promise, value)));
   }
-  __name(wg, "wg");
-  function Dg(a, b, c, d) {
-    if (a instanceof X) return Og(a, zg(b || ug, c || null, d)), true;
-    if (vg(a)) return a.then(b, c, d), true;
-    if (La(a)) try {
-      var e = a.then;
-      if (typeof e === "function") return Rg(a, e, b, c, d), true;
-    } catch (f) {
-      return c.call(d, f), true;
-    }
+  __name(settlePromise, "settlePromise");
+  function assimilateThenable(value, onFulfilled, onRejected, receiver) {
+    if (value instanceof LegacyPromise)
+      return appendPromiseCallback(
+        value,
+        allocatePromiseCallback(
+          onFulfilled || internalPromiseExecutor,
+          onRejected || null,
+          receiver
+        )
+      ), true;
+    if (isClosureThenable(value)) return value.then(onFulfilled, onRejected, receiver), true;
+    if (isObjectLike(value))
+      try {
+        var then = value.then;
+        if (typeof then === "function")
+          return callThenSafely(value, then, onFulfilled, onRejected, receiver), true;
+      } catch (caughtError) {
+        return onRejected.call(receiver, caughtError), true;
+      }
     return false;
   }
-  __name(Dg, "Dg");
-  function Rg(a, b, c, d, e) {
-    function f(k) {
-      h || (h = true, d.call(e, k));
+  __name(assimilateThenable, "assimilateThenable");
+  function callThenSafely(thenable, thenMethod, onFulfilled, onRejected, receiver) {
+    function rejectOnce(settledValue) {
+      completed || (completed = true, onRejected.call(receiver, settledValue));
     }
-    __name(f, "f");
-    function g(k) {
-      h || (h = true, c.call(e, k));
+    __name(rejectOnce, "rejectOnce");
+    function resolveOnce(settledValue) {
+      completed || (completed = true, onFulfilled.call(receiver, settledValue));
     }
-    __name(g, "g");
-    var h = false;
+    __name(resolveOnce, "resolveOnce");
+    var completed = false;
     try {
-      b.call(a, g, f);
-    } catch (k) {
-      f(k);
+      thenMethod.call(thenable, resolveOnce, rejectOnce);
+    } catch (caughtError) {
+      rejectOnce(caughtError);
     }
   }
-  __name(Rg, "Rg");
-  function Pg(a) {
-    a.A || (a.A = true, rg(a.jb, a));
+  __name(callThenSafely, "callThenSafely");
+  function schedulePromiseCallbacks(promise) {
+    promise.A || (promise.A = true, enqueueMicrotask(promise.jb, promise));
   }
-  __name(Pg, "Pg");
-  function Mg(a) {
-    var b = null;
-    a.l && (b = a.l, a.l = b.next, b.next = null);
-    a.l || (a.v = null);
-    return b;
+  __name(schedulePromiseCallbacks, "schedulePromiseCallbacks");
+  function shiftPromiseCallback(promise) {
+    var callbackNode = null;
+    promise.l && (callbackNode = promise.l, promise.l = callbackNode.next, callbackNode.next = null);
+    promise.l || (promise.v = null);
+    return callbackNode;
   }
-  __name(Mg, "Mg");
-  p.jb = function() {
-    for (var a; a = Mg(this); ) Ng(this, a, this.j, this.J);
+  __name(shiftPromiseCallback, "shiftPromiseCallback");
+  prototypeAlias.jb = function() {
+    for (var intermediate; intermediate = shiftPromiseCallback(this); )
+      executePromiseCallback(this, intermediate, this.j, this.J);
     this.A = false;
   };
-  function Ng(a, b, c, d) {
-    if (c == 3 && b.l && !b.D)
-      for (; a && a.D; a = a.o) a.D = false;
-    if (b.j) b.j.o = null, Sg(b, c, d);
-    else try {
-      b.D ? b.v.call(b.o) : Sg(b, c, d);
-    } catch (e) {
-      Tg.call(null, e);
-    }
-    gg(yg, b);
+  function executePromiseCallback(promise, callback, state, value) {
+    if (state == 3 && callback.l && !callback.D)
+      for (; promise && promise.D; promise = promise.o) promise.D = false;
+    if (callback.j) {
+      callback.j.o = null;
+      invokePromiseCallback(callback, state, value);
+    } else
+      try {
+        callback.D ? callback.v.call(callback.o) : invokePromiseCallback(callback, state, value);
+      } catch (caughtError) {
+        unhandledRejectionHandler.call(null, caughtError);
+      }
+    releaseToPool(promiseCallbackPool, callback);
   }
-  __name(Ng, "Ng");
-  function Sg(a, b, c) {
-    b == 2 ? a.v.call(a.o, c) : a.l && a.l.call(a.o, c);
+  __name(executePromiseCallback, "executePromiseCallback");
+  function invokePromiseCallback(callback, state, value) {
+    state == 2 ? callback.v.call(callback.o, value) : callback.l && callback.l.call(callback.o, value);
   }
-  __name(Sg, "Sg");
-  function Qg(a, b) {
-    a.D = true;
-    rg(function() {
-      a.D && Tg.call(null, b);
+  __name(invokePromiseCallback, "invokePromiseCallback");
+  function scheduleUnhandledRejection(promise, error) {
+    promise.D = true;
+    enqueueMicrotask(function() {
+      promise.D && unhandledRejectionHandler.call(null, error);
     });
   }
-  __name(Qg, "Qg");
-  var Tg = Va;
-  function Kg(a) {
-    Ua.call(this, a);
+  __name(scheduleUnhandledRejection, "scheduleUnhandledRejection");
+  var unhandledRejectionHandler = throwAsynchronously;
+  function PromiseCancellationError(message) {
+    ClosureError.call(this, message);
     this.j = false;
   }
-  __name(Kg, "Kg");
-  B(Kg, Ua);
-  Kg.prototype.name = "cancel";
-  function Ig(a, b, c) {
-    this.promise = a;
-    this.resolve = b;
-    this.reject = c;
+  __name(PromiseCancellationError, "PromiseCancellationError");
+  inheritClosureClass(PromiseCancellationError, ClosureError);
+  PromiseCancellationError.prototype.name = "cancel";
+  function PromiseResolver(promise, resolve, reject) {
+    this.promise = promise;
+    this.resolve = resolve;
+    this.reject = reject;
   }
-  __name(Ig, "Ig");
-  ;
-  function Ug() {
+  __name(PromiseResolver, "PromiseResolver");
+  function LegacyDeferred() {
     this.D = [];
     this.v = this.o = false;
     this.l = void 0;
@@ -3668,770 +3789,857 @@
     this.j = null;
     this.C = 0;
   }
-  __name(Ug, "Ug");
-  Ug.prototype.cancel = function(a) {
-    if (this.o) this.l instanceof Ug && this.l.cancel();
+  __name(LegacyDeferred, "LegacyDeferred");
+  LegacyDeferred.prototype.cancel = function(value) {
+    if (this.o) this.l instanceof LegacyDeferred && this.l.cancel();
     else {
       if (this.j) {
-        var b = this.j;
+        var intermediate = this.j;
         delete this.j;
-        a ? b.cancel(a) : (b.C--, b.C <= 0 && b.cancel());
+        value ? intermediate.cancel(value) : (intermediate.C--, intermediate.C <= 0 && intermediate.cancel());
       }
       this.G = true;
-      this.o || (a = new Vg(this), Wg(this), Xg(this, false, a));
+      this.o || (value = new DeferredCanceledError(this), assertDeferredNotFired(this), settleDeferred(this, false, value));
     }
   };
-  Ug.prototype.H = function(a, b) {
+  LegacyDeferred.prototype.H = function(value, other) {
     this.J = false;
-    Xg(this, a, b);
+    settleDeferred(this, value, other);
   };
-  function Xg(a, b, c) {
-    a.o = true;
-    a.l = c;
-    a.v = !b;
-    Yg(a);
+  function settleDeferred(deferred, succeeded, value) {
+    deferred.o = true;
+    deferred.l = value;
+    deferred.v = !succeeded;
+    runDeferredCallbacks(deferred);
   }
-  __name(Xg, "Xg");
-  function Wg(a) {
-    if (a.o) {
-      if (!a.G) throw new Zg(a);
-      a.G = false;
+  __name(settleDeferred, "settleDeferred");
+  function assertDeferredNotFired(deferred) {
+    if (deferred.o) {
+      if (!deferred.G) throw new DeferredAlreadyCalledError(deferred);
+      deferred.G = false;
     }
   }
-  __name(Wg, "Wg");
-  function $g(a) {
-    throw a;
+  __name(assertDeferredNotFired, "assertDeferredNotFired");
+  function rethrowError(error) {
+    throw error;
   }
-  __name($g, "$g");
-  function ah(a, b, c) {
-    return bh(a, b, null, c);
+  __name(rethrowError, "rethrowError");
+  function addDeferredCallback(deferred, callback, receiver) {
+    return addDeferredCallbacks(deferred, callback, null, receiver);
   }
-  __name(ah, "ah");
-  function ch(a, b, c) {
-    bh(a, b, function(d) {
-      var e = b.call(this, d);
-      if (e === void 0) throw d;
-      return e;
-    }, c);
+  __name(addDeferredCallback, "addDeferredCallback");
+  function addDeferredBoth(deferred, callback, receiver) {
+    addDeferredCallbacks(
+      deferred,
+      callback,
+      function(value) {
+        var intermediate = callback.call(this, value);
+        if (intermediate === void 0) throw value;
+        return intermediate;
+      },
+      receiver
+    );
   }
-  __name(ch, "ch");
-  function bh(a, b, c, d) {
-    var e = a.o;
-    e || (b === c ? b = c = eg(b) : (b = eg(b), c = eg(c)));
-    a.D.push([b, c, d]);
-    e && Yg(a);
-    return a;
+  __name(addDeferredBoth, "addDeferredBoth");
+  function addDeferredCallbacks(deferred, onSuccess, onError, receiver) {
+    var intermediate = deferred.o;
+    intermediate || (onSuccess === onError ? onSuccess = onError = wrapAsyncContext(onSuccess) : (onSuccess = wrapAsyncContext(onSuccess), onError = wrapAsyncContext(onError)));
+    deferred.D.push([onSuccess, onError, receiver]);
+    intermediate && runDeferredCallbacks(deferred);
+    return deferred;
   }
-  __name(bh, "bh");
-  Ug.prototype.then = function(a, b, c) {
-    var d, e, f = new X(function(g, h) {
-      e = g;
-      d = h;
+  __name(addDeferredCallbacks, "addDeferredCallbacks");
+  LegacyDeferred.prototype.then = function(value, other, options) {
+    var callback, intermediate, legacyPromise = new LegacyPromise(function(value2, other2) {
+      intermediate = value2;
+      callback = other2;
     });
-    bh(this, e, function(g) {
-      g instanceof Vg ? f.cancel() : d(g);
-      return dh;
-    }, this);
-    return f.then(a, b, c);
+    addDeferredCallbacks(
+      this,
+      intermediate,
+      function(value2) {
+        value2 instanceof DeferredCanceledError ? legacyPromise.cancel() : callback(value2);
+        return deferredConsumedToken;
+      },
+      this
+    );
+    return legacyPromise.then(value, other, options);
   };
-  Ug.prototype.$goog_Thenable = true;
-  function eh(a) {
-    return db(a.D, function(b) {
-      return typeof b[1] === "function";
+  LegacyDeferred.prototype.$goog_Thenable = true;
+  function hasDeferredErrback(deferred) {
+    return arraySome(deferred.D, function(value) {
+      return typeof value[1] === "function";
     });
   }
-  __name(eh, "eh");
-  var dh = {};
-  function Yg(a) {
-    if (a.A && a.o && eh(a)) {
-      var b = a.A, c = fh[b];
-      c && (z.clearTimeout(c.j), delete fh[b]);
-      a.A = 0;
+  __name(hasDeferredErrback, "hasDeferredErrback");
+  var deferredConsumedToken = {};
+  function runDeferredCallbacks(deferred) {
+    if (deferred.A && deferred.o && hasDeferredErrback(deferred)) {
+      var intermediate = deferred.A, intermediate2 = deferredUnhandledErrors[intermediate];
+      intermediate2 && (runtimeGlobal.clearTimeout(intermediate2.j), delete deferredUnhandledErrors[intermediate]);
+      deferred.A = 0;
     }
-    a.j && (a.j.C--, delete a.j);
-    b = a.l;
-    for (var d = c = false; a.D.length && !a.J; ) {
-      var e = a.D.shift(), f = e[0], g = e[1];
-      e = e[2];
-      if (f = a.v ? g : f) try {
-        var h = f.call(e || null, b);
-        h === dh && (h = void 0);
-        h !== void 0 && (a.v = a.v && (h == b || h instanceof Error), a.l = b = h);
-        if (vg(b) || typeof z.Promise === "function" && b instanceof z.Promise) d = true, a.J = true;
-      } catch (k) {
-        b = k, a.v = true, eh(a) || (c = true);
-      }
+    deferred.j && (deferred.j.C--, delete deferred.j);
+    intermediate = deferred.l;
+    for (var intermediate3 = intermediate2 = false; deferred.D.length && !deferred.J; ) {
+      var intermediate4 = deferred.D.shift(), intermediate5 = intermediate4[0], intermediate6 = intermediate4[1];
+      intermediate4 = intermediate4[2];
+      if (intermediate5 = deferred.v ? intermediate6 : intermediate5)
+        try {
+          var intermediate7 = intermediate5.call(intermediate4 || null, intermediate);
+          intermediate7 === deferredConsumedToken && (intermediate7 = void 0);
+          intermediate7 !== void 0 && (deferred.v = deferred.v && (intermediate7 == intermediate || intermediate7 instanceof Error), deferred.l = intermediate = intermediate7);
+          if (isClosureThenable(intermediate) || typeof runtimeGlobal.Promise === "function" && intermediate instanceof runtimeGlobal.Promise) {
+            intermediate3 = true;
+            deferred.J = true;
+          }
+        } catch (caughtError) {
+          {
+            intermediate = caughtError;
+            deferred.v = true;
+            hasDeferredErrback(deferred) || (intermediate2 = true);
+          }
+        }
     }
-    a.l = b;
-    d && (h = A(a.H, a, true), d = A(a.H, a, false), b instanceof Ug ? (bh(b, h, d), b.L = true) : b.then(h, d));
-    c && (b = new gh(b), fh[b.j] = b, a.A = b.j);
+    deferred.l = intermediate;
+    intermediate3 && (intermediate7 = bindFunction(deferred.H, deferred, true), intermediate3 = bindFunction(deferred.H, deferred, false), intermediate instanceof LegacyDeferred ? (addDeferredCallbacks(intermediate, intermediate7, intermediate3), intermediate.L = true) : intermediate.then(intermediate7, intermediate3));
+    intermediate2 && (intermediate = new DeferredUnhandledError(intermediate), deferredUnhandledErrors[intermediate.j] = intermediate, deferred.A = intermediate.j);
   }
-  __name(Yg, "Yg");
-  function hh(a) {
-    var b = new Ug();
-    Wg(b);
-    Xg(b, true, a);
-    return b;
+  __name(runDeferredCallbacks, "runDeferredCallbacks");
+  function resolvedDeferred(value) {
+    var legacyDeferred = new LegacyDeferred();
+    assertDeferredNotFired(legacyDeferred);
+    settleDeferred(legacyDeferred, true, value);
+    return legacyDeferred;
   }
-  __name(hh, "hh");
-  function Zg() {
-    Ua.call(this);
+  __name(resolvedDeferred, "resolvedDeferred");
+  function DeferredAlreadyCalledError() {
+    ClosureError.call(this);
   }
-  __name(Zg, "Zg");
-  B(Zg, Ua);
-  Zg.prototype.message = "Deferred has already fired";
-  Zg.prototype.name = "AlreadyCalledError";
-  function Vg() {
-    Ua.call(this);
+  __name(DeferredAlreadyCalledError, "DeferredAlreadyCalledError");
+  inheritClosureClass(DeferredAlreadyCalledError, ClosureError);
+  DeferredAlreadyCalledError.prototype.message = "Deferred has already fired";
+  DeferredAlreadyCalledError.prototype.name = "AlreadyCalledError";
+  function DeferredCanceledError() {
+    ClosureError.call(this);
   }
-  __name(Vg, "Vg");
-  B(Vg, Ua);
-  Vg.prototype.message = "Deferred was canceled";
-  Vg.prototype.name = "CanceledError";
-  function gh(a) {
-    this.j = z.setTimeout(A(this.o, this), 0);
-    this.l = a;
+  __name(DeferredCanceledError, "DeferredCanceledError");
+  inheritClosureClass(DeferredCanceledError, ClosureError);
+  DeferredCanceledError.prototype.message = "Deferred was canceled";
+  DeferredCanceledError.prototype.name = "CanceledError";
+  function DeferredUnhandledError(error) {
+    this.j = runtimeGlobal.setTimeout(bindFunction(this.o, this), 0);
+    this.l = error;
   }
-  __name(gh, "gh");
-  gh.prototype.o = function() {
-    delete fh[this.j];
-    $g(this.l);
+  __name(DeferredUnhandledError, "DeferredUnhandledError");
+  DeferredUnhandledError.prototype.o = function() {
+    delete deferredUnhandledErrors[this.j];
+    rethrowError(this.l);
   };
-  var fh = {};
-  function ih() {
+  var deferredUnhandledErrors = {};
+  function Provider() {
   }
-  __name(ih, "ih");
-  function jh(a) {
-    return a != null && !!a.Ea;
+  __name(Provider, "Provider");
+  function isJavaProvider(value) {
+    return value != null && !!value.Ea;
   }
-  __name(jh, "jh");
-  ih.prototype.Ea = true;
-  ih.prototype.F = ["javax.inject.Provider", 1];
-  function kh() {
+  __name(isJavaProvider, "isJavaProvider");
+  Provider.prototype.Ea = true;
+  Provider.prototype.F = ["javax.inject.Provider", 1];
+  function FlagService() {
   }
-  __name(kh, "kh");
-  function lh(a) {
-    return a != null && !!a.Da;
+  __name(FlagService, "FlagService");
+  function isFlagService(value) {
+    return value != null && !!value.Da;
   }
-  __name(lh, "lh");
-  kh.prototype.Da = true;
-  kh.prototype.F = ["com.google.apps.docs.xplat.flag.FlagService", 1];
-  var mh;
-  function nh() {
-    if (mh == null) {
-      var a = new oh(null);
-      mh = /* @__PURE__ */ __name(function() {
-        return a;
-      }, "mh");
+  __name(isFlagService, "isFlagService");
+  FlagService.prototype.Da = true;
+  FlagService.prototype.F = ["com.google.apps.docs.xplat.flag.FlagService", 1];
+  var flagServiceProvider;
+  function getFlagService() {
+    if (flagServiceProvider == null) {
+      var flagServiceImpl = new FlagServiceImpl(null);
+      flagServiceProvider = /* @__PURE__ */ __name(function() {
+        return flagServiceImpl;
+      }, "flagServiceProvider");
     }
-    var b;
-    return R((b = mh, b()), lh, kh);
+    var callback;
+    return checkedJavaCast(
+      (callback = flagServiceProvider, callback()),
+      isFlagService,
+      FlagService
+    );
   }
-  __name(nh, "nh");
-  ;
-  function ph() {
+  __name(getFlagService, "getFlagService");
+  function FlagServiceHelper() {
   }
-  __name(ph, "ph");
-  v(ph, L);
-  ph.prototype.get = function() {
+  __name(FlagServiceHelper, "FlagServiceHelper");
+  inheritCompiledClass(FlagServiceHelper, JavaObject);
+  FlagServiceHelper.prototype.get = function() {
     if (this.l == null) {
-      var a = R(z._docs_flag_initialData, uf, tf);
-      this.l = a != null ? a : R({}, uf, tf);
+      var intermediate = checkedJavaCast(
+        runtimeGlobal._docs_flag_initialData,
+        isNativeObject,
+        NativeObjectClass
+      );
+      this.l = intermediate != null ? intermediate : checkedJavaCast({}, isNativeObject, NativeObjectClass);
     }
     return this.l;
   };
-  ph.prototype.j = function() {
+  FlagServiceHelper.prototype.j = function() {
     return this.get();
   };
-  ph.prototype.Ea = true;
-  ph.prototype.F = ["com.google.apps.docs.xplat.flag.FlagServiceHelper", 0];
-  function qh(a) {
-    return typeof a == "string" ? a == "true" || a == "1" : !!a;
+  FlagServiceHelper.prototype.Ea = true;
+  FlagServiceHelper.prototype.F = ["com.google.apps.docs.xplat.flag.FlagServiceHelper", 0];
+  function parseBooleanFlag(value) {
+    return typeof value == "string" ? value == "true" || value == "1" : !!value;
   }
-  __name(qh, "qh");
-  ;
-  function oh(a) {
-    this.j = new ph();
+  __name(parseBooleanFlag, "parseBooleanFlag");
+  function FlagServiceImpl(helper) {
+    this.j = new FlagServiceHelper();
     this.l = null;
-    if (a != null)
-      for (var b in a) {
-        var c = b, d = a[b];
-        if (this.l != null) throw Pe("Cannot use setClientFlag when comparison is enabled.").j;
-        var e = R(this.j.j(), uf, tf);
-        ff(d) ? (d = R(d, ff, df).Y, e[c] = d) : e[c] = d != null ? d : null;
+    if (helper != null)
+      for (var intermediate in helper) {
+        var intermediate2 = intermediate, intermediate3 = helper[intermediate];
+        if (this.l != null)
+          throw createIllegalStateException("Cannot use setClientFlag when comparison is enabled.").j;
+        var intermediate4 = checkedJavaCast(this.j.j(), isNativeObject, NativeObjectClass);
+        isBoxedInteger(intermediate3) ? (intermediate3 = checkedJavaCast(intermediate3, isBoxedInteger, JavaInteger).Y, intermediate4[intermediate2] = intermediate3) : intermediate4[intermediate2] = intermediate3 != null ? intermediate3 : null;
       }
   }
-  __name(oh, "oh");
-  v(oh, L);
-  oh.prototype.clear = function() {
-    this.j = new ph();
+  __name(FlagServiceImpl, "FlagServiceImpl");
+  inheritCompiledClass(FlagServiceImpl, JavaObject);
+  FlagServiceImpl.prototype.clear = function() {
+    this.j = new FlagServiceHelper();
     this.l = null;
   };
-  oh.prototype.get = function(a) {
-    rh(this, a);
-    return R(this.j.j(), uf, tf)[a];
+  FlagServiceImpl.prototype.get = function(value) {
+    checkFlagProviderAgreement(this, value);
+    return checkedJavaCast(this.j.j(), isNativeObject, NativeObjectClass)[value];
   };
-  function sh(a, b) {
-    a = R(a.j.j(), uf, tf);
-    return b in a;
+  function hasClientFlag(service, key) {
+    service = checkedJavaCast(service.j.j(), isNativeObject, NativeObjectClass);
+    return key in service;
   }
-  __name(sh, "sh");
-  function th(a, b) {
-    rh(a, b);
-    if (!sh(a, b) || a.get(b) == null) return NaN;
+  __name(hasClientFlag, "hasClientFlag");
+  function readNumericClientFlag(service, key) {
+    checkFlagProviderAgreement(service, key);
+    if (!hasClientFlag(service, key) || service.get(key) == null) return NaN;
     try {
-      var c = M(a.get(b));
-      Te == null && (Te = RegExp(
+      var intermediate = javaString(service.get(key));
+      javaDoublePattern == null && (javaDoublePattern = RegExp(
         "^\\s*[+-]?(NaN|Infinity|((\\d+\\.?\\d*)|(\\.\\d+))([eE][+-]?\\d+)?[dDfF]?)\\s*$"
       ));
-      if (!Te.test(c)) {
-        var d = new gf();
-        d.l = 'For input string: "' + M(c) + '"';
-        Q(d);
-        P(d, Error(d));
-        throw d.j;
+      if (!javaDoublePattern.test(intermediate)) {
+        var javaNumberFormatException = new JavaNumberFormatException();
+        javaNumberFormatException.l = 'For input string: "' + javaString(intermediate) + '"';
+        captureJavaStack(javaNumberFormatException);
+        associateNativeError(javaNumberFormatException, Error(javaNumberFormatException));
+        throw javaNumberFormatException.j;
       }
-      return parseFloat(c);
-    } catch (f) {
-      var e = ye(f);
-      if (e instanceof gf) return NaN;
-      throw e.j;
+      return parseFloat(intermediate);
+    } catch (caughtError) {
+      var intermediate2 = wrapJavaThrowable(caughtError);
+      if (intermediate2 instanceof JavaNumberFormatException) return NaN;
+      throw intermediate2.j;
     }
   }
-  __name(th, "th");
-  function uh(a, b) {
-    rh(a, b);
-    if (!sh(a, b)) return "";
-    a = a.get(b);
-    if (a == null) return "";
-    var c;
-    if (b = "number" === typeof a && (c = a, true)) {
-      b = Ve(S(c));
-      var d = Ve(S(c));
-      b = b.equals(d);
+  __name(readNumericClientFlag, "readNumericClientFlag");
+  function readStringClientFlag(service, key) {
+    checkFlagProviderAgreement(service, key);
+    if (!hasClientFlag(service, key)) return "";
+    service = service.get(key);
+    if (service == null) return "";
+    var intermediate;
+    if (key = "number" === typeof service && (intermediate = service, true)) {
+      key = javaLongFromNumber(requireNonNull(intermediate));
+      var intermediate2 = javaLongFromNumber(requireNonNull(intermediate));
+      key = key.equals(intermediate2);
     }
-    return b ? "" + Ve(S(c)) : M(a);
+    return key ? "" + javaLongFromNumber(requireNonNull(intermediate)) : javaString(service);
   }
-  __name(uh, "uh");
-  function rh(a, b) {
-    if (a.l != null) {
+  __name(readStringClientFlag, "readStringClientFlag");
+  function checkFlagProviderAgreement(service, key) {
+    if (service.l != null) {
       try {
-        var c = R(a.j.j(), uf, tf)[b];
-      } catch (h) {
-        var d = ye(h);
-        if (d instanceof De) c = "injection-failed";
-        else throw d.j;
+        var intermediate = checkedJavaCast(service.j.j(), isNativeObject, NativeObjectClass)[key];
+      } catch (caughtError) {
+        var intermediate2 = wrapJavaThrowable(caughtError);
+        if (intermediate2 instanceof JavaRuntimeException) intermediate = "injection-failed";
+        else throw intermediate2.j;
       }
       try {
-        var e = a.l;
-        if (e == null) throw ze().j;
-        var f = R(R(e, jh, ih).j(), uf, tf)[b];
-      } catch (h) {
-        var g = ye(h);
-        if (g instanceof De) f = "injection-failed";
-        else throw g.j;
+        var intermediate3 = service.l;
+        if (intermediate3 == null) throw createNullPointerException().j;
+        var intermediate4 = checkedJavaCast(
+          checkedJavaCast(intermediate3, isJavaProvider, Provider).j(),
+          isNativeObject,
+          NativeObjectClass
+        )[key];
+      } catch (caughtError) {
+        var intermediate5 = wrapJavaThrowable(caughtError);
+        if (intermediate5 instanceof JavaRuntimeException) intermediate4 = "injection-failed";
+        else throw intermediate5.j;
       }
-      a = c;
-      !(b = qe(a, f)) && (b = a != null) && (b = a.equals ? a.equals(f) : Object.is(a, f));
-      if (!b) throw Pe("Logging is not supported.").j;
+      service = intermediate;
+      !(key = javaObjectEquals(service, intermediate4)) && (key = service != null) && (key = service.equals ? service.equals(intermediate4) : Object.is(service, intermediate4));
+      if (!key) throw createIllegalStateException("Logging is not supported.").j;
     }
   }
-  __name(rh, "rh");
-  oh.prototype.Da = true;
-  oh.prototype.F = ["com.google.apps.docs.xplat.flag.FlagServiceImpl", 0];
-  function vh(a) {
-    nf.call(this, a, null);
-    P(this, Error(this));
+  __name(checkFlagProviderAgreement, "checkFlagProviderAgreement");
+  FlagServiceImpl.prototype.Da = true;
+  FlagServiceImpl.prototype.F = ["com.google.apps.docs.xplat.flag.FlagServiceImpl", 0];
+  function LimitException(helper) {
+    XplatException.call(this, helper, null);
+    associateNativeError(this, Error(this));
   }
-  __name(vh, "vh");
-  v(vh, nf);
-  vh.prototype.F = ["com.google.apps.docs.xplat.net.LimitException", 0];
-  function wh(a, b, c, d) {
-    Af();
+  __name(LimitException, "LimitException");
+  inheritCompiledClass(LimitException, XplatException);
+  LimitException.prototype.F = ["com.google.apps.docs.xplat.net.LimitException", 0];
+  function QpsLimiter(helper, helper2, helper3, helper4) {
+    initializeDisposableChildren();
     this.j = false;
-    this.A = a;
-    this.o = b;
-    this.l = new xh(Math.imul(c, 1e3), d);
+    this.A = helper;
+    this.o = helper2;
+    this.l = new BasicStat(Math.imul(helper3, 1e3), helper4);
   }
-  __name(wh, "wh");
-  v(wh, yf);
-  function yh(a) {
-    if (!((a.l.get(null) + 1 | 0) / S(a.l.o / 1e3) <= a.o)) throw new vh("Query would cause " + M(a.A) + " to exceed " + a.o + " qps.").j;
-    a = a.l;
-    var b = Yd(ee(Date.now()));
-    zh(a, b);
-    var c = R(Ah(a.j), Bh, Ch);
-    if (c == null || S(b) >= S(c.l)) b = Dh(a, S(b)), c = new Ch(), c.l = b, c.j = 0, c.v = 2147483647, c.o = -2147483648, a.j.add(c);
-    c.j = c.j + 1 | 0;
-    c.v = Math.min(1, c.v);
-    c.o = Math.max(1, c.o);
+  __name(QpsLimiter, "QpsLimiter");
+  inheritCompiledClass(QpsLimiter, JavaDisposable);
+  function consumeQpsQuota(limiter) {
+    if (!((limiter.l.get(null) + 1 | 0) / requireNonNull(limiter.l.o / 1e3) <= limiter.o))
+      throw new LimitException(
+        "Query would cause " + javaString(limiter.A) + " to exceed " + limiter.o + " qps."
+      ).j;
+    limiter = limiter.l;
+    var intermediate = int64ToNumber(int64FromNumber(Date.now()));
+    resetStatisticsOnClockRollback(limiter, intermediate);
+    var intermediate2 = checkedJavaCast(
+      lastCircularBufferItem(limiter.j),
+      isStatisticsSlot,
+      BasicStatSlot
+    );
+    if (intermediate2 == null || requireNonNull(intermediate) >= requireNonNull(intermediate2.l)) {
+      intermediate = endOfStatisticsSlot(limiter, requireNonNull(intermediate));
+      intermediate2 = new BasicStatSlot();
+      intermediate2.l = intermediate;
+      intermediate2.j = 0;
+      intermediate2.v = 2147483647;
+      intermediate2.o = -2147483648;
+      limiter.j.add(intermediate2);
+    }
+    intermediate2.j = intermediate2.j + 1 | 0;
+    intermediate2.v = Math.min(1, intermediate2.v);
+    intermediate2.o = Math.max(1, intermediate2.o);
   }
-  __name(yh, "yh");
-  wh.prototype.F = ["com.google.apps.docs.xplat.net.QpsLimiter", 0];
-  function Ch() {
+  __name(consumeQpsQuota, "consumeQpsQuota");
+  QpsLimiter.prototype.F = ["com.google.apps.docs.xplat.net.QpsLimiter", 0];
+  function BasicStatSlot() {
     this.o = this.v = this.j = 0;
   }
-  __name(Ch, "Ch");
-  v(Ch, L);
-  function Bh(a) {
-    return a instanceof Ch;
+  __name(BasicStatSlot, "BasicStatSlot");
+  inheritCompiledClass(BasicStatSlot, JavaObject);
+  function isStatisticsSlot(value) {
+    return value instanceof BasicStatSlot;
   }
-  __name(Bh, "Bh");
-  Ch.prototype.F = ["com.google.apps.docs.xplat.util.BasicStat$Slot", 0];
-  function xh(a) {
+  __name(isStatisticsSlot, "isStatisticsSlot");
+  BasicStatSlot.prototype.F = ["com.google.apps.docs.xplat.util.BasicStat$Slot", 0];
+  function BasicStat(helper) {
     this.l = 0;
-    this.o = a;
-    this.l = We(a / 50);
-    this.j = new Eh(ef(50));
+    this.o = helper;
+    this.l = javaNumberToInt(helper / 50);
+    this.j = new CircularBuffer(boxInteger(50));
   }
-  __name(xh, "xh");
-  v(xh, L);
-  xh.prototype.get = function(a) {
-    return Fh(this, a, function(b, c) {
-      b = R(b, ff, df);
-      c = R(c, Bh, Ch);
-      return ef(b.Y + c.j | 0);
+  __name(BasicStat, "BasicStat");
+  inheritCompiledClass(BasicStat, JavaObject);
+  BasicStat.prototype.get = function(value) {
+    return aggregateStatistics(this, value, function(value2, other) {
+      value2 = checkedJavaCast(value2, isBoxedInteger, JavaInteger);
+      other = checkedJavaCast(other, isStatisticsSlot, BasicStatSlot);
+      return boxInteger(value2.Y + other.j | 0);
     });
   };
-  function Fh(a, b, c) {
-    b = b != null ? S(b) : Yd(ee(Date.now()));
-    zh(a, b);
-    var d = 0;
-    b = Dh(a, S(b));
-    b = S(b) - a.o;
-    for (var e = a.j.j.length - 1 | 0; e >= 0; e = e - 1 | 0) {
-      var f = R(a.j.get(e), Bh, Ch);
-      if (S(f.l) <= b) break;
-      d = R(c(ef(d), f), ff, df).Y;
+  function aggregateStatistics(statistics, timestamp, reducer) {
+    timestamp = timestamp != null ? requireNonNull(timestamp) : int64ToNumber(int64FromNumber(Date.now()));
+    resetStatisticsOnClockRollback(statistics, timestamp);
+    var intermediate = 0;
+    timestamp = endOfStatisticsSlot(statistics, requireNonNull(timestamp));
+    timestamp = requireNonNull(timestamp) - statistics.o;
+    for (var intermediate2 = statistics.j.j.length - 1 | 0; intermediate2 >= 0; intermediate2 = intermediate2 - 1 | 0) {
+      var intermediate3 = checkedJavaCast(
+        statistics.j.get(intermediate2),
+        isStatisticsSlot,
+        BasicStatSlot
+      );
+      if (requireNonNull(intermediate3.l) <= timestamp) break;
+      intermediate = checkedJavaCast(
+        reducer(boxInteger(intermediate), intermediate3),
+        isBoxedInteger,
+        JavaInteger
+      ).Y;
     }
-    return d;
+    return intermediate;
   }
-  __name(Fh, "Fh");
-  function Dh(a, b) {
-    return a.l * Math.floor(b / a.l + 1);
+  __name(aggregateStatistics, "aggregateStatistics");
+  function endOfStatisticsSlot(statistics, timestamp) {
+    return statistics.l * Math.floor(timestamp / statistics.l + 1);
   }
-  __name(Dh, "Dh");
-  function zh(a, b) {
-    var c = R(Ah(a.j), Bh, Ch);
-    c != null && (c = S(c.l) - a.l, S(b) < S(c) && a.j.clear());
+  __name(endOfStatisticsSlot, "endOfStatisticsSlot");
+  function resetStatisticsOnClockRollback(statistics, timestamp) {
+    var intermediate = checkedJavaCast(
+      lastCircularBufferItem(statistics.j),
+      isStatisticsSlot,
+      BasicStatSlot
+    );
+    intermediate != null && (intermediate = requireNonNull(intermediate.l) - statistics.l, requireNonNull(timestamp) < requireNonNull(intermediate) && statistics.j.clear());
   }
-  __name(zh, "zh");
-  xh.prototype.F = ["com.google.apps.docs.xplat.util.BasicStat", 0];
-  function Eh(a) {
+  __name(resetStatisticsOnClockRollback, "resetStatisticsOnClockRollback");
+  BasicStat.prototype.F = ["com.google.apps.docs.xplat.util.BasicStat", 0];
+  function CircularBuffer(capacity) {
     this.l = this.o = 0;
-    a != null ? "number" === typeof a ? (a = S(a), a = Math.max(Math.min(a, 2147483647), -2147483648) | 0) : a = a instanceof Xd ? S(a).K : a.Y : a = 100;
-    this.o = a;
-    this.j = R([], sf, rf);
+    capacity != null ? "number" === typeof capacity ? (capacity = requireNonNull(capacity), capacity = Math.max(Math.min(capacity, 2147483647), -2147483648) | 0) : capacity = capacity instanceof Int64 ? requireNonNull(capacity).K : capacity.Y : capacity = 100;
+    this.o = capacity;
+    this.j = checkedJavaCast([], isNativeArray, NativeArrayType);
   }
-  __name(Eh, "Eh");
-  v(Eh, L);
-  p = Eh.prototype;
-  p.add = function(a) {
-    var b = this.j[this.l];
-    this.j[this.l] = a;
-    this.l = We((this.l + 1 | 0) % this.o);
-    return b;
+  __name(CircularBuffer, "CircularBuffer");
+  inheritCompiledClass(CircularBuffer, JavaObject);
+  prototypeAlias = CircularBuffer.prototype;
+  prototypeAlias.add = function(value) {
+    var intermediate = this.j[this.l];
+    this.j[this.l] = value;
+    this.l = javaNumberToInt((this.l + 1 | 0) % this.o);
+    return intermediate;
   };
-  p.get = function(a) {
-    a = Gh(this, a);
-    return this.j[a];
+  prototypeAlias.get = function(value) {
+    value = circularBufferIndex(this, value);
+    return this.j[value];
   };
-  p.set = function(a, b) {
-    a = Gh(this, a);
-    this.j[a] = b;
+  prototypeAlias.set = function(value, other) {
+    value = circularBufferIndex(this, value);
+    this.j[value] = other;
   };
-  p.clear = function() {
+  prototypeAlias.clear = function() {
     this.l = this.j.length = 0;
   };
-  p.xa = function() {
-    for (var a = this.j.length, b = this.j.length - this.j.length | 0, c = R([], sf, rf); b < a; b = b + 1 | 0) {
-      var d = c, e = this.get(b);
-      d.push(e);
+  prototypeAlias.xa = function() {
+    for (var length = this.j.length, intermediate = this.j.length - this.j.length | 0, intermediate2 = checkedJavaCast([], isNativeArray, NativeArrayType); intermediate < length; intermediate = intermediate + 1 | 0) {
+      var intermediate22 = intermediate2, value = this.get(intermediate);
+      intermediate22.push(value);
     }
-    return c;
+    return intermediate2;
   };
-  function Ah(a) {
-    return a.j.length == 0 ? null : a.get(a.j.length - 1 | 0);
+  function lastCircularBufferItem(buffer) {
+    return buffer.j.length == 0 ? null : buffer.get(buffer.j.length - 1 | 0);
   }
-  __name(Ah, "Ah");
-  function Gh(a, b) {
-    if (b >= a.j.length) throw a = new Ee(), Q(a), P(a, Error(a)), a.j;
-    return a.j.length < a.o ? b : We((a.l + b | 0) % a.o);
+  __name(lastCircularBufferItem, "lastCircularBufferItem");
+  function circularBufferIndex(buffer, index) {
+    if (index >= buffer.j.length)
+      throw buffer = new JavaIndexOutOfBoundsException(), captureJavaStack(buffer), associateNativeError(buffer, Error(buffer)), buffer.j;
+    return buffer.j.length < buffer.o ? index : javaNumberToInt((buffer.l + index | 0) % buffer.o);
   }
-  __name(Gh, "Gh");
-  p.F = ["com.google.apps.docs.xplat.util.CircularBuffer", 0];
-  function Hh() {
+  __name(circularBufferIndex, "circularBufferIndex");
+  prototypeAlias.F = ["com.google.apps.docs.xplat.util.CircularBuffer", 0];
+  function StatusState() {
     this.j = 0;
   }
-  __name(Hh, "Hh");
-  var Ih, Jh;
-  v(Hh, L);
-  function Y(a, b) {
-    var c = new Hh();
-    c.l = a;
-    c.j = b;
-    Ih[a] = c !== void 0 ? c : null;
-    return c;
+  __name(StatusState, "StatusState");
+  var networkStatusByName, offlineNetworkStatus;
+  inheritCompiledClass(StatusState, JavaObject);
+  function defineNetworkStatus(name, severity) {
+    var statusState = new StatusState();
+    statusState.l = name;
+    statusState.j = severity;
+    networkStatusByName[name] = statusState !== void 0 ? statusState : null;
+    return statusState;
   }
-  __name(Y, "Y");
-  Hh.prototype.toString = ba("l");
-  function Kh() {
-    Kh = n();
-    Ih = R({}, wf, vf);
-    Y("IDLE", 1);
-    Y("BUSY", 1);
-    Y("RECOVERING", 2);
-    Jh = Y("OFFLINE", 3);
-    Y("SERVER_DOWN", 3);
-    Y("FORBIDDEN", 4);
-    Y("AUTH_REQUIRED", 4);
-    Y("DELTA_STALE_CLIENT", 4);
-    Y("SESSION_LIMIT_EXCEEDED", 5);
-    Y("LOCKED", 5);
-    Y("INCOMPATIBLE_SERVER", 5);
-    Y("CLIENT_ERROR", 5);
-    Y("CLIENT_FATAL_ERROR", 5);
-    Y("CLIENT_FATAL_ERROR_PENDING_CHANGES", 5);
-    Y("BATCH_CLIENT_ERROR", 3);
-    Y("SAVE_ERROR", 5);
-    Y("DOCUMENT_TOO_LARGE", 5);
-    Y("CSE_BLOCKED_REQUEST", 5);
-    Y("BATCH_SAVE_ERROR", 3);
-    Y("DOCS_EVERYWHERE_IMPORT_ERROR", 5);
-    Y(
-      "POST_LIMIT_EXCEEDED_ERROR",
-      5
-    );
-    Y("DOCS_QUOTA_EXCEEDED_ERROR", 5);
+  __name(defineNetworkStatus, "defineNetworkStatus");
+  StatusState.prototype.toString = createPropertyGetter("l");
+  function initializeNetworkStatuses() {
+    initializeNetworkStatuses = createNoopFunction();
+    networkStatusByName = checkedJavaCast({}, isNativeObjectMap, NativeObjectMapClass);
+    defineNetworkStatus("IDLE", 1);
+    defineNetworkStatus("BUSY", 1);
+    defineNetworkStatus("RECOVERING", 2);
+    offlineNetworkStatus = defineNetworkStatus("OFFLINE", 3);
+    defineNetworkStatus("SERVER_DOWN", 3);
+    defineNetworkStatus("FORBIDDEN", 4);
+    defineNetworkStatus("AUTH_REQUIRED", 4);
+    defineNetworkStatus("DELTA_STALE_CLIENT", 4);
+    defineNetworkStatus("SESSION_LIMIT_EXCEEDED", 5);
+    defineNetworkStatus("LOCKED", 5);
+    defineNetworkStatus("INCOMPATIBLE_SERVER", 5);
+    defineNetworkStatus("CLIENT_ERROR", 5);
+    defineNetworkStatus("CLIENT_FATAL_ERROR", 5);
+    defineNetworkStatus("CLIENT_FATAL_ERROR_PENDING_CHANGES", 5);
+    defineNetworkStatus("BATCH_CLIENT_ERROR", 3);
+    defineNetworkStatus("SAVE_ERROR", 5);
+    defineNetworkStatus("DOCUMENT_TOO_LARGE", 5);
+    defineNetworkStatus("CSE_BLOCKED_REQUEST", 5);
+    defineNetworkStatus("BATCH_SAVE_ERROR", 3);
+    defineNetworkStatus("DOCS_EVERYWHERE_IMPORT_ERROR", 5);
+    defineNetworkStatus("POST_LIMIT_EXCEEDED_ERROR", 5);
+    defineNetworkStatus("DOCS_QUOTA_EXCEEDED_ERROR", 5);
   }
-  __name(Kh, "Kh");
-  Hh.prototype.F = ["com.google.apps.docs.xplat.net.Status$State", 0];
-  function Lh() {
+  __name(initializeNetworkStatuses, "initializeNetworkStatuses");
+  StatusState.prototype.F = ["com.google.apps.docs.xplat.net.Status$State", 0];
+  function EventObserverTrackerObservableObserverPair() {
   }
-  __name(Lh, "Lh");
-  v(Lh, L);
-  function Mh(a) {
-    return a instanceof Lh;
+  __name(EventObserverTrackerObservableObserverPair, "EventObserverTrackerObservableObserverPair");
+  inheritCompiledClass(EventObserverTrackerObservableObserverPair, JavaObject);
+  function isObserverPair(value) {
+    return value instanceof EventObserverTrackerObservableObserverPair;
   }
-  __name(Mh, "Mh");
-  Lh.prototype.F = [
+  __name(isObserverPair, "isObserverPair");
+  EventObserverTrackerObservableObserverPair.prototype.F = [
     "com.google.apps.docsshared.xplat.observable.EventObserverTracker$ObservableObserverPair",
     0
   ];
-  function Nh() {
-    Af();
+  function EventObserverTracker() {
+    initializeDisposableChildren();
     this.j = false;
-    this.l = R([], sf, rf);
+    this.l = checkedJavaCast([], isNativeArray, NativeArrayType);
   }
-  __name(Nh, "Nh");
-  v(Nh, yf);
-  function Oh(a, b, c) {
-    var d;
+  __name(EventObserverTracker, "EventObserverTracker");
+  inheritCompiledClass(EventObserverTracker, JavaDisposable);
+  function trackObserver(tracker, observable, observer) {
+    var intermediate;
     a: {
-      for (d = 0; d < a.l.length; d = d + 1 | 0) {
-        var e = R(a.l[d], Mh, Lh);
-        if (qe(e.l, c) && qe(e.j, b)) {
-          d = true;
+      for (intermediate = 0; intermediate < tracker.l.length; intermediate = intermediate + 1 | 0) {
+        var intermediate2 = checkedJavaCast(
+          tracker.l[intermediate],
+          isObserverPair,
+          EventObserverTrackerObservableObserverPair
+        );
+        if (javaObjectEquals(intermediate2.l, observer) && javaObjectEquals(intermediate2.j, observable)) {
+          intermediate = true;
           break a;
         }
       }
-      d = false;
+      intermediate = false;
     }
-    d || (a = a.l, c = b.j(c), d = new Lh(), d.j = b, d.l = c, a.push(d));
+    intermediate || (tracker = tracker.l, observer = observable.j(observer), intermediate = new EventObserverTrackerObservableObserverPair(), intermediate.j = observable, intermediate.l = observer, tracker.push(intermediate));
   }
-  __name(Oh, "Oh");
-  Nh.prototype.sa = function() {
+  __name(trackObserver, "trackObserver");
+  EventObserverTracker.prototype.sa = function() {
     this.removeAll();
-    yf.prototype.sa.call(this);
+    JavaDisposable.prototype.sa.call(this);
   };
-  Nh.prototype.removeAll = function() {
-    for (var a = R(this.l.pop(), Mh, Lh); a != null; ) a.j.l(a.l), a = R(this.l.pop(), Mh, Lh);
+  EventObserverTracker.prototype.removeAll = function() {
+    for (var intermediate = checkedJavaCast(
+      this.l.pop(),
+      isObserverPair,
+      EventObserverTrackerObservableObserverPair
+    ); intermediate != null; ) {
+      intermediate.j.l(intermediate.l);
+      intermediate = checkedJavaCast(
+        this.l.pop(),
+        isObserverPair,
+        EventObserverTrackerObservableObserverPair
+      );
+    }
   };
-  Nh.prototype.F = ["com.google.apps.docsshared.xplat.observable.EventObserverTracker", 0];
-  function Ph(a, b, c) {
-    for (var d in a) b.call(c, a[d], d, a);
+  EventObserverTracker.prototype.F = [
+    "com.google.apps.docsshared.xplat.observable.EventObserverTracker",
+    0
+  ];
+  function forEachObjectValue(object, callback, receiver) {
+    for (var intermediate in object)
+      callback.call(receiver, object[intermediate], intermediate, object);
   }
-  __name(Ph, "Ph");
-  function Qh(a) {
-    var b = {}, c;
-    for (c in a) b[c] = a[c];
-    return b;
+  __name(forEachObjectValue, "forEachObjectValue");
+  function shallowCloneObject(object) {
+    var record = {}, intermediate;
+    for (intermediate in object) record[intermediate] = object[intermediate];
+    return record;
   }
-  __name(Qh, "Qh");
-  var Rh = "constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(" ");
-  function Sh(a, b) {
-    for (var c, d, e = 1; e < arguments.length; e++) {
-      d = arguments[e];
-      for (c in d) a[c] = d[c];
-      for (var f = 0; f < Rh.length; f++) c = Rh[f], Object.prototype.hasOwnProperty.call(d, c) && (a[c] = d[c]);
+  __name(shallowCloneObject, "shallowCloneObject");
+  var objectPrototypeKeys = "constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(
+    " "
+  );
+  function extendObject(target, source) {
+    for (var intermediate, intermediate2, index = 1; index < arguments.length; index++) {
+      intermediate2 = arguments[index];
+      for (intermediate in intermediate2) target[intermediate] = intermediate2[intermediate];
+      for (var index2 = 0; index2 < objectPrototypeKeys.length; index2++) {
+        intermediate = objectPrototypeKeys[index2];
+        Object.prototype.hasOwnProperty.call(intermediate2, intermediate) && (target[intermediate] = intermediate2[intermediate]);
+      }
     }
   }
-  __name(Sh, "Sh");
-  ;
-  function Th(a) {
+  __name(extendObject, "extendObject");
+  function MutableUrl(value) {
     this.j = this.J = this.v = "";
     this.C = null;
     this.A = this.l = "";
     this.D = false;
-    var b;
-    a instanceof Th ? (this.D = a.D, Uh(this, a.v), this.J = a.J, this.j = a.j, Vh(this, a.C), Wh(this, a.l), Xh(this, a.o.clone()), this.A = a.A) : a && (b = String(a).match(Vf)) ? (this.D = false, Uh(this, b[1] || "", true), this.J = Yh(b[2] || ""), this.j = Yh(b[3] || "", true), Vh(this, b[4]), Wh(this, b[5] || "", true), Xh(this, b[6] || "", true), this.A = Yh(b[7] || "")) : (this.D = false, this.o = new Zh(null, this.D));
+    var urlParts;
+    value instanceof MutableUrl ? (this.D = value.D, setUrlScheme(this, value.v), this.J = value.J, this.j = value.j, setUrlPort(this, value.C), setUrlPath(this, value.l), setUrlQueryData(this, value.o.clone()), this.A = value.A) : value && (urlParts = String(value).match(urlPartsPattern)) ? (this.D = false, setUrlScheme(this, urlParts[1] || "", true), this.J = decodeUrlComponent(urlParts[2] || ""), this.j = decodeUrlComponent(urlParts[3] || "", true), setUrlPort(this, urlParts[4]), setUrlPath(this, urlParts[5] || "", true), setUrlQueryData(this, urlParts[6] || "", true), this.A = decodeUrlComponent(urlParts[7] || "")) : (this.D = false, this.o = new QueryData(null, this.D));
   }
-  __name(Th, "Th");
-  Th.prototype.toString = function() {
-    var a = [], b = this.v;
-    b && a.push($h(b, ai, true), ":");
-    var c = this.j;
-    if (c || b == "file") a.push("//"), (b = this.J) && a.push($h(b, ai, true), "@"), a.push(encodeURIComponent(
-      String(c)
-    ).replace(/%25([0-9a-fA-F]{2})/g, "%$1")), c = this.C, c != null && a.push(":", String(c));
-    if (c = this.l) this.j && c.charAt(0) != "/" && a.push("/"), a.push($h(c, c.charAt(0) == "/" ? bi : ci, true));
-    (c = this.o.toString()) && a.push("?", c);
-    (c = this.A) && a.push("#", $h(c, di));
-    return a.join("");
-  };
-  Th.prototype.resolve = function(a) {
-    var b = this.clone(), c = !!a.v;
-    c ? Uh(b, a.v) : c = !!a.J;
-    c ? b.J = a.J : c = !!a.j;
-    c ? b.j = a.j : c = a.C != null;
-    var d = a.l;
-    if (c) Vh(b, a.C);
-    else if (c = !!a.l) {
-      if (d.charAt(0) != "/")
-        if (this.j && !this.l) d = "/" + d;
-        else {
-          var e = b.l.lastIndexOf("/");
-          e != -1 && (d = b.l.slice(0, e + 1) + d);
-        }
-      e = d;
-      if (e == ".." || e == ".") d = "";
-      else if (e.indexOf("./") != -1 || e.indexOf("/.") != -1) {
-        d = e.lastIndexOf("/", 0) == 0;
-        e = e.split("/");
-        for (var f = [], g = 0; g < e.length; ) {
-          var h = e[g++];
-          h == "." ? d && g == e.length && f.push("") : h == ".." ? ((f.length > 1 || f.length == 1 && f[0] != "") && f.pop(), d && g == e.length && f.push("")) : (f.push(h), d = true);
-        }
-        d = f.join("/");
-      } else d = e;
+  __name(MutableUrl, "MutableUrl");
+  MutableUrl.prototype.toString = function() {
+    var parts = [], schemeOrUserInfo = this.v;
+    schemeOrUserInfo && parts.push(encodeUrlComponent(schemeOrUserInfo, schemeAndUserInfoEscapePattern, true), ":");
+    var component = this.j;
+    if (component || schemeOrUserInfo == "file") {
+      parts.push("//");
+      (schemeOrUserInfo = this.J) && parts.push(encodeUrlComponent(schemeOrUserInfo, schemeAndUserInfoEscapePattern, true), "@");
+      parts.push(encodeURIComponent(String(component)).replace(/%25([0-9a-fA-F]{2})/g, "%$1"));
+      component = this.C;
+      component != null && parts.push(":", String(component));
     }
-    c ? Wh(b, d) : c = a.o.toString() !== "";
-    c ? Xh(b, a.o.clone()) : c = !!a.A;
-    c && (b.A = a.A);
-    return b;
+    if (component = this.l) {
+      this.j && component.charAt(0) != "/" && parts.push("/");
+      parts.push(
+        encodeUrlComponent(
+          component,
+          component.charAt(0) == "/" ? absolutePathEscapePattern : relativePathEscapePattern,
+          true
+        )
+      );
+    }
+    (component = this.o.toString()) && parts.push("?", component);
+    (component = this.A) && parts.push("#", encodeUrlComponent(component, fragmentEscapePattern));
+    return parts.join("");
   };
-  Th.prototype.clone = function() {
-    return new Th(this);
+  MutableUrl.prototype.resolve = function(relativeUrl) {
+    var resolvedUrl = this.clone(), overridesComponent = !!relativeUrl.v;
+    overridesComponent ? setUrlScheme(resolvedUrl, relativeUrl.v) : overridesComponent = !!relativeUrl.J;
+    overridesComponent ? resolvedUrl.J = relativeUrl.J : overridesComponent = !!relativeUrl.j;
+    overridesComponent ? resolvedUrl.j = relativeUrl.j : overridesComponent = relativeUrl.C != null;
+    var path = relativeUrl.l;
+    if (overridesComponent) setUrlPort(resolvedUrl, relativeUrl.C);
+    else if (overridesComponent = !!relativeUrl.l) {
+      if (path.charAt(0) != "/")
+        if (this.j && !this.l) path = "/" + path;
+        else {
+          var pathPartsOrSlashIndex = resolvedUrl.l.lastIndexOf("/");
+          pathPartsOrSlashIndex != -1 && (path = resolvedUrl.l.slice(0, pathPartsOrSlashIndex + 1) + path);
+        }
+      pathPartsOrSlashIndex = path;
+      if (pathPartsOrSlashIndex == ".." || pathPartsOrSlashIndex == ".") path = "";
+      else if (pathPartsOrSlashIndex.indexOf("./") != -1 || pathPartsOrSlashIndex.indexOf("/.") != -1) {
+        path = pathPartsOrSlashIndex.lastIndexOf("/", 0) == 0;
+        pathPartsOrSlashIndex = pathPartsOrSlashIndex.split("/");
+        for (var segments = [], segmentIndex = 0; segmentIndex < pathPartsOrSlashIndex.length; ) {
+          var segment = pathPartsOrSlashIndex[segmentIndex++];
+          segment == "." ? path && segmentIndex == pathPartsOrSlashIndex.length && segments.push("") : segment == ".." ? ((segments.length > 1 || segments.length == 1 && segments[0] != "") && segments.pop(), path && segmentIndex == pathPartsOrSlashIndex.length && segments.push("")) : (segments.push(segment), path = true);
+        }
+        path = segments.join("/");
+      } else path = pathPartsOrSlashIndex;
+    }
+    overridesComponent ? setUrlPath(resolvedUrl, path) : overridesComponent = relativeUrl.o.toString() !== "";
+    overridesComponent ? setUrlQueryData(resolvedUrl, relativeUrl.o.clone()) : overridesComponent = !!relativeUrl.A;
+    overridesComponent && (resolvedUrl.A = relativeUrl.A);
+    return resolvedUrl;
   };
-  function Uh(a, b, c) {
-    a.v = c ? Yh(b, true) : b;
-    a.v && (a.v = a.v.replace(/:$/, ""));
-    return a;
+  MutableUrl.prototype.clone = function() {
+    return new MutableUrl(this);
+  };
+  function setUrlScheme(url, scheme, decode) {
+    url.v = decode ? decodeUrlComponent(scheme, true) : scheme;
+    url.v && (url.v = url.v.replace(/:$/, ""));
+    return url;
   }
-  __name(Uh, "Uh");
-  function Vh(a, b) {
-    if (b) {
-      b = Number(b);
-      if (isNaN(b) || b < 0) throw Error("Bad port number " + b);
-      a.C = b;
-    } else a.C = null;
+  __name(setUrlScheme, "setUrlScheme");
+  function setUrlPort(url, port) {
+    if (port) {
+      port = Number(port);
+      if (isNaN(port) || port < 0) throw Error("Bad port number " + port);
+      url.C = port;
+    } else url.C = null;
   }
-  __name(Vh, "Vh");
-  function Wh(a, b, c) {
-    a.l = c ? Yh(b, true) : b;
-    return a;
+  __name(setUrlPort, "setUrlPort");
+  function setUrlPath(url, path, decode) {
+    url.l = decode ? decodeUrlComponent(path, true) : path;
+    return url;
   }
-  __name(Wh, "Wh");
-  function Xh(a, b, c) {
-    b instanceof Zh ? (a.o = b, ei(a.o, a.D)) : (c || (b = $h(b, fi)), a.o = new Zh(b, a.D));
+  __name(setUrlPath, "setUrlPath");
+  function setUrlQueryData(url, query, decode) {
+    query instanceof QueryData ? (url.o = query, setQueryIgnoreCase(url.o, url.D)) : (decode || (query = encodeUrlComponent(query, queryEscapePattern)), url.o = new QueryData(query, url.D));
   }
-  __name(Xh, "Xh");
-  function gi(a, b, c) {
-    a.o.set(b, c);
-    return a;
+  __name(setUrlQueryData, "setUrlQueryData");
+  function setUrlQueryParameter(url, key, value) {
+    url.o.set(key, value);
+    return url;
   }
-  __name(gi, "gi");
-  function Yh(a, b) {
-    return a ? b ? decodeURI(a.replace(/%25/g, "%2525")) : decodeURIComponent(a) : "";
+  __name(setUrlQueryParameter, "setUrlQueryParameter");
+  function decodeUrlComponent(text, preserveReserved) {
+    return text ? preserveReserved ? decodeURI(text.replace(/%25/g, "%2525")) : decodeURIComponent(text) : "";
   }
-  __name(Yh, "Yh");
-  function $h(a, b, c) {
-    return typeof a === "string" ? (a = encodeURI(a).replace(b, hi), c && (a = a.replace(
-      /%25([0-9a-fA-F]{2})/g,
-      "%$1"
-    )), a) : null;
+  __name(decodeUrlComponent, "decodeUrlComponent");
+  function encodeUrlComponent(text, pattern, preserveEscapes) {
+    return typeof text === "string" ? (text = encodeURI(text).replace(pattern, percentEncodeCharacter), preserveEscapes && (text = text.replace(/%25([0-9a-fA-F]{2})/g, "%$1")), text) : null;
   }
-  __name($h, "$h");
-  function hi(a) {
-    a = a.charCodeAt(0);
-    return "%" + (a >> 4 & 15).toString(16) + (a & 15).toString(16);
+  __name(encodeUrlComponent, "encodeUrlComponent");
+  function percentEncodeCharacter(character) {
+    character = character.charCodeAt(0);
+    return "%" + (character >> 4 & 15).toString(16) + (character & 15).toString(16);
   }
-  __name(hi, "hi");
-  var ai = /[#\/\?@]/g, ci = /[#\?:]/g, bi = /[#\?]/g, fi = /[#\?@]/g, di = /#/g;
-  function Zh(a, b) {
+  __name(percentEncodeCharacter, "percentEncodeCharacter");
+  var schemeAndUserInfoEscapePattern = /[#\/\?@]/g, relativePathEscapePattern = /[#\?:]/g, absolutePathEscapePattern = /[#\?]/g, queryEscapePattern = /[#\?@]/g, fragmentEscapePattern = /#/g;
+  function QueryData(encodedQuery, ignoreCase) {
     this.l = this.j = null;
-    this.o = a || null;
-    this.v = !!b;
+    this.o = encodedQuery || null;
+    this.v = !!ignoreCase;
   }
-  __name(Zh, "Zh");
-  function ii(a) {
-    a.j || (a.j = /* @__PURE__ */ new Map(), a.l = 0, a.o && Wf(a.o, function(b, c) {
-      a.add(decodeURIComponent(b.replace(/\+/g, " ")), c);
+  __name(QueryData, "QueryData");
+  function initializeQueryData(query) {
+    query.j || (query.j = /* @__PURE__ */ new Map(), query.l = 0, query.o && forEachQueryParameter(query.o, function(encodedKey, queryValue) {
+      query.add(decodeURIComponent(encodedKey.replace(/\+/g, " ")), queryValue);
     }));
   }
-  __name(ii, "ii");
-  p = Zh.prototype;
-  p.add = function(a, b) {
-    ii(this);
+  __name(initializeQueryData, "initializeQueryData");
+  prototypeAlias = QueryData.prototype;
+  prototypeAlias.add = function(key, value) {
+    initializeQueryData(this);
     this.o = null;
-    a = ji(this, a);
-    var c = this.j.get(a);
-    c || this.j.set(a, c = []);
-    c.push(b);
+    key = normalizeQueryKey(this, key);
+    var existingValues = this.j.get(key);
+    existingValues || this.j.set(key, existingValues = []);
+    existingValues.push(value);
     this.l = this.l + 1;
     return this;
   };
-  p.remove = function(a) {
-    ii(this);
-    a = ji(this, a);
-    return this.j.has(a) ? (this.o = null, this.l = this.l - this.j.get(a).length, this.j.delete(a)) : false;
+  prototypeAlias.remove = function(key) {
+    initializeQueryData(this);
+    key = normalizeQueryKey(this, key);
+    return this.j.has(key) ? (this.o = null, this.l = this.l - this.j.get(key).length, this.j.delete(key)) : false;
   };
-  p.clear = function() {
+  prototypeAlias.clear = function() {
     this.j = this.o = null;
     this.l = 0;
   };
-  function ki(a, b) {
-    ii(a);
-    b = ji(a, b);
-    return a.j.has(b);
+  function hasQueryParameter(query, key) {
+    initializeQueryData(query);
+    key = normalizeQueryKey(query, key);
+    return query.j.has(key);
   }
-  __name(ki, "ki");
-  p.forEach = function(a, b) {
-    ii(this);
-    this.j.forEach(function(c, d) {
-      c.forEach(function(e) {
-        a.call(b, e, d, this);
+  __name(hasQueryParameter, "hasQueryParameter");
+  prototypeAlias.forEach = function(callback, receiver) {
+    initializeQueryData(this);
+    this.j.forEach(function(value, other) {
+      value.forEach(function(value2) {
+        callback.call(receiver, value2, other, this);
       }, this);
     }, this);
   };
-  p.xa = function(a) {
-    ii(this);
-    var b = [];
-    if (typeof a === "string") ki(this, a) && (b = b.concat(this.j.get(ji(this, a))));
+  prototypeAlias.xa = function(key) {
+    initializeQueryData(this);
+    var values = [];
+    if (typeof key === "string")
+      hasQueryParameter(this, key) && (values = values.concat(this.j.get(normalizeQueryKey(this, key))));
     else {
-      a = Array.from(this.j.values());
-      for (var c = 0; c < a.length; c++) b = b.concat(a[c]);
+      key = Array.from(this.j.values());
+      for (var index = 0; index < key.length; index++) values = values.concat(key[index]);
     }
-    return b;
+    return values;
   };
-  p.set = function(a, b) {
-    ii(this);
+  prototypeAlias.set = function(key, value) {
+    initializeQueryData(this);
     this.o = null;
-    a = ji(this, a);
-    ki(this, a) && (this.l = this.l - this.j.get(a).length);
-    this.j.set(a, [b]);
+    key = normalizeQueryKey(this, key);
+    hasQueryParameter(this, key) && (this.l = this.l - this.j.get(key).length);
+    this.j.set(key, [value]);
     this.l = this.l + 1;
     return this;
   };
-  p.get = function(a, b) {
-    if (!a) return b;
-    a = this.xa(a);
-    return a.length > 0 ? String(a[0]) : b;
+  prototypeAlias.get = function(key, fallback) {
+    if (!key) return fallback;
+    key = this.xa(key);
+    return key.length > 0 ? String(key[0]) : fallback;
   };
-  p.toString = function() {
+  prototypeAlias.toString = function() {
     if (this.o) return this.o;
     if (!this.j) return "";
-    for (var a = [], b = Array.from(this.j.keys()), c = 0; c < b.length; c++) {
-      var d = b[c], e = encodeURIComponent(String(d));
-      d = this.xa(d);
-      for (var f = 0; f < d.length; f++) {
-        var g = e;
-        d[f] !== "" && (g += "=" + encodeURIComponent(String(d[f])));
-        a.push(g);
+    for (var parts = [], keys = Array.from(this.j.keys()), keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+      var keyOrValues = keys[keyIndex], encodedKey = encodeURIComponent(String(keyOrValues));
+      keyOrValues = this.xa(keyOrValues);
+      for (var valueIndex = 0; valueIndex < keyOrValues.length; valueIndex++) {
+        var encodedPair = encodedKey;
+        keyOrValues[valueIndex] !== "" && (encodedPair += "=" + encodeURIComponent(String(keyOrValues[valueIndex])));
+        parts.push(encodedPair);
       }
     }
-    return this.o = a.join("&");
+    return this.o = parts.join("&");
   };
-  p.clone = function() {
-    var a = new Zh();
-    a.o = this.o;
-    this.j && (a.j = new Map(this.j), a.l = this.l);
-    return a;
+  prototypeAlias.clone = function() {
+    var copy = new QueryData();
+    copy.o = this.o;
+    this.j && (copy.j = new Map(this.j), copy.l = this.l);
+    return copy;
   };
-  function ji(a, b) {
-    b = String(b);
-    a.v && (b = b.toLowerCase());
-    return b;
+  function normalizeQueryKey(query, key) {
+    key = String(key);
+    query.v && (key = key.toLowerCase());
+    return key;
   }
-  __name(ji, "ji");
-  function ei(a, b) {
-    b && !a.v && (ii(a), a.o = null, a.j.forEach(function(c, d) {
-      var e = d.toLowerCase();
-      if (d != e && (this.remove(d), this.remove(e), c.length > 0)) {
+  __name(normalizeQueryKey, "normalizeQueryKey");
+  function setQueryIgnoreCase(query, ignoreCase) {
+    ignoreCase && !query.v && (initializeQueryData(query), query.o = null, query.j.forEach(function(value, other) {
+      var intermediate = other.toLowerCase();
+      if (other != intermediate && (this.remove(other), this.remove(intermediate), value.length > 0)) {
         this.o = null;
-        d = this.j;
-        var f = d.set;
-        e = ji(this, e);
-        var g = c.length;
-        if (g > 0) {
-          for (var h = Array(g), k = 0; k < g; k++) h[k] = c[k];
-          g = h;
-        } else g = [];
-        f.call(d, e, g);
-        this.l = this.l + c.length;
+        other = this.j;
+        var set = other.set;
+        intermediate = normalizeQueryKey(this, intermediate);
+        var length = value.length;
+        if (length > 0) {
+          for (var intermediate2 = Array(length), index = 0; index < length; index++)
+            intermediate2[index] = value[index];
+          length = intermediate2;
+        } else length = [];
+        set.call(other, intermediate, length);
+        this.l = this.l + value.length;
       }
-    }, a));
-    a.v = b;
+    }, query));
+    query.v = ignoreCase;
   }
-  __name(ei, "ei");
-  ;
-  function li() {
-    var a = z.window;
-    a.onbeforeunload = n();
-    a.location.reload();
+  __name(setQueryIgnoreCase, "setQueryIgnoreCase");
+  function reloadAfterError() {
+    var window2 = runtimeGlobal.window;
+    window2.onbeforeunload = createNoopFunction();
+    window2.location.reload();
   }
-  __name(li, "li");
-  ;
-  function mi() {
+  __name(reloadAfterError, "reloadAfterError");
+  function ReloadPrompt() {
     this.j = function() {
-      li();
+      reloadAfterError();
     };
   }
-  __name(mi, "mi");
-  mi.prototype.notify = function() {
+  __name(ReloadPrompt, "ReloadPrompt");
+  ReloadPrompt.prototype.notify = function() {
     window.confirm(
       "This error has been reported to Google and we'll look into it as soon as possible. Please reload this page to continue."
     ) && this.j();
   };
-  function ni(a, b) {
-    this.type = a;
-    this.currentTarget = this.target = b;
+  function BaseEvent(type, target) {
+    this.type = type;
+    this.currentTarget = this.target = target;
     this.defaultPrevented = this.l = false;
   }
-  __name(ni, "ni");
-  ni.prototype.stopPropagation = function() {
+  __name(BaseEvent, "BaseEvent");
+  BaseEvent.prototype.stopPropagation = function() {
     this.l = true;
   };
-  ni.prototype.preventDefault = function() {
+  BaseEvent.prototype.preventDefault = function() {
     this.defaultPrevented = true;
   };
-  var oi = (function() {
-    if (!z.addEventListener || !Object.defineProperty) return false;
-    var a = false, b = Object.defineProperty({}, "passive", {
+  var supportsPassiveEvents = (function() {
+    if (!runtimeGlobal.addEventListener || !Object.defineProperty) return false;
+    var intermediate = false, intermediate2 = Object.defineProperty({}, "passive", {
       get: /* @__PURE__ */ __name(function() {
-        a = true;
+        intermediate = true;
       }, "get")
     });
     try {
-      var c = n();
-      z.addEventListener("test", c, b);
-      z.removeEventListener("test", c, b);
-    } catch (d) {
+      var noopFunction = createNoopFunction();
+      runtimeGlobal.addEventListener("test", noopFunction, intermediate2);
+      runtimeGlobal.removeEventListener("test", noopFunction, intermediate2);
+    } catch (caughtError) {
     }
-    return a;
+    return intermediate;
   })();
-  function pi(a, b) {
-    ni.call(this, a ? a.type : "");
+  function BrowserEvent(event, currentTarget) {
+    BaseEvent.call(this, event ? event.type : "");
     this.relatedTarget = this.currentTarget = this.target = null;
     this.button = this.screenY = this.screenX = this.clientY = this.clientX = this.offsetY = this.offsetX = 0;
     this.key = "";
@@ -4442,864 +4650,913 @@
     this.pointerType = "";
     this.timeStamp = 0;
     this.j = null;
-    a && this.init(a, b);
+    event && this.init(event, currentTarget);
   }
-  __name(pi, "pi");
-  B(pi, ni);
-  pi.prototype.init = function(a, b) {
-    var c = this.type = a.type, d = a.changedTouches && a.changedTouches.length ? a.changedTouches[0] : null;
-    this.target = a.target || a.srcElement;
-    this.currentTarget = b;
-    b = a.relatedTarget;
-    b || (c == "mouseover" ? b = a.fromElement : c == "mouseout" && (b = a.toElement));
-    this.relatedTarget = b;
-    d ? (this.clientX = d.clientX !== void 0 ? d.clientX : d.pageX, this.clientY = d.clientY !== void 0 ? d.clientY : d.pageY, this.screenX = d.screenX || 0, this.screenY = d.screenY || 0) : (this.offsetX = a.offsetX, this.offsetY = a.offsetY, this.clientX = a.clientX !== void 0 ? a.clientX : a.pageX, this.clientY = a.clientY !== void 0 ? a.clientY : a.pageY, this.screenX = a.screenX || 0, this.screenY = a.screenY || 0);
-    this.button = a.button;
-    this.keyCode = a.keyCode || 0;
-    this.key = a.key || "";
-    this.charCode = a.charCode || (c == "keypress" ? a.keyCode : 0);
-    this.ctrlKey = a.ctrlKey;
-    this.altKey = a.altKey;
-    this.shiftKey = a.shiftKey;
-    this.metaKey = a.metaKey;
-    this.pointerId = a.pointerId || 0;
-    this.pointerType = a.pointerType;
-    this.state = a.state;
-    this.timeStamp = a.timeStamp;
-    this.j = a;
-    a.defaultPrevented && pi.W.preventDefault.call(this);
+  __name(BrowserEvent, "BrowserEvent");
+  inheritClosureClass(BrowserEvent, BaseEvent);
+  BrowserEvent.prototype.init = function(value, other) {
+    var intermediate = this.type = value.type, intermediate2 = value.changedTouches && value.changedTouches.length ? value.changedTouches[0] : null;
+    this.target = value.target || value.srcElement;
+    this.currentTarget = other;
+    other = value.relatedTarget;
+    other || (intermediate == "mouseover" ? other = value.fromElement : intermediate == "mouseout" && (other = value.toElement));
+    this.relatedTarget = other;
+    intermediate2 ? (this.clientX = intermediate2.clientX !== void 0 ? intermediate2.clientX : intermediate2.pageX, this.clientY = intermediate2.clientY !== void 0 ? intermediate2.clientY : intermediate2.pageY, this.screenX = intermediate2.screenX || 0, this.screenY = intermediate2.screenY || 0) : (this.offsetX = value.offsetX, this.offsetY = value.offsetY, this.clientX = value.clientX !== void 0 ? value.clientX : value.pageX, this.clientY = value.clientY !== void 0 ? value.clientY : value.pageY, this.screenX = value.screenX || 0, this.screenY = value.screenY || 0);
+    this.button = value.button;
+    this.keyCode = value.keyCode || 0;
+    this.key = value.key || "";
+    this.charCode = value.charCode || (intermediate == "keypress" ? value.keyCode : 0);
+    this.ctrlKey = value.ctrlKey;
+    this.altKey = value.altKey;
+    this.shiftKey = value.shiftKey;
+    this.metaKey = value.metaKey;
+    this.pointerId = value.pointerId || 0;
+    this.pointerType = value.pointerType;
+    this.state = value.state;
+    this.timeStamp = value.timeStamp;
+    this.j = value;
+    value.defaultPrevented && BrowserEvent.W.preventDefault.call(this);
   };
-  pi.prototype.stopPropagation = function() {
-    pi.W.stopPropagation.call(this);
+  BrowserEvent.prototype.stopPropagation = function() {
+    BrowserEvent.W.stopPropagation.call(this);
     this.j.stopPropagation ? this.j.stopPropagation() : this.j.cancelBubble = true;
   };
-  pi.prototype.preventDefault = function() {
-    pi.W.preventDefault.call(this);
-    var a = this.j;
-    a.preventDefault ? a.preventDefault() : a.returnValue = false;
+  BrowserEvent.prototype.preventDefault = function() {
+    BrowserEvent.W.preventDefault.call(this);
+    var intermediate = this.j;
+    intermediate.preventDefault ? intermediate.preventDefault() : intermediate.returnValue = false;
   };
-  var qi = "closure_listenable_" + (Math.random() * 1e6 | 0);
-  var ri = 0;
-  function si(a, b, c, d, e) {
-    this.listener = a;
+  var listenableMarkerKey = "closure_listenable_" + (Math.random() * 1e6 | 0);
+  var nextListenerKey = 0;
+  function EventListenerRecord(listener, source, type, capture, receiver) {
+    this.listener = listener;
     this.proxy = null;
-    this.src = b;
-    this.type = c;
-    this.capture = !!d;
-    this.handler = e;
-    this.key = ++ri;
+    this.src = source;
+    this.type = type;
+    this.capture = !!capture;
+    this.handler = receiver;
+    this.key = ++nextListenerKey;
     this.removed = this.ja = false;
   }
-  __name(si, "si");
-  function ti(a) {
-    a.removed = true;
-    a.listener = null;
-    a.proxy = null;
-    a.src = null;
-    a.handler = null;
+  __name(EventListenerRecord, "EventListenerRecord");
+  function clearListenerRecord(record) {
+    record.removed = true;
+    record.listener = null;
+    record.proxy = null;
+    record.src = null;
+    record.handler = null;
   }
-  __name(ti, "ti");
-  ;
-  function ui(a) {
-    this.src = a;
+  __name(clearListenerRecord, "clearListenerRecord");
+  function ListenerMap(source) {
+    this.src = source;
     this.j = {};
     this.l = 0;
   }
-  __name(ui, "ui");
-  ui.prototype.add = function(a, b, c, d, e) {
-    var f = a.toString();
-    a = this.j[f];
-    a || (a = this.j[f] = [], this.l++);
-    var g = vi(a, b, d, e);
-    g > -1 ? (b = a[g], c || (b.ja = false)) : (b = new si(b, this.src, f, !!d, e), b.ja = c, a.push(b));
-    return b;
+  __name(ListenerMap, "ListenerMap");
+  ListenerMap.prototype.add = function(value, other, options, context, extra) {
+    var intermediate = value.toString();
+    value = this.j[intermediate];
+    value || (value = this.j[intermediate] = [], this.l++);
+    var intermediate2 = findListenerIndex(value, other, context, extra);
+    intermediate2 > -1 ? (other = value[intermediate2], options || (other.ja = false)) : (other = new EventListenerRecord(other, this.src, intermediate, !!context, extra), other.ja = options, value.push(other));
+    return other;
   };
-  ui.prototype.remove = function(a, b, c, d) {
-    a = a.toString();
-    if (!(a in this.j)) return false;
-    var e = this.j[a];
-    b = vi(e, b, c, d);
-    return b > -1 ? (ti(e[b]), Array.prototype.splice.call(e, b, 1), e.length == 0 && (delete this.j[a], this.l--), true) : false;
+  ListenerMap.prototype.remove = function(value, other, options, context) {
+    value = value.toString();
+    if (!(value in this.j)) return false;
+    var intermediate = this.j[value];
+    other = findListenerIndex(intermediate, other, options, context);
+    return other > -1 ? (clearListenerRecord(intermediate[other]), Array.prototype.splice.call(intermediate, other, 1), intermediate.length == 0 && (delete this.j[value], this.l--), true) : false;
   };
-  function wi(a, b) {
-    var c = b.type;
-    c in a.j && eb(a.j[c], b) && (ti(b), a.j[c].length == 0 && (delete a.j[c], a.l--));
+  function removeListenerRecord(map, record) {
+    var type = record.type;
+    type in map.j && removeArrayValue(map.j[type], record) && (clearListenerRecord(record), map.j[type].length == 0 && (delete map.j[type], map.l--));
   }
-  __name(wi, "wi");
-  ui.prototype.removeAll = function(a) {
-    a = a && a.toString();
-    var b = 0, c;
-    for (c in this.j)
-      if (!a || c == a) {
-        for (var d = this.j[c], e = 0; e < d.length; e++) ++b, ti(d[e]);
-        delete this.j[c];
+  __name(removeListenerRecord, "removeListenerRecord");
+  ListenerMap.prototype.removeAll = function(value) {
+    value = value && value.toString();
+    var index = 0, intermediate;
+    for (intermediate in this.j)
+      if (!value || intermediate == value) {
+        for (var intermediate2 = this.j[intermediate], index2 = 0; index2 < intermediate2.length; index2++) {
+          ++index;
+          clearListenerRecord(intermediate2[index2]);
+        }
+        delete this.j[intermediate];
         this.l--;
       }
-    return b;
+    return index;
   };
-  function vi(a, b, c, d) {
-    for (var e = 0; e < a.length; ++e) {
-      var f = a[e];
-      if (!f.removed && f.listener == b && f.capture == !!c && f.handler == d) return e;
+  function findListenerIndex(listeners, listener, capture, receiver) {
+    for (var index = 0; index < listeners.length; ++index) {
+      var intermediate = listeners[index];
+      if (!intermediate.removed && intermediate.listener == listener && intermediate.capture == !!capture && intermediate.handler == receiver)
+        return index;
     }
     return -1;
   }
-  __name(vi, "vi");
-  ;
-  var xi = "closure_lm_" + (Math.random() * 1e6 | 0), yi = {}, zi = 0;
-  function Ai(a, b, c, d, e) {
-    if (d && d.once) return Bi(a, b, c, d, e);
-    if (Array.isArray(b)) {
-      for (var f = 0; f < b.length; f++) Ai(a, b[f], c, d, e);
+  __name(findListenerIndex, "findListenerIndex");
+  var listenerMapKey = "closure_lm_" + (Math.random() * 1e6 | 0), onEventNameCache = {}, nativeListenerCount = 0;
+  function listen(source, type, listener, options, receiver) {
+    if (options && options.once) return listenOnce(source, type, listener, options, receiver);
+    if (Array.isArray(type)) {
+      for (var index = 0; index < type.length; index++)
+        listen(source, type[index], listener, options, receiver);
       return null;
     }
-    c = Ci(c);
-    return a && a[qi] ? a.listen(b, c, La(d) ? !!d.capture : !!d, e) : Di(a, b, c, false, d, e);
+    listener = normalizeEventListener(listener);
+    return source && source[listenableMarkerKey] ? source.listen(type, listener, isObjectLike(options) ? !!options.capture : !!options, receiver) : registerNativeListener(source, type, listener, false, options, receiver);
   }
-  __name(Ai, "Ai");
-  function Di(a, b, c, d, e, f) {
-    if (!b) throw Error("Invalid event type");
-    var g = La(e) ? !!e.capture : !!e, h = Ei(a);
-    h || (a[xi] = h = new ui(a));
-    c = h.add(b, c, d, g, f);
-    if (c.proxy) return c;
-    d = Fi();
-    c.proxy = d;
-    d.src = a;
-    d.listener = c;
-    if (a.addEventListener) oi || (e = g), e === void 0 && (e = false), a.addEventListener(b.toString(), d, e);
-    else if (a.attachEvent) a.attachEvent(Gi(b.toString()), d);
-    else if (a.addListener && a.removeListener) a.addListener(d);
+  __name(listen, "listen");
+  function registerNativeListener(source, type, listener, once, options, receiver) {
+    if (!type) throw Error("Invalid event type");
+    var intermediate = isObjectLike(options) ? !!options.capture : !!options, listenerMap = getListenerMap(source);
+    listenerMap || (source[listenerMapKey] = listenerMap = new ListenerMap(source));
+    listener = listenerMap.add(type, listener, once, intermediate, receiver);
+    if (listener.proxy) return listener;
+    once = createNativeEventProxy();
+    listener.proxy = once;
+    once.src = source;
+    once.listener = listener;
+    if (source.addEventListener) {
+      supportsPassiveEvents || (options = intermediate);
+      options === void 0 && (options = false);
+      source.addEventListener(type.toString(), once, options);
+    } else if (source.attachEvent) source.attachEvent(getOnEventName(type.toString()), once);
+    else if (source.addListener && source.removeListener) source.addListener(once);
     else throw Error("addEventListener and attachEvent are unavailable.");
-    zi++;
-    return c;
+    nativeListenerCount++;
+    return listener;
   }
-  __name(Di, "Di");
-  function Fi() {
-    function a(c) {
-      return b.call(a.src, a.listener, c);
+  __name(registerNativeListener, "registerNativeListener");
+  function createNativeEventProxy() {
+    function helper(helper2) {
+      return dispatchNativeEvent2.call(helper.src, helper.listener, helper2);
     }
-    __name(a, "a");
-    var b = Hi;
-    return a;
+    __name(helper, "helper");
+    var dispatchNativeEvent2 = dispatchNativeEvent;
+    return helper;
   }
-  __name(Fi, "Fi");
-  function Bi(a, b, c, d, e) {
-    if (Array.isArray(b)) {
-      for (var f = 0; f < b.length; f++) Bi(a, b[f], c, d, e);
+  __name(createNativeEventProxy, "createNativeEventProxy");
+  function listenOnce(source, type, listener, options, receiver) {
+    if (Array.isArray(type)) {
+      for (var index = 0; index < type.length; index++)
+        listenOnce(source, type[index], listener, options, receiver);
       return null;
     }
-    c = Ci(c);
-    return a && a[qi] ? a.l.add(String(b), c, true, La(d) ? !!d.capture : !!d, e) : Di(a, b, c, true, d, e);
+    listener = normalizeEventListener(listener);
+    return source && source[listenableMarkerKey] ? source.l.add(
+      String(type),
+      listener,
+      true,
+      isObjectLike(options) ? !!options.capture : !!options,
+      receiver
+    ) : registerNativeListener(source, type, listener, true, options, receiver);
   }
-  __name(Bi, "Bi");
-  function Ii(a, b, c, d, e) {
-    if (Array.isArray(b))
-      for (var f = 0; f < b.length; f++) Ii(a, b[f], c, d, e);
-    else (d = La(d) ? !!d.capture : !!d, c = Ci(c), a && a[qi]) ? a.l.remove(String(b), c, d, e) : a && (a = Ei(
-      a
-    )) && (b = a.j[b.toString()], a = -1, b && (a = vi(b, c, d, e)), (c = a > -1 ? b[a] : null) && Ji(c));
+  __name(listenOnce, "listenOnce");
+  function unlisten(source, type, listener, options, receiver) {
+    if (Array.isArray(type))
+      for (var index = 0; index < type.length; index++)
+        unlisten(source, type[index], listener, options, receiver);
+    else
+      (options = isObjectLike(options) ? !!options.capture : !!options, listener = normalizeEventListener(listener), source && source[listenableMarkerKey]) ? source.l.remove(String(type), listener, options, receiver) : source && (source = getListenerMap(source)) && (type = source.j[type.toString()], source = -1, type && (source = findListenerIndex(type, listener, options, receiver)), (listener = source > -1 ? type[source] : null) && unlistenByKey(listener));
   }
-  __name(Ii, "Ii");
-  function Ji(a) {
-    if (typeof a !== "number" && a && !a.removed) {
-      var b = a.src;
-      if (b && b[qi]) wi(b.l, a);
+  __name(unlisten, "unlisten");
+  function unlistenByKey(record) {
+    if (typeof record !== "number" && record && !record.removed) {
+      var src = record.src;
+      if (src && src[listenableMarkerKey]) removeListenerRecord(src.l, record);
       else {
-        var c = a.type, d = a.proxy;
-        b.removeEventListener ? b.removeEventListener(c, d, a.capture) : b.detachEvent ? b.detachEvent(
-          Gi(c),
-          d
-        ) : b.addListener && b.removeListener && b.removeListener(d);
-        zi--;
-        (c = Ei(b)) ? (wi(c, a), c.l == 0 && (c.src = null, b[xi] = null)) : ti(a);
+        var type = record.type, proxy = record.proxy;
+        src.removeEventListener ? src.removeEventListener(type, proxy, record.capture) : src.detachEvent ? src.detachEvent(getOnEventName(type), proxy) : src.addListener && src.removeListener && src.removeListener(proxy);
+        nativeListenerCount--;
+        (type = getListenerMap(src)) ? (removeListenerRecord(type, record), type.l == 0 && (type.src = null, src[listenerMapKey] = null)) : clearListenerRecord(record);
       }
     }
   }
-  __name(Ji, "Ji");
-  function Gi(a) {
-    return a in yi ? yi[a] : yi[a] = "on" + a;
+  __name(unlistenByKey, "unlistenByKey");
+  function getOnEventName(type) {
+    return type in onEventNameCache ? onEventNameCache[type] : onEventNameCache[type] = "on" + type;
   }
-  __name(Gi, "Gi");
-  function Hi(a, b) {
-    if (a.removed) a = true;
+  __name(getOnEventName, "getOnEventName");
+  function dispatchNativeEvent(record, event) {
+    if (record.removed) record = true;
     else {
-      b = new pi(b, this);
-      var c = a.listener, d = a.handler || a.src;
-      a.ja && Ji(a);
-      a = c.call(d, b);
+      event = new BrowserEvent(event, this);
+      var listener = record.listener, intermediate = record.handler || record.src;
+      record.ja && unlistenByKey(record);
+      record = listener.call(intermediate, event);
     }
-    return a;
+    return record;
   }
-  __name(Hi, "Hi");
-  function Ei(a) {
-    a = a[xi];
-    return a instanceof ui ? a : null;
+  __name(dispatchNativeEvent, "dispatchNativeEvent");
+  function getListenerMap(source) {
+    source = source[listenerMapKey];
+    return source instanceof ListenerMap ? source : null;
   }
-  __name(Ei, "Ei");
-  var Ki = "__closure_events_fn_" + (Math.random() * 1e9 >>> 0);
-  function Ci(a) {
-    if (typeof a === "function") return a;
-    a[Ki] || (a[Ki] = function(b) {
-      return a.handleEvent(b);
+  __name(getListenerMap, "getListenerMap");
+  var listenerWrapperKey = "__closure_events_fn_" + (Math.random() * 1e9 >>> 0);
+  function normalizeEventListener(listener) {
+    if (typeof listener === "function") return listener;
+    listener[listenerWrapperKey] || (listener[listenerWrapperKey] = function(value) {
+      return listener.handleEvent(value);
     });
-    return a[Ki];
+    return listener[listenerWrapperKey];
   }
-  __name(Ci, "Ci");
-  kg(function(a) {
-    Hi = a(Hi);
+  __name(normalizeEventListener, "normalizeEventListener");
+  registerEntryPoint(function(callback) {
+    dispatchNativeEvent = callback(dispatchNativeEvent);
   });
-  function Li(a, b) {
-    ni.call(this, a);
-    this.error = b;
+  function ErrorEvent(type, error) {
+    BaseEvent.call(this, type);
+    this.error = error;
   }
-  __name(Li, "Li");
-  v(Li, ni);
-  var Mi = /\/d\/([^\/]+)/, Ni = /\/r\/([^\/]+)/;
-  function Oi(a) {
-    a = a.match(Vf)[5] || null;
-    return Mi.test(a);
+  __name(ErrorEvent, "ErrorEvent");
+  inheritCompiledClass(ErrorEvent, BaseEvent);
+  var documentIdPathPattern = /\/d\/([^\/]+)/, resourceIdPathPattern = /\/r\/([^\/]+)/;
+  function hasDocumentPath(url) {
+    url = url.match(urlPartsPattern)[5] || null;
+    return documentIdPathPattern.test(url);
   }
-  __name(Oi, "Oi");
-  function Pi(a, b) {
-    if (Oi(a)) {
-      Oi(a);
-      a = a.match(Vf);
-      var c = a[5];
-      c = c.replace(b, "");
-      b = Uf(a[1], a[2], a[3], a[4], c, a[6], a[7]);
-    } else b = a;
-    return b;
+  __name(hasDocumentPath, "hasDocumentPath");
+  function redactDocumentPath(url, value) {
+    if (hasDocumentPath(url)) {
+      hasDocumentPath(url);
+      url = url.match(urlPartsPattern);
+      var intermediate = url[5];
+      intermediate = intermediate.replace(value, "");
+      value = buildUrl(url[1], url[2], url[3], url[4], intermediate, url[6], url[7]);
+    } else value = url;
+    return value;
   }
-  __name(Pi, "Pi");
-  ;
-  function Z() {
-    W.call(this);
-    this.l = new ui(this);
+  __name(redactDocumentPath, "redactDocumentPath");
+  function EventTarget() {
+    Disposable.call(this);
+    this.l = new ListenerMap(this);
     this.Sa = this;
     this.P = null;
   }
-  __name(Z, "Z");
-  B(Z, W);
-  Z.prototype[qi] = true;
-  p = Z.prototype;
-  p.addEventListener = function(a, b, c, d) {
-    Ai(this, a, b, c, d);
+  __name(EventTarget, "EventTarget");
+  inheritClosureClass(EventTarget, Disposable);
+  EventTarget.prototype[listenableMarkerKey] = true;
+  prototypeAlias = EventTarget.prototype;
+  prototypeAlias.addEventListener = function(value, other, options, context) {
+    listen(this, value, other, options, context);
   };
-  p.removeEventListener = function(a, b, c, d) {
-    Ii(this, a, b, c, d);
+  prototypeAlias.removeEventListener = function(value, other, options, context) {
+    unlisten(this, value, other, options, context);
   };
-  p.dispatchEvent = function(a) {
-    var b = this.P;
-    if (b) {
-      var c = [];
-      for (var d = 1; b; b = b.P) c.push(b), ++d;
-    }
-    b = this.Sa;
-    d = a.type || a;
-    if (typeof a === "string") a = new ni(a, b);
-    else if (a instanceof ni) a.target = a.target || b;
-    else {
-      var e = a;
-      a = new ni(d, b);
-      Sh(a, e);
-    }
-    e = true;
-    var f;
-    if (c)
-      for (f = c.length - 1; !a.l && f >= 0; f--) {
-        var g = a.currentTarget = c[f];
-        e = Qi(g, d, true, a) && e;
+  prototypeAlias.dispatchEvent = function(value) {
+    var intermediate = this.P;
+    if (intermediate) {
+      var values = [];
+      for (var index = 1; intermediate; intermediate = intermediate.P) {
+        values.push(intermediate);
+        ++index;
       }
-    a.l || (g = a.currentTarget = b, e = Qi(g, d, true, a) && e, a.l || (e = Qi(g, d, false, a) && e));
-    if (c)
-      for (f = 0; !a.l && f < c.length; f++) g = a.currentTarget = c[f], e = Qi(g, d, false, a) && e;
-    return e;
+    }
+    intermediate = this.Sa;
+    index = value.type || value;
+    if (typeof value === "string") value = new BaseEvent(value, intermediate);
+    else if (value instanceof BaseEvent) value.target = value.target || intermediate;
+    else {
+      var value2 = value;
+      value = new BaseEvent(index, intermediate);
+      extendObject(value, value2);
+    }
+    value2 = true;
+    var index2;
+    if (values)
+      for (index2 = values.length - 1; !value.l && index2 >= 0; index2--) {
+        var intermediate2 = value.currentTarget = values[index2];
+        value2 = dispatchListeners(intermediate2, index, true, value) && value2;
+      }
+    value.l || (intermediate2 = value.currentTarget = intermediate, value2 = dispatchListeners(intermediate2, index, true, value) && value2, value.l || (value2 = dispatchListeners(intermediate2, index, false, value) && value2));
+    if (values)
+      for (index2 = 0; !value.l && index2 < values.length; index2++) {
+        intermediate2 = value.currentTarget = values[index2];
+        value2 = dispatchListeners(intermediate2, index, false, value) && value2;
+      }
+    return value2;
   };
-  p.N = function() {
-    Z.W.N.call(this);
+  prototypeAlias.N = function() {
+    EventTarget.W.N.call(this);
     this.l && this.l.removeAll(void 0);
     this.P = null;
   };
-  p.listen = function(a, b, c, d) {
-    return this.l.add(String(a), b, false, c, d);
+  prototypeAlias.listen = function(value, other, options, context) {
+    return this.l.add(String(value), other, false, options, context);
   };
-  function Qi(a, b, c, d) {
-    b = a.l.j[String(b)];
-    if (!b) return true;
-    b = b.concat();
-    for (var e = true, f = 0; f < b.length; ++f) {
-      var g = b[f];
-      if (g && !g.removed && g.capture == c) {
-        var h = g.listener, k = g.handler || g.src;
-        g.ja && wi(a.l, g);
-        e = h.call(k, d) !== false && e;
+  function dispatchListeners(target, type, capture, event) {
+    type = target.l.j[String(type)];
+    if (!type) return true;
+    type = type.concat();
+    for (var intermediate = true, index = 0; index < type.length; ++index) {
+      var intermediate2 = type[index];
+      if (intermediate2 && !intermediate2.removed && intermediate2.capture == capture) {
+        var listener = intermediate2.listener, intermediate3 = intermediate2.handler || intermediate2.src;
+        intermediate2.ja && removeListenerRecord(target.l, intermediate2);
+        intermediate = listener.call(intermediate3, event) !== false && intermediate;
       }
     }
-    return e && !d.defaultPrevented;
+    return intermediate && !event.defaultPrevented;
   }
-  __name(Qi, "Qi");
-  ;
-  function Ri(a, b, c) {
-    if (typeof a === "function") c && (a = A(a, c));
-    else if (a && typeof a.handleEvent == "function") a = A(a.handleEvent, a);
+  __name(dispatchListeners, "dispatchListeners");
+  function schedule(callback, delay, receiver) {
+    if (typeof callback === "function") receiver && (callback = bindFunction(callback, receiver));
+    else if (callback && typeof callback.handleEvent == "function")
+      callback = bindFunction(callback.handleEvent, callback);
     else throw Error("Invalid listener argument");
-    return Number(b) > 2147483647 ? -1 : z.setTimeout(a, b || 0);
+    return Number(delay) > 2147483647 ? -1 : runtimeGlobal.setTimeout(callback, delay || 0);
   }
-  __name(Ri, "Ri");
-  function Si() {
-    var a = null;
-    return new X(function(b, c) {
-      a = Ri(function() {
-        b(void 0);
+  __name(schedule, "schedule");
+  function waitForOffscreenStartup() {
+    var intermediate = null;
+    return new LegacyPromise(function(callback, callback2) {
+      intermediate = schedule(function() {
+        callback(void 0);
       }, 2e3);
-      a == -1 && c(Error("Failed to schedule timer."));
-    }).T(function(b) {
-      z.clearTimeout(a);
-      throw b;
+      intermediate == -1 && callback2(Error("Failed to schedule timer."));
+    }).T(function(value) {
+      runtimeGlobal.clearTimeout(intermediate);
+      throw value;
     });
   }
-  __name(Si, "Si");
-  ;
-  function Ti(a, b, c) {
-    W.call(this);
-    this.j = a;
-    this.o = b || 0;
-    this.l = c;
-    this.v = A(this.hb, this);
+  __name(waitForOffscreenStartup, "waitForOffscreenStartup");
+  function DelayTimer(callback, delay, receiver) {
+    Disposable.call(this);
+    this.j = callback;
+    this.o = delay || 0;
+    this.l = receiver;
+    this.v = bindFunction(this.hb, this);
   }
-  __name(Ti, "Ti");
-  B(Ti, W);
-  p = Ti.prototype;
-  p.ia = 0;
-  p.N = function() {
-    Ti.W.N.call(this);
+  __name(DelayTimer, "DelayTimer");
+  inheritClosureClass(DelayTimer, Disposable);
+  prototypeAlias = DelayTimer.prototype;
+  prototypeAlias.ia = 0;
+  prototypeAlias.N = function() {
+    DelayTimer.W.N.call(this);
     this.stop();
     delete this.j;
     delete this.l;
   };
-  p.start = function(a) {
+  prototypeAlias.start = function(value) {
     this.stop();
-    this.ia = Ri(this.v, a !== void 0 ? a : this.o);
+    this.ia = schedule(this.v, value !== void 0 ? value : this.o);
   };
-  p.stop = function() {
-    this.isActive() && z.clearTimeout(this.ia);
+  prototypeAlias.stop = function() {
+    this.isActive() && runtimeGlobal.clearTimeout(this.ia);
     this.ia = 0;
   };
-  p.isActive = function() {
+  prototypeAlias.isActive = function() {
     return this.ia != 0;
   };
-  p.hb = function() {
+  prototypeAlias.hb = function() {
     this.ia = 0;
     this.j && this.j.call(this.l);
   };
-  function Ui(a, b, c, d) {
-    W.call(this);
-    this.o = d != null ? d : 0.15;
-    this.A = a;
-    this.v = b;
-    this.G = c;
-    this.j = new Ti(this.zb, void 0, this);
+  function BackoffTimer(callback, initialDelay, maximumDelay, jitter) {
+    Disposable.call(this);
+    this.o = jitter != null ? jitter : 0.15;
+    this.A = callback;
+    this.v = initialDelay;
+    this.G = maximumDelay;
+    this.j = new DelayTimer(this.zb, void 0, this);
     this.C = Number.NEGATIVE_INFINITY;
     this.l = 0;
   }
-  __name(Ui, "Ui");
-  v(Ui, W);
-  p = Ui.prototype;
-  p.isActive = function() {
+  __name(BackoffTimer, "BackoffTimer");
+  inheritCompiledClass(BackoffTimer, Disposable);
+  prototypeAlias = BackoffTimer.prototype;
+  prototypeAlias.isActive = function() {
     return this.j.isActive();
   };
-  p.start = function() {
-    Vi(this, false, false);
+  prototypeAlias.start = function() {
+    restartBackoff(this, false, false);
   };
-  function Vi(a, b, c) {
-    b && (a.j.stop(), Xi(a, a.v));
-    a.isActive() || (b = Math.max(0, a.C + a.l - Date.now()), b == 0 && (c ? b = Xi(a, a.v) : a.l = 0), a.j.start(b));
+  function restartBackoff(timer, reset, runImmediately) {
+    reset && (timer.j.stop(), calculateBackoffDelay(timer, timer.v));
+    timer.isActive() || (reset = Math.max(0, timer.C + timer.l - Date.now()), reset == 0 && (runImmediately ? reset = calculateBackoffDelay(timer, timer.v) : timer.l = 0), timer.j.start(reset));
   }
-  __name(Vi, "Vi");
-  p.stop = function() {
+  __name(restartBackoff, "restartBackoff");
+  prototypeAlias.stop = function() {
     this.j.stop();
   };
-  function Xi(a, b) {
-    b > 0 && a.o != 0 && (b = Math.floor(b * (1 - a.o + Math.random() * a.o * 2)));
-    return a.l = b;
+  function calculateBackoffDelay(timer, delay) {
+    delay > 0 && timer.o != 0 && (delay = Math.floor(delay * (1 - timer.o + Math.random() * timer.o * 2)));
+    return timer.l = delay;
   }
-  __name(Xi, "Xi");
-  p.zb = function() {
+  __name(calculateBackoffDelay, "calculateBackoffDelay");
+  prototypeAlias.zb = function() {
     this.C = Date.now();
-    Xi(this, Math.min(Math.max(this.l * 2, this.v), this.G));
+    calculateBackoffDelay(this, Math.min(Math.max(this.l * 2, this.v), this.G));
     this.A();
   };
-  p.N = function() {
+  prototypeAlias.N = function() {
     this.j.dispose();
     delete this.j;
     delete this.A;
-    W.prototype.N.call(this);
+    Disposable.prototype.N.call(this);
   };
-  function Yi(a) {
-    W.call(this);
-    this.l = a;
+  function EventHandler(receiver) {
+    Disposable.call(this);
+    this.l = receiver;
     this.j = {};
   }
-  __name(Yi, "Yi");
-  B(Yi, W);
-  var Zi = [];
-  Yi.prototype.listen = function(a, b, c, d) {
-    Array.isArray(b) || (b && (Zi[0] = b.toString()), b = Zi);
-    for (var e = 0; e < b.length; e++) {
-      var f = Ai(a, b[e], c || this.handleEvent, d || false, this.l || this);
-      if (!f) break;
-      this.j[f.key] = f;
+  __name(EventHandler, "EventHandler");
+  inheritClosureClass(EventHandler, Disposable);
+  var eventHandlerTypeBuffer = [];
+  EventHandler.prototype.listen = function(value, other, options, context) {
+    Array.isArray(other) || (other && (eventHandlerTypeBuffer[0] = other.toString()), other = eventHandlerTypeBuffer);
+    for (var index = 0; index < other.length; index++) {
+      var intermediate = listen(
+        value,
+        other[index],
+        options || this.handleEvent,
+        context || false,
+        this.l || this
+      );
+      if (!intermediate) break;
+      this.j[intermediate.key] = intermediate;
     }
     return this;
   };
-  Yi.prototype.removeAll = function() {
-    Ph(this.j, function(a, b) {
-      this.j.hasOwnProperty(b) && Ji(a);
-    }, this);
+  EventHandler.prototype.removeAll = function() {
+    forEachObjectValue(
+      this.j,
+      function(value, other) {
+        this.j.hasOwnProperty(other) && unlistenByKey(value);
+      },
+      this
+    );
     this.j = {};
   };
-  Yi.prototype.N = function() {
-    Yi.W.N.call(this);
+  EventHandler.prototype.N = function() {
+    EventHandler.W.N.call(this);
     this.removeAll();
   };
-  Yi.prototype.handleEvent = function() {
+  EventHandler.prototype.handleEvent = function() {
     throw Error("EventHandler.handleEvent not implemented");
   };
-  function $i(a, b, c, d, e, f, g) {
-    g = g === void 0 ? true : g;
-    W.call(this);
-    var h = this;
-    this.j = a;
+  function RetryingLogTransport(request, endpoint, limiter, timeout, onSuccess, options, reportFailures) {
+    reportFailures = reportFailures === void 0 ? true : reportFailures;
+    Disposable.call(this);
+    var instance = this;
+    this.j = request;
     this.j.O = 1e4;
-    this.ea = b;
-    this.o = f;
-    this.l = new Ui(function() {
-      return h.za();
-    }, 3e4, 36e5);
+    this.ea = endpoint;
+    this.o = options;
+    this.l = new BackoffTimer(
+      function() {
+        return instance.za();
+      },
+      3e4,
+      36e5
+    );
     this.A = 0;
     this.C = null;
-    this.U = new wh("errorsender", 1, 8, d);
-    dg(this, this.U);
+    this.U = new QpsLimiter("errorsender", 1, 8, timeout);
+    ownDisposable(this, this.U);
     this.P = false;
     this.H = null;
     this.M = /* @__PURE__ */ new Set();
-    this.G = new Yi(this);
-    this.fa = c || 10;
-    this.V = e || null;
+    this.G = new EventHandler(this);
+    this.fa = limiter || 10;
+    this.V = onSuccess || null;
     this.G.listen(this.j, "complete", this.ob);
     this.G.listen(this.j, "ready", this.za);
     this.R = null;
-    this.L = new Nh();
-    dg(this, this.L);
-    this.o && Oh(this.L, this.o.l(), function() {
-      h.o.getState().j >= 3 && (h.R = (Kh(), Jh));
-      h.o.getState().j >= 3 || h.R !== (Kh(), Jh) || aj(h);
+    this.L = new EventObserverTracker();
+    ownDisposable(this, this.L);
+    this.o && trackObserver(this.L, this.o.l(), function() {
+      instance.o.getState().j >= 3 && (instance.R = (initializeNetworkStatuses(), offlineNetworkStatus));
+      instance.o.getState().j >= 3 || instance.R !== (initializeNetworkStatuses(), offlineNetworkStatus) || scheduleLogRetry(instance);
     });
-    this.O = g;
+    this.O = reportFailures;
     this.X = {};
   }
-  __name($i, "$i");
-  v($i, W);
-  p = $i.prototype;
-  p.send = function(a, b, c, d) {
-    qh(this.ea.get("docs-dafjera")) && (a = Pi(Pi(a, Ni), Mi));
-    var e = ah(ah(hh(this.v.length), function(f) {
-      if (!(f >= this.fa)) return this.O && (a = V(a, "errorSender_enqueueTimeMs", Date.now().toString())), f = {}, f.u = a, f.m = b, f.c = c, f.h = d, this.enqueue(f);
-    }, this), this.za, this);
-    ch(e, function() {
-      this.M.delete(e);
-    }, this);
-    this.M.add(e);
+  __name(RetryingLogTransport, "RetryingLogTransport");
+  inheritCompiledClass(RetryingLogTransport, Disposable);
+  prototypeAlias = RetryingLogTransport.prototype;
+  prototypeAlias.send = function(value, other, options, context) {
+    parseBooleanFlag(this.ea.get("docs-dafjera")) && (value = redactDocumentPath(
+      redactDocumentPath(value, resourceIdPathPattern),
+      documentIdPathPattern
+    ));
+    var intermediate = addDeferredCallback(
+      addDeferredCallback(
+        resolvedDeferred(this.v.length),
+        function(value2) {
+          if (!(value2 >= this.fa))
+            return this.O && (value = appendQueryParameters(
+              value,
+              "errorSender_enqueueTimeMs",
+              Date.now().toString()
+            )), value2 = {}, value2.u = value, value2.m = other, value2.c = options, value2.h = context, this.enqueue(value2);
+        },
+        this
+      ),
+      this.za,
+      this
+    );
+    addDeferredBoth(
+      intermediate,
+      function() {
+        this.M.delete(intermediate);
+      },
+      this
+    );
+    this.M.add(intermediate);
   };
-  p.za = function() {
-    var a = this.o && this.o.getState().j >= 3, b = this.na() || this.j.isActive() || this.l.isActive() || this.P;
-    return a || b ? hh() : bj(this);
+  prototypeAlias.za = function() {
+    var intermediate = this.o && this.o.getState().j >= 3, intermediate2 = this.na() || this.j.isActive() || this.l.isActive() || this.P;
+    return intermediate || intermediate2 ? resolvedDeferred() : flushLogTransport(this);
   };
-  function bj(a) {
+  function flushLogTransport(transport) {
     return (function() {
-      return ah(hh(a.v[0] !== void 0 ? a.v[0] : null), function(b) {
-        return cj(a, b);
-      });
+      return addDeferredCallback(
+        resolvedDeferred(transport.v[0] !== void 0 ? transport.v[0] : null),
+        function(value) {
+          return sendNextLogEntry(transport, value);
+        }
+      );
     })();
   }
-  __name(bj, "bj");
-  function cj(a, b) {
-    if (a.l.isActive() || a.j.isActive() || a.P) return hh();
-    if (!b) return a.l.stop(), hh();
-    if (b.u.length > 4e3) return dj(a);
+  __name(flushLogTransport, "flushLogTransport");
+  function sendNextLogEntry(transport, entry) {
+    if (transport.l.isActive() || transport.j.isActive() || transport.P) return resolvedDeferred();
+    if (!entry) return transport.l.stop(), resolvedDeferred();
+    if (entry.u.length > 4e3) return dropFirstLogEntry(transport);
     try {
-      yh(a.U);
-      a.H = new Ug();
-      var c = b.u;
-      a.V != null && (c = V(c, "reportingSessionId", a.V));
-      a.A > 0 && (c = V(c, "retryCount", a.A));
-      a.C != null && (c = V(c, "previousErrorSendStatus", a.C));
-      a.O && (c = V(c, "errorSender_sendTimeMs", Date.now().toString()), c = V(c, "errorSenderType", a.Ka()), b.errorSender_frontIndex && (c = V(c, "errorSender_frontIndex", b.errorSender_frontIndex)), b.errorSender_nextIndex && (c = V(
-        c,
+      consumeQpsQuota(transport.U);
+      transport.H = new LegacyDeferred();
+      var intermediate = entry.u;
+      transport.V != null && (intermediate = appendQueryParameters(intermediate, "reportingSessionId", transport.V));
+      transport.A > 0 && (intermediate = appendQueryParameters(intermediate, "retryCount", transport.A));
+      transport.C != null && (intermediate = appendQueryParameters(intermediate, "previousErrorSendStatus", transport.C));
+      transport.O && (intermediate = appendQueryParameters(
+        intermediate,
+        "errorSender_sendTimeMs",
+        Date.now().toString()
+      ), intermediate = appendQueryParameters(intermediate, "errorSenderType", transport.Ka()), entry.errorSender_frontIndex && (intermediate = appendQueryParameters(
+        intermediate,
+        "errorSender_frontIndex",
+        entry.errorSender_frontIndex
+      )), entry.errorSender_nextIndex && (intermediate = appendQueryParameters(
+        intermediate,
         "errorSender_nextIndex",
-        b.errorSender_nextIndex
-      )), b.errorSender_queueSize && (c = V(c, "errorSender_queueSize", b.errorSender_queueSize)));
-      a.X = b;
-      var d = b.m, e = b.c, f = b.h;
-      return ah(ah(dj(a), function() {
-        a.j.send(c, d, e, f);
-      }), function() {
-        return a.H;
-      });
-    } catch (g) {
-      if (Bf(g) instanceof vh) a.P = true;
-      else throw If(g, {
-        "docs-origin-class": "docs.debug.ErrorSender"
-      });
+        entry.errorSender_nextIndex
+      )), entry.errorSender_queueSize && (intermediate = appendQueryParameters(
+        intermediate,
+        "errorSender_queueSize",
+        entry.errorSender_queueSize
+      )));
+      transport.X = entry;
+      var intermediate2 = entry.m, intermediate3 = entry.c, intermediate4 = entry.h;
+      return addDeferredCallback(
+        addDeferredCallback(dropFirstLogEntry(transport), function() {
+          transport.j.send(intermediate, intermediate2, intermediate3, intermediate4);
+        }),
+        function() {
+          return transport.H;
+        }
+      );
+    } catch (caughtError) {
+      if (toJavaThrowable(caughtError) instanceof LimitException) transport.P = true;
+      else
+        throw normalizeErrorWithContext(caughtError, {
+          "docs-origin-class": "docs.debug.ErrorSender"
+        });
     }
-    return hh();
+    return resolvedDeferred();
   }
-  __name(cj, "cj");
-  p.ob = function() {
-    var a = ej(this.j), b = this.H, c = fj(this.j) || a >= 400 && a <= 500, d = this.A > 3;
-    c || d ? (this.A = 0, this.C = null, this.l.stop(), ah(hh(), function() {
-      Wg(b);
-      Xg(b, true);
-    })) : (this.A++, this.C = a === -1 ? this.j.C : a, aj(this), this.enqueue(this.X), Wg(b), Xg(b, true));
+  __name(sendNextLogEntry, "sendNextLogEntry");
+  prototypeAlias.ob = function() {
+    var xhrStatus = readXhrStatus(this.j), intermediate = this.H, intermediate2 = isSuccessfulXhr(this.j) || xhrStatus >= 400 && xhrStatus <= 500, intermediate3 = this.A > 3;
+    intermediate2 || intermediate3 ? (this.A = 0, this.C = null, this.l.stop(), addDeferredCallback(resolvedDeferred(), function() {
+      assertDeferredNotFired(intermediate);
+      settleDeferred(intermediate, true);
+    })) : (this.A++, this.C = xhrStatus === -1 ? this.j.C : xhrStatus, scheduleLogRetry(this), this.enqueue(this.X), assertDeferredNotFired(intermediate), settleDeferred(intermediate, true));
   };
-  function aj(a) {
-    a.A != 1 || a.l.isActive() ? a.l.start() : Vi(a.l, true, true);
+  function scheduleLogRetry(transport) {
+    transport.A != 1 || transport.l.isActive() ? transport.l.start() : restartBackoff(transport.l, true, true);
   }
-  __name(aj, "aj");
-  p.N = function() {
-    cg(this.G, this.l, this.j, this.L);
+  __name(scheduleLogRetry, "scheduleLogRetry");
+  prototypeAlias.N = function() {
+    disposeAll(this.G, this.l, this.j, this.L);
     this.M.clear();
-    W.prototype.N.call(this);
+    Disposable.prototype.N.call(this);
   };
-  p.Ka = ca("BaseErrorSender");
-  function gj(a, b, c, d, e) {
-    $i.call(this, a, b, c, void 0, d, e, void 0);
+  prototypeAlias.Ka = createConstantFunction("BaseErrorSender");
+  function BufferedLogTransport(request, endpoint, limiter, onSuccess, options) {
+    RetryingLogTransport.call(this, request, endpoint, limiter, void 0, onSuccess, options, void 0);
     this.v = [];
   }
-  __name(gj, "gj");
-  v(gj, $i);
-  gj.prototype.enqueue = function(a) {
-    this.v.push(a);
-    return hh();
+  __name(BufferedLogTransport, "BufferedLogTransport");
+  inheritCompiledClass(BufferedLogTransport, RetryingLogTransport);
+  BufferedLogTransport.prototype.enqueue = function(value) {
+    this.v.push(value);
+    return resolvedDeferred();
   };
-  function dj(a) {
-    a.v.shift();
-    return hh();
+  function dropFirstLogEntry(transport) {
+    transport.v.shift();
+    return resolvedDeferred();
   }
-  __name(dj, "dj");
-  gj.prototype.Ka = ca("MemoryErrorSender");
-  gj.prototype.N = function() {
+  __name(dropFirstLogEntry, "dropFirstLogEntry");
+  BufferedLogTransport.prototype.Ka = createConstantFunction("MemoryErrorSender");
+  BufferedLogTransport.prototype.N = function() {
     delete this.v;
-    $i.prototype.N.call(this);
+    RetryingLogTransport.prototype.N.call(this);
   };
-  function hj() {
-    var a = a === void 0 ? false : a;
-    if (a === void 0 ? 0 : a) throw Error(
-      "A module ID must be set on the Fava ServiceId a in order to modify extra edges."
-    );
+  function createFavaServiceId() {
+    var intermediate = intermediate === void 0 ? false : intermediate;
+    if (intermediate === void 0 ? 0 : intermediate)
+      throw Error("A module ID must be set on the Fava ServiceId a in order to modify extra edges.");
   }
-  __name(hj, "hj");
-  hj.prototype.toString = ca("a");
-  new hj();
-  function ij(a) {
-    this.j = Id(pe(), Nc(a));
-    a = ud(this.j, 1);
-    this.l = Math.floor(Math.random() * 100) < a;
+  __name(createFavaServiceId, "createFavaServiceId");
+  createFavaServiceId.prototype.toString = createConstantFunction("a");
+  new createFavaServiceId();
+  function ExperimentSamplingConfig(array) {
+    this.j = immutableMessageFromArray(getDefaultExperimentSamplingMessage(), cloneJsonValue(array));
+    array = readCoercedNumberField(this.j, 1);
+    this.l = Math.floor(Math.random() * 100) < array;
   }
-  __name(ij, "ij");
-  ij.prototype.toString = function() {
-    var a = "{bool=" + !(this.l ? !td(this.j, 5) : !td(this.j, 2)) + ', string="', b = this.l ? yd(this.j, 6) : wd(this.j, 3);
-    a = a + (b != null ? String(b) : "") + '", int=';
-    b = this.l ? wc(H(this.j, 7, void 0, Zc)) : ud(this.j, 4, -1);
-    return a + (b != null ? Number(b) : -1) + "}";
+  __name(ExperimentSamplingConfig, "ExperimentSamplingConfig");
+  ExperimentSamplingConfig.prototype.toString = function() {
+    var intermediate = "{bool=" + !(this.l ? !readBooleanField(this.j, 5) : !readBooleanField(this.j, 2)) + ', string="', intermediate2 = this.l ? readStringField(this.j, 6) : readStringOrDefault(this.j, 3);
+    intermediate = intermediate + (intermediate2 != null ? String(intermediate2) : "") + '", int=';
+    intermediate2 = this.l ? coerceNumericInt32(getMessageField(this.j, 7, void 0, preserveNullFieldToken)) : readCoercedNumberField(this.j, 4, -1);
+    return intermediate + (intermediate2 != null ? Number(intermediate2) : -1) + "}";
   };
-  function jj(a) {
+  function ExperimentMetadata(values) {
     this.j = /* @__PURE__ */ new Map();
     this.l = [];
-    if (a = a.get("docs-cei")) {
-      var b = a.i;
-      b && fb(this.l, b);
-      a = a.cf || {};
-      for (var c in a) this.j.set(c, new ij(a[c]));
+    if (values = values.get("docs-cei")) {
+      var intermediate = values.i;
+      intermediate && extendArray(this.l, intermediate);
+      values = values.cf || {};
+      for (var intermediate2 in values)
+        this.j.set(intermediate2, new ExperimentSamplingConfig(values[intermediate2]));
     }
   }
-  __name(jj, "jj");
-  jj.prototype.get = function(a) {
-    return this.j.get(a) || null;
+  __name(ExperimentMetadata, "ExperimentMetadata");
+  ExperimentMetadata.prototype.get = function(value) {
+    return this.j.get(value) || null;
   };
-  function kj() {
-    for (var a in Array.prototype) return false;
+  function isArrayPrototypeIntact() {
+    for (var intermediate in Array.prototype) return false;
     return true;
   }
-  __name(kj, "kj");
-  ;
-  var lj = [
+  __name(isArrayPrototypeIntact, "isArrayPrototypeIntact");
+  var knownInjectedErrorMessages = [
     'window[("_callback_" + expid)] is not a function',
     "Cannot read properties of null (reading 'readyState')",
     "request failed on client side"
-  ], mj = [/(undefined|constructor).*YT|YT.*(undefined|constructor)/];
-  function Ed(a) {
-    this.j = a;
+  ], knownInjectedErrorPatterns = [/(undefined|constructor).*YT|YT.*(undefined|constructor)/];
+  function BootstrapString(value) {
+    this.j = value;
   }
-  __name(Ed, "Ed");
-  function Hd(a) {
-    var b = a.j;
-    if (b == null) return null;
-    if (typeof b === "string") return b;
-    throw new TypeError("Invalid string data <K1cgmc>: " + a.j + " (typeof " + typeof a.j + ")");
-  }
-  __name(Hd, "Hd");
-  Ed.prototype.toString = function() {
-    var a = Hd(this);
-    if (a === null) throw Error("Data K1cgmc not defined.");
-    return a;
-  };
-  function nj(a) {
-    this.B = G(a);
-  }
-  __name(nj, "nj");
-  v(nj, J);
-  nj.prototype.qa = function(a) {
-    Ad(this, 7, a);
-  };
-  function oj(a) {
-    this.B = G(a);
-  }
-  __name(oj, "oj");
-  v(oj, J);
-  function pj(a) {
-    return qd(a, nj, kd(a, qj, 4));
-  }
-  __name(pj, "pj");
-  var qj = [4, 5];
-  function rj(a) {
-    this.B = G(a);
-  }
-  __name(rj, "rj");
-  v(rj, J);
-  function sj(a) {
-    this.B = G(a);
-  }
-  __name(sj, "sj");
-  v(sj, J);
-  function Gd(a) {
-    this.B = G(a);
-  }
-  __name(Gd, "Gd");
-  v(Gd, J);
-  function tj(a) {
-    return qd(a, oj, 1);
-  }
-  __name(tj, "tj");
-  ;
-  function uj() {
-    this.j = Dd();
-  }
-  __name(uj, "uj");
-  uj.prototype.ga = function() {
-    var a = /* @__PURE__ */ new Map(), b, c = (b = this.j) == null ? void 0 : pj(tj(b));
-    if (c == null ? 0 : vc(H(c, 2)) != null) {
-      var d;
-      (b = (d = xd(c, 2)) == null ? void 0 : d.toString()) && a.set("canaryanalysisservertestgroup", b);
-      if (c == null) var e = void 0;
-      else if ((c = I(c, ke, 3)) == null) e = void 0;
-      else {
-        d = Number;
-        e = e === void 0 ? "0" : e;
-        b = H(c, 1, void 0, void 0, Ac);
-        var f = f === void 0 ? false : f;
-        var g = typeof b;
-        b == null ? f = b : g === "bigint" ? f = String(mc(64, b)) : uc(b) ? g === "string" ? (f = b, uc(f), b = pc(Number(f)), nc(b) ? f = String(b) : (b = f.indexOf("."), b !== -1 && (f = f.substring(
-          0,
-          b
-        )), f = xc(f))) : f = f ? zc(b) : yc(b) : f = void 0;
-        e = d(f != null ? f : e);
-        c = ud(c, 2);
-        e = new Date(e * 1e3 + c / 1e6).valueOf().toString();
-      }
-      e && a.set("serverstarttimemillis", e);
-    }
-    var h, k;
-    (e = (h = this.j) == null ? void 0 : (k = I(h, oj, 1)) == null ? void 0 : xd(k, 6)) && a.set(
-      "clientApp",
-      String(e)
+  __name(BootstrapString, "BootstrapString");
+  function unwrapBootstrapString(wrapper) {
+    var intermediate = wrapper.j;
+    if (intermediate == null) return null;
+    if (typeof intermediate === "string") return intermediate;
+    throw new TypeError(
+      "Invalid string data <K1cgmc>: " + wrapper.j + " (typeof " + typeof wrapper.j + ")"
     );
-    return a;
-  };
-  function vj(a, b) {
-    this.width = a;
-    this.height = b;
   }
-  __name(vj, "vj");
-  p = vj.prototype;
-  p.clone = function() {
-    return new vj(this.width, this.height);
+  __name(unwrapBootstrapString, "unwrapBootstrapString");
+  BootstrapString.prototype.toString = function() {
+    var intermediate = unwrapBootstrapString(this);
+    if (intermediate === null) throw Error("Data K1cgmc not defined.");
+    return intermediate;
   };
-  p.aspectRatio = function() {
+  function CrashClassificationMessage(array) {
+    this.B = initializeMessageArray(array);
+  }
+  __name(CrashClassificationMessage, "CrashClassificationMessage");
+  inheritCompiledClass(CrashClassificationMessage, ArrayMessage);
+  CrashClassificationMessage.prototype.qa = function(value) {
+    setStringField(this, 7, value);
+  };
+  function CrashClientStateMessage(array) {
+    this.B = initializeMessageArray(array);
+  }
+  __name(CrashClientStateMessage, "CrashClientStateMessage");
+  inheritCompiledClass(CrashClientStateMessage, ArrayMessage);
+  function readCrashClassification(message) {
+    return getNestedMessageOrDefault(
+      message,
+      CrashClassificationMessage,
+      getActiveOneofField(message, crashStateOneofFields, 4)
+    );
+  }
+  __name(readCrashClassification, "readCrashClassification");
+  var crashStateOneofFields = [4, 5];
+  function CrashSeverityMessage(array) {
+    this.B = initializeMessageArray(array);
+  }
+  __name(CrashSeverityMessage, "CrashSeverityMessage");
+  inheritCompiledClass(CrashSeverityMessage, ArrayMessage);
+  function CrashMetadataMessage(array) {
+    this.B = initializeMessageArray(array);
+  }
+  __name(CrashMetadataMessage, "CrashMetadataMessage");
+  inheritCompiledClass(CrashMetadataMessage, ArrayMessage);
+  function TelemetryBootstrapMessage(array) {
+    this.B = initializeMessageArray(array);
+  }
+  __name(TelemetryBootstrapMessage, "TelemetryBootstrapMessage");
+  inheritCompiledClass(TelemetryBootstrapMessage, ArrayMessage);
+  function readCrashClientState(message) {
+    return getNestedMessageOrDefault(message, CrashClientStateMessage, 1);
+  }
+  __name(readCrashClientState, "readCrashClientState");
+  function BootstrapConfigProvider() {
+    this.j = readTelemetryBootstrapMessage();
+  }
+  __name(BootstrapConfigProvider, "BootstrapConfigProvider");
+  BootstrapConfigProvider.prototype.ga = function() {
+    var map = /* @__PURE__ */ new Map(), intermediate, intermediate2 = (intermediate = this.j) == null ? void 0 : readCrashClassification(readCrashClientState(intermediate));
+    if (intermediate2 == null ? 0 : coerceInt32(getMessageField(intermediate2, 2)) != null) {
+      var callback;
+      (intermediate = (callback = readNumberField(intermediate2, 2)) == null ? void 0 : callback.toString()) && map.set("canaryanalysisservertestgroup", intermediate);
+      if (intermediate2 == null) var intermediate3 = void 0;
+      else if ((intermediate2 = readNestedMessage(intermediate2, ExperimentConfigMessage, 3)) == null)
+        intermediate3 = void 0;
+      else {
+        callback = Number;
+        intermediate3 = intermediate3 === void 0 ? "0" : intermediate3;
+        intermediate = getMessageField(intermediate2, 1, void 0, void 0, coerceInt64);
+        var intermediate4 = intermediate4 === void 0 ? false : intermediate4;
+        var intermediate5 = typeof intermediate;
+        intermediate == null ? intermediate4 = intermediate : intermediate5 === "bigint" ? intermediate4 = String(bigIntAsIntN(64, intermediate)) : isNumericRepresentation(intermediate) ? intermediate5 === "string" ? (intermediate4 = intermediate, isNumericRepresentation(intermediate4), intermediate = truncateNumber(Number(intermediate4)), isSafeInteger(intermediate) ? intermediate4 = String(intermediate) : (intermediate = intermediate4.indexOf("."), intermediate !== -1 && (intermediate4 = intermediate4.substring(0, intermediate)), intermediate4 = normalizeInt64String(intermediate4))) : intermediate4 = intermediate4 ? numberToInt64String(intermediate) : numberToInt64Representation(intermediate) : intermediate4 = void 0;
+        intermediate3 = callback(intermediate4 != null ? intermediate4 : intermediate3);
+        intermediate2 = readCoercedNumberField(intermediate2, 2);
+        intermediate3 = new Date(intermediate3 * 1e3 + intermediate2 / 1e6).valueOf().toString();
+      }
+      intermediate3 && map.set("serverstarttimemillis", intermediate3);
+    }
+    var intermediate6, intermediate7;
+    (intermediate3 = (intermediate6 = this.j) == null ? void 0 : (intermediate7 = readNestedMessage(intermediate6, CrashClientStateMessage, 1)) == null ? void 0 : readNumberField(intermediate7, 6)) && map.set("clientApp", String(intermediate3));
+    return map;
+  };
+  function Size(width, height) {
+    this.width = width;
+    this.height = height;
+  }
+  __name(Size, "Size");
+  prototypeAlias = Size.prototype;
+  prototypeAlias.clone = function() {
+    return new Size(this.width, this.height);
+  };
+  prototypeAlias.aspectRatio = function() {
     return this.width / this.height;
   };
-  p.ceil = function() {
+  prototypeAlias.ceil = function() {
     this.width = Math.ceil(this.width);
     this.height = Math.ceil(this.height);
     return this;
   };
-  p.floor = function() {
+  prototypeAlias.floor = function() {
     this.width = Math.floor(this.width);
     this.height = Math.floor(this.height);
     return this;
   };
-  p.round = function() {
+  prototypeAlias.round = function() {
     this.width = Math.round(this.width);
     this.height = Math.round(this.height);
     return this;
   };
-  function wj() {
-    function a() {
+  function EnvironmentInspector() {
+    function helper() {
     }
-    __name(a, "a");
-    this.j = a.call.bind(a.toString);
+    __name(helper, "helper");
+    this.j = helper.call.bind(helper.toString);
   }
-  __name(wj, "wj");
-  wj.prototype.ga = function() {
-    var a = /* @__PURE__ */ new Map();
-    xj() && a.set("apps_telemetry.screen_tampered", "true");
+  __name(EnvironmentInspector, "EnvironmentInspector");
+  EnvironmentInspector.prototype.ga = function() {
+    var map = /* @__PURE__ */ new Map();
+    isScreenTampered() && map.set("apps_telemetry.screen_tampered", "true");
     a: {
-      var b = w(Array.prototype), c = b.next(), d;
+      var iterator = getIterator(Array.prototype), iteration = iterator.next(), intermediate;
       try {
-        for (; !c.done; c = b.next()) {
-          var e = true;
+        for (; !iteration.done; iteration = iterator.next()) {
+          var intermediate2 = true;
           break a;
         }
       } finally {
-        c && !c.done && (d = b.return) && d.call(b);
+        iteration && !iteration.done && (intermediate = iterator.return) && intermediate.call(iterator);
       }
-      e = false;
+      intermediate2 = false;
     }
-    e && a.set("apps_telemetry.array_prototype_tampered", "true");
-    yj() || a.set("apps_telemetry.canvas_creation_broken", "true");
-    !zj() && z.navigator && z.navigator.webdriver && a.set("apps_telemetry.webdriver", "true");
-    e = false;
-    b = w(Aj);
-    c = b.next();
-    var f;
+    intermediate2 && map.set("apps_telemetry.array_prototype_tampered", "true");
+    canCreateCanvas() || map.set("apps_telemetry.canvas_creation_broken", "true");
+    !isWorkerGlobalScope() && runtimeGlobal.navigator && runtimeGlobal.navigator.webdriver && map.set("apps_telemetry.webdriver", "true");
+    intermediate2 = false;
+    iterator = getIterator(automationPropertyProbes);
+    iteration = iterator.next();
+    var intermediate3;
     try {
-      for (; !c.done; c = b.next()) {
-        var g = c.value, h = Bj(g.key);
-        h === 0 ? (a.set("apps_telemetry.automation_property_present." + g.S, "true"), e = true) : h === 2 && a.set("apps_telemetry.automation_property_check_failed." + g.S, "true");
+      for (; !iteration.done; iteration = iterator.next()) {
+        var value = iteration.value, intermediate4 = probeGlobalProperty(value.key);
+        intermediate4 === 0 ? (map.set("apps_telemetry.automation_property_present." + value.S, "true"), intermediate2 = true) : intermediate4 === 2 && map.set("apps_telemetry.automation_property_check_failed." + value.S, "true");
       }
     } finally {
-      c && !c.done && (f = b.return) && f.call(b);
+      iteration && !iteration.done && (intermediate3 = iterator.return) && intermediate3.call(iterator);
     }
-    e && a.set("apps_telemetry.automation_detected", "true");
-    f = false;
-    g = w(Cj);
-    h = g.next();
-    var k;
+    intermediate2 && map.set("apps_telemetry.automation_detected", "true");
+    intermediate3 = false;
+    value = getIterator(nativeFunctionProbes);
+    intermediate4 = value.next();
+    var intermediate5;
     try {
-      for (; !h.done; h = g.next()) {
-        var l = h.value, m = l.S, q = Dj(this, l.name, l.Ja);
-        if (!q.da) {
-          var t = q.reason;
-          a.set("apps_telemetry.native_function_tampering." + m + ".reason", t);
-          t === "non_function_type" && a.set("apps_telemetry.native_function_tampering." + m + ".type", q.type);
-          f = true;
+      for (; !intermediate4.done; intermediate4 = value.next()) {
+        var value2 = intermediate4.value, intermediate6 = value2.S, intermediate7 = inspectNativeFunction(this, value2.name, value2.Ja);
+        if (!intermediate7.da) {
+          var reason = intermediate7.reason;
+          map.set("apps_telemetry.native_function_tampering." + intermediate6 + ".reason", reason);
+          reason === "non_function_type" && map.set(
+            "apps_telemetry.native_function_tampering." + intermediate6 + ".type",
+            intermediate7.type
+          );
+          intermediate3 = true;
         }
       }
     } finally {
-      h && !h.done && (k = g.return) && k.call(g);
+      intermediate4 && !intermediate4.done && (intermediate5 = value.return) && intermediate5.call(value);
     }
-    f && a.set("apps_telemetry.native_function_tampering_detected", "true");
-    return a;
+    intermediate3 && map.set("apps_telemetry.native_function_tampering_detected", "true");
+    return map;
   };
-  function xj() {
-    if (zj()) return false;
-    var a = z.screen, b = !(a instanceof Screen);
-    if (hb || gb) return b;
+  function isScreenTampered() {
+    if (isWorkerGlobalScope()) return false;
+    var screen = runtimeGlobal.screen, intermediate = !(screen instanceof Screen);
+    if (isSafariLike || isFirefox) return intermediate;
     try {
-      var c = n();
-      a.addEventListener("change", c);
-      a.removeEventListener("change", c);
-    } catch (d) {
-      b = true;
+      var noopFunction = createNoopFunction();
+      screen.addEventListener("change", noopFunction);
+      screen.removeEventListener("change", noopFunction);
+    } catch (caughtError) {
+      intermediate = true;
     }
-    return b;
+    return intermediate;
   }
-  __name(xj, "xj");
-  function yj() {
-    function a(b) {
+  __name(isScreenTampered, "isScreenTampered");
+  function canCreateCanvas() {
+    function helper(helper2) {
       try {
-        var c = new vj(1, 500);
-        if (b) {
-          b = "CANVAS";
-          c = document;
-          b = String(b);
-          c.contentType === "application/xhtml+xml" && (b = b.toLowerCase());
-          var d = c.createElement(b);
-        } else d = new OffscreenCanvas(c.width, c.height);
-        return d.getContext("2d") != null;
-      } catch (e) {
+        var size = new Size(1, 500);
+        if (helper2) {
+          helper2 = "CANVAS";
+          size = document;
+          helper2 = String(helper2);
+          size.contentType === "application/xhtml+xml" && (helper2 = helper2.toLowerCase());
+          var element = size.createElement(helper2);
+        } else element = new OffscreenCanvas(size.width, size.height);
+        return element.getContext("2d") != null;
+      } catch (caughtError) {
         return false;
       }
     }
-    __name(a, "a");
-    return a(false) && (zj() || a(true));
+    __name(helper, "helper");
+    return helper(false) && (isWorkerGlobalScope() || helper(true));
   }
-  __name(yj, "yj");
-  function zj() {
-    return "WorkerGlobalScope" in z && typeof z.WorkerGlobalScope === "function" && self instanceof z.WorkerGlobalScope;
+  __name(canCreateCanvas, "canCreateCanvas");
+  function isWorkerGlobalScope() {
+    return "WorkerGlobalScope" in runtimeGlobal && typeof runtimeGlobal.WorkerGlobalScope === "function" && self instanceof runtimeGlobal.WorkerGlobalScope;
   }
-  __name(zj, "zj");
-  function Bj(a) {
-    if (zj() || !z) return 1;
+  __name(isWorkerGlobalScope, "isWorkerGlobalScope");
+  function probeGlobalProperty(key) {
+    if (isWorkerGlobalScope() || !runtimeGlobal) return 1;
     try {
-      if (a in z || z.document && a in z.document) return 0;
-    } catch (b) {
+      if (key in runtimeGlobal || runtimeGlobal.document && key in runtimeGlobal.document) return 0;
+    } catch (caughtError) {
       return 2;
     }
     return 1;
   }
-  __name(Bj, "Bj");
-  function Dj(a, b, c) {
+  __name(probeGlobalProperty, "probeGlobalProperty");
+  function inspectNativeFunction(inspector, name, getFunction) {
     try {
-      var d = c();
-    } catch (f) {
-      return {
-        da: false,
-        reason: "not_reachable"
-      };
+      var function2 = getFunction();
+    } catch (caughtError) {
+      return { da: false, reason: "not_reachable" };
     }
-    c = Ej(d);
-    if (c !== "function") return {
-      da: false,
-      reason: "non_function_type",
-      type: c
-    };
+    getFunction = describeJsType(function2);
+    if (getFunction !== "function")
+      return { da: false, reason: "non_function_type", type: getFunction };
     try {
-      var e = a.j(d);
-    } catch (f) {
-      return {
-        da: false,
-        reason: "to_string_failed"
-      };
+      var intermediate = inspector.j(function2);
+    } catch (caughtError) {
+      return { da: false, reason: "to_string_failed" };
     }
-    a = Fj.exec(e);
-    return a ? (a = a[1]) ? a !== b ? {
-      da: false,
-      reason: "likely_wrong_native_function"
-    } : {
-      da: true
-    } : {
-      da: false,
-      reason: "likely_bound_function"
-    } : {
-      da: false,
-      reason: "likely_non_native_source"
-    };
+    inspector = nativeFunctionPatterns.exec(intermediate);
+    return inspector ? (inspector = inspector[1]) ? inspector !== name ? { da: false, reason: "likely_wrong_native_function" } : { da: true } : { da: false, reason: "likely_bound_function" } : { da: false, reason: "likely_non_native_source" };
   }
-  __name(Dj, "Dj");
-  function Ej(a) {
-    switch (typeof a) {
+  __name(inspectNativeFunction, "inspectNativeFunction");
+  function describeJsType(value) {
+    switch (typeof value) {
       case "function":
         return "function";
       case "undefined":
@@ -5311,7 +5568,7 @@
       case "string":
         return "string";
       case "object":
-        return a === null ? "null" : "object";
+        return value === null ? "null" : "object";
       case "symbol":
         return "symbol";
       case "bigint":
@@ -5320,882 +5577,878 @@
         return "unknown";
     }
   }
-  __name(Ej, "Ej");
-  var Aj = [{
-    key: "Cypress",
-    S: "cypress"
-  }, {
-    key: "$cdc_asdjflasutopfhvcZLmcfl_",
-    S: "selenium"
-  }, {
-    key: "$wdc_",
-    S: "chrome_driver"
-  }, {
-    key: "domAutomationController",
-    S: "chromium_automation"
-  }, {
-    key: "callPhantom",
-    S: "phantomjs"
-  }, {
-    key: "windmill",
-    S: "windmill"
-  }, {
-    key: "____LocationIntercept",
-    S: "awesomium"
-  }, {
-    key: "awesomium",
-    S: "awesomium"
-  }, {
-    key: "ubot",
-    S: "ubot"
-  }, {
-    key: "cefsharp_CreatePromise",
-    S: "cefsharp"
-  }, {
-    key: "__nightmare",
-    S: "nightmare"
-  }], Cj = [{
-    name: "getOwnPropertyDescriptor",
-    Ja: /* @__PURE__ */ __name(function() {
-      return Object.getOwnPropertyDescriptor;
-    }, "Ja"),
-    S: "Object.getOwnPropertyDescriptor"
-  }, {
-    name: "addEventListener",
-    Ja: /* @__PURE__ */ __name(function() {
-      return z.addEventListener;
-    }, "Ja"),
-    S: "global.addEventListener"
-  }], Fj = /^function\s*(?:\s([a-zA-Z_$][\w$]+))?\(\) \{\s+\[native code\]\s+\}$/;
-  var Gj = [], Hj = [], Ij = [RegExp("^_0x[a-f0-9]{6} is not defined$"), RegExp("[Zz]otero"), RegExp(
-    '^Not found$|^Unknown Error of type "string": Not found$'
-  )], Jj = "egfdjlfmgnehecnclamagfafdccgfndp mndnfokpggljbaajbnioimlmbfngpief mlkejohendkgipaomdopolhpbihbhfnf kgonammgkackdilhodbgbmodpepjocdp klbcgckkldhdhonijdbnhhaiedfkllef pmehocpgjmkenlokgjfkaichfjdhpeol cjlaeehoipngghikfjogbdkpbdgebppb ghbmnnjooekpmoecnnnilnnbdlolhkhi lmjegmlicamnimmfhcmpkclmigmmcbeh gmbmikajjgmnabiglmofipeabaddhgne lpcaedmchfhocbbapmcbpinfpgnhiddi gbkeegbaiigmenfmjfclcdgdpimamgkj adokjfanaflbkibffcbhihgihpgijcei iklnnbgdcppplombffihcijanngoeifm".split(" "), Kj = [RegExp("chrome-extension://([^/]+)", "g"), RegExp("moz-extension://([^/]+)", "g"), RegExp(
-    "ms-browser-extension://([^/]+)",
-    "g"
-  ), RegExp("webkit-masked-url://([^/]+)", "g"), RegExp(
-    "safari-web-extension://([^/]+)",
-    "g"
-  )], Lj = [RegExp("^Permission denied$"), RegExp("index out of range: \\d+ \\+ \\d+ > \\d+"), RegExp(
-    "getReadMode(Config|Render|Extract)"
-  )], Mj = [RegExp("at file:///|@file:///|phantomjs|node:electron|py-scrap|eval code|Program Files"), RegExp(
-    "_0x[a-f0-9]+.*anonymous"
-  )], Nj = [
+  __name(describeJsType, "describeJsType");
+  var automationPropertyProbes = [
+    { key: "Cypress", S: "cypress" },
+    { key: "$cdc_asdjflasutopfhvcZLmcfl_", S: "selenium" },
+    { key: "$wdc_", S: "chrome_driver" },
+    { key: "domAutomationController", S: "chromium_automation" },
+    { key: "callPhantom", S: "phantomjs" },
+    { key: "windmill", S: "windmill" },
+    { key: "____LocationIntercept", S: "awesomium" },
+    { key: "awesomium", S: "awesomium" },
+    { key: "ubot", S: "ubot" },
+    { key: "cefsharp_CreatePromise", S: "cefsharp" },
+    { key: "__nightmare", S: "nightmare" }
+  ], nativeFunctionProbes = [
+    {
+      name: "getOwnPropertyDescriptor",
+      Ja: /* @__PURE__ */ __name(function() {
+        return Object.getOwnPropertyDescriptor;
+      }, "Ja"),
+      S: "Object.getOwnPropertyDescriptor"
+    },
+    {
+      name: "addEventListener",
+      Ja: /* @__PURE__ */ __name(function() {
+        return runtimeGlobal.addEventListener;
+      }, "Ja"),
+      S: "global.addEventListener"
+    }
+  ], nativeFunctionPatterns = /^function\s*(?:\s([a-zA-Z_$][\w$]+))?\(\) \{\s+\[native code\]\s+\}$/;
+  var injectedUrlPatterns = [], injectedErrorPatterns = [], ignoredErrorPatterns = [
+    RegExp("^_0x[a-f0-9]{6} is not defined$"),
+    RegExp("[Zz]otero"),
+    RegExp('^Not found$|^Unknown Error of type "string": Not found$')
+  ], knownExtensionIds = "egfdjlfmgnehecnclamagfafdccgfndp mndnfokpggljbaajbnioimlmbfngpief mlkejohendkgipaomdopolhpbihbhfnf kgonammgkackdilhodbgbmodpepjocdp klbcgckkldhdhonijdbnhhaiedfkllef pmehocpgjmkenlokgjfkaichfjdhpeol cjlaeehoipngghikfjogbdkpbdgebppb ghbmnnjooekpmoecnnnilnnbdlolhkhi lmjegmlicamnimmfhcmpkclmigmmcbeh gmbmikajjgmnabiglmofipeabaddhgne lpcaedmchfhocbbapmcbpinfpgnhiddi gbkeegbaiigmenfmjfclcdgdpimamgkj adokjfanaflbkibffcbhihgihpgijcei iklnnbgdcppplombffihcijanngoeifm".split(
+    " "
+  ), knownExtensionHosts = [
+    RegExp("chrome-extension://([^/]+)", "g"),
+    RegExp("moz-extension://([^/]+)", "g"),
+    RegExp("ms-browser-extension://([^/]+)", "g"),
+    RegExp("webkit-masked-url://([^/]+)", "g"),
+    RegExp("safari-web-extension://([^/]+)", "g")
+  ], knownInjectedNames = [
+    RegExp("^Permission denied$"),
+    RegExp("index out of range: \\d+ \\+ \\d+ > \\d+"),
+    RegExp("getReadMode(Config|Render|Extract)")
+  ], knownInjectedScripts = [
+    RegExp("at file:///|@file:///|phantomjs|node:electron|py-scrap|eval code|Program Files"),
+    RegExp("_0x[a-f0-9]+.*anonymous")
+  ], knownInjectedUrls = [
     RegExp("Script https://meet\\.google\\.com/.*meetsw.*load failed"),
     RegExp("A bad HTTP response code \\(\\d+\\) was received when fetching the script")
-  ], Oj = [RegExp("Error loading.*Consecutive load failures"), RegExp(
-    "Failed to load module.*Consecutive load failures"
-  )];
-  function Pj(a, b) {
-    this.ta = a;
-    this.la = b;
+  ], knownInjectedErrorTokens = [
+    RegExp("Error loading.*Consecutive load failures"),
+    RegExp("Failed to load module.*Consecutive load failures")
+  ];
+  function ErrorClassifier(classification, code) {
+    this.ta = classification;
+    this.la = code;
   }
-  __name(Pj, "Pj");
-  function Qj(a, b) {
-    return (b = a.j(b)) ? {
-      ta: a.ta,
-      la: a.la,
-      Ba: b.toUpperCase()
-    } : null;
+  __name(ErrorClassifier, "ErrorClassifier");
+  function classifyError(classifier, error) {
+    return (error = classifier.j(error)) ? { ta: classifier.ta, la: classifier.la, Ba: error.toUpperCase() } : null;
   }
-  __name(Qj, "Qj");
-  ;
-  function Rj() {
-    Pj.call(this, 1, 1);
+  __name(classifyError, "classifyError");
+  function StackErrorClassifier() {
+    ErrorClassifier.call(this, 1, 1);
   }
-  __name(Rj, "Rj");
-  v(Rj, Pj);
-  Rj.prototype.j = function(a) {
+  __name(StackErrorClassifier, "StackErrorClassifier");
+  inheritCompiledClass(StackErrorClassifier, ErrorClassifier);
+  StackErrorClassifier.prototype.j = function(value) {
     a: {
-      a = Sj(a);
-      var b = false, c = w(Kj), d = c.next(), e;
+      value = formatErrorRecord(value);
+      var intermediate = false, iterator = getIterator(knownExtensionHosts), iteration = iterator.next(), intermediate2;
       try {
-        for (; !d.done; d = c.next()) {
-          var f = a.matchAll(d.value), g = w(f), h = g.next(), k;
+        for (; !iteration.done; iteration = iterator.next()) {
+          var intermediate3 = value.matchAll(iteration.value), iterator2 = getIterator(intermediate3), iteration2 = iterator2.next(), intermediate4;
           try {
-            for (; !h.done; h = g.next()) {
-              var l = h.value[1];
-              if (l) {
-                if (Jj.includes(l)) {
-                  var m = false;
+            for (; !iteration2.done; iteration2 = iterator2.next()) {
+              var intermediate5 = iteration2.value[1];
+              if (intermediate5) {
+                if (knownExtensionIds.includes(intermediate5)) {
+                  var intermediate6 = false;
                   break a;
                 }
-                b = true;
+                intermediate = true;
               }
             }
           } finally {
-            h && !h.done && (k = g.return) && k.call(g);
+            iteration2 && !iteration2.done && (intermediate4 = iterator2.return) && intermediate4.call(iterator2);
           }
         }
       } finally {
-        d && !d.done && (e = c.return) && e.call(c);
+        iteration && !iteration.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
       }
-      m = b;
+      intermediate6 = intermediate;
     }
-    return m ? "warning" : null;
+    return intermediate6 ? "warning" : null;
   };
-  function Tj(a, b, c) {
-    c = c === void 0 ? Uj : c;
-    Pj.call(this, a, b);
-    this.l = c;
+  function KnownErrorClassifier(classification, code, rules) {
+    rules = rules === void 0 ? knownErrorRules : rules;
+    ErrorClassifier.call(this, classification, code);
+    this.l = rules;
   }
-  __name(Tj, "Tj");
-  v(Tj, Pj);
-  Tj.prototype.j = function(a) {
-    var b = typeof a.l.get("apps_telemetry.cross_origin_scripts") === "string" ? a.l.get(
-      "apps_telemetry.cross_origin_scripts"
-    ) : "", c = a.l.get("apps_telemetry.native_function_tampering_detected") === "true", d = Sj(a), e = d.includes("blob:"), f = w(this.l), g = f.next(), h;
+  __name(KnownErrorClassifier, "KnownErrorClassifier");
+  inheritCompiledClass(KnownErrorClassifier, ErrorClassifier);
+  KnownErrorClassifier.prototype.j = function(value) {
+    var intermediate = typeof value.l.get("apps_telemetry.cross_origin_scripts") === "string" ? value.l.get("apps_telemetry.cross_origin_scripts") : "", intermediate2 = value.l.get("apps_telemetry.native_function_tampering_detected") === "true", intermediate3 = formatErrorRecord(value), intermediate4 = intermediate3.includes("blob:"), iterator = getIterator(this.l), iteration = iterator.next(), intermediate5;
     try {
-      for (; !g.done; g = f.next()) {
-        var k = g.value, l = k.errorMessage, m = k.Ca, q = m === void 0 ? [] : m, t = k.Z, x = t === void 0 ? [] : t, u = k.pa, N = u === void 0 ? false : u, E = k.Ha, ma = k.rb, U = ma === void 0 ? false : ma;
-        if ((E === void 0 ? 0 : E) ? a.message === l : d.includes(l)) {
-          var Ma = q.some(function(Jf) {
-            return b.includes(Jf);
-          }), Wi = x.some(function(Jf) {
-            return a.j.includes(Jf);
+      for (; !iteration.done; iteration = iterator.next()) {
+        var value2 = iteration.value, errorMessage = value2.errorMessage, intermediate6 = value2.Ca, intermediate7 = intermediate6 === void 0 ? [] : intermediate6, intermediate8 = value2.Z, intermediate9 = intermediate8 === void 0 ? [] : intermediate8, intermediate10 = value2.pa, intermediate11 = intermediate10 === void 0 ? false : intermediate10, intermediate12 = value2.Ha, intermediate13 = value2.rb, intermediate14 = intermediate13 === void 0 ? false : intermediate13;
+        if ((intermediate12 === void 0 ? 0 : intermediate12) ? value.message === errorMessage : intermediate3.includes(errorMessage)) {
+          var intermediate15 = intermediate7.some(function(value3) {
+            return intermediate.includes(value3);
+          }), intermediate16 = intermediate9.some(function(value3) {
+            return value.j.includes(value3);
           });
-          q = N && e;
-          U = U && c;
-          if (Ma || Wi || q || U) return "warning";
+          intermediate7 = intermediate11 && intermediate4;
+          intermediate14 = intermediate14 && intermediate2;
+          if (intermediate15 || intermediate16 || intermediate7 || intermediate14) return "warning";
         }
       }
     } finally {
-      g && !g.done && (h = f.return) && h.call(f);
+      iteration && !iteration.done && (intermediate5 = iterator.return) && intermediate5.call(iterator);
     }
     return null;
   };
-  var Uj = [{
-    errorMessage: "Cannot read properties of undefined (reading 'addListener')",
-    pa: true,
-    Ca: ["infird.com"]
-  }, {
-    errorMessage: "browser_polyfill_default(...).runtime.getManifest is not a function",
-    pa: true,
-    Ca: ["infird.com"]
-  }, {
-    errorMessage: 'fileName":',
-    Ca: ["walkme.com"]
-  }, {
-    errorMessage: "] is not a function",
-    pa: true
-  }, {
-    errorMessage: "(reading 'toLowerCase')",
-    pa: true,
-    Z: ["__aiNetCmd__"]
-  }, {
-    errorMessage: "Cannot read properties of undefined",
-    Z: ["recaptcha"]
-  }, {
-    errorMessage: "a is not defined",
-    Ha: true,
-    Z: ["<anonymous>"]
-  }, {
-    errorMessage: "i is not defined",
-    Ha: true,
-    Z: ["<anonymous>"]
-  }, {
-    errorMessage: "Failed to fetch",
-    Z: ["__DLD__", "frontend.min.js"]
-  }, {
-    errorMessage: "Maximum call stack size exceeded",
-    rb: true
-  }, {
-    errorMessage: "Unexpected end of JSON input",
-    Z: ["facebook.net"]
-  }];
-  function Vj(a, b, c, d, e) {
-    e = e === void 0 ? /* @__PURE__ */ new Map() : e;
-    this.message = a;
-    this.j = b;
-    this.cause = c;
-    this.o = d;
-    this.l = e;
+  var knownErrorRules = [
+    {
+      errorMessage: "Cannot read properties of undefined (reading 'addListener')",
+      pa: true,
+      Ca: ["infird.com"]
+    },
+    {
+      errorMessage: "browser_polyfill_default(...).runtime.getManifest is not a function",
+      pa: true,
+      Ca: ["infird.com"]
+    },
+    { errorMessage: 'fileName":', Ca: ["walkme.com"] },
+    { errorMessage: "] is not a function", pa: true },
+    { errorMessage: "(reading 'toLowerCase')", pa: true, Z: ["__aiNetCmd__"] },
+    { errorMessage: "Cannot read properties of undefined", Z: ["recaptcha"] },
+    { errorMessage: "a is not defined", Ha: true, Z: ["<anonymous>"] },
+    { errorMessage: "i is not defined", Ha: true, Z: ["<anonymous>"] },
+    { errorMessage: "Failed to fetch", Z: ["__DLD__", "frontend.min.js"] },
+    { errorMessage: "Maximum call stack size exceeded", rb: true },
+    { errorMessage: "Unexpected end of JSON input", Z: ["facebook.net"] }
+  ];
+  function ErrorRecord(message, stack, cause, severity, metadata) {
+    metadata = metadata === void 0 ? /* @__PURE__ */ new Map() : metadata;
+    this.message = message;
+    this.j = stack;
+    this.cause = cause;
+    this.o = severity;
+    this.l = metadata;
   }
-  __name(Vj, "Vj");
-  function Wj(a) {
-    return (a = a.cause) ? a.message + "\n" + a.j + "\n" + Wj(a) : "";
+  __name(ErrorRecord, "ErrorRecord");
+  function formatCauseChain(error) {
+    return (error = error.cause) ? error.message + "\n" + error.j + "\n" + formatCauseChain(error) : "";
   }
-  __name(Wj, "Wj");
-  function Sj(a) {
-    return a.message + "\n" + a.j + "\n" + Wj(a);
+  __name(formatCauseChain, "formatCauseChain");
+  function formatErrorRecord(error) {
+    return error.message + "\n" + error.j + "\n" + formatCauseChain(error);
   }
-  __name(Sj, "Sj");
-  function Xj() {
+  __name(formatErrorRecord, "formatErrorRecord");
+  function ErrorRecordBuilder() {
     this.o = this.j = this.message = "";
     this.l = /* @__PURE__ */ new Map();
   }
-  __name(Xj, "Xj");
-  function Yj(a, b) {
-    a.message = b;
-    return a;
+  __name(ErrorRecordBuilder, "ErrorRecordBuilder");
+  function setErrorRecordMessage(builder, message) {
+    builder.message = message;
+    return builder;
   }
-  __name(Yj, "Yj");
-  function Zj(a) {
-    return new Vj(a.message, a.j, a.cause, a.o, a.l);
+  __name(setErrorRecordMessage, "setErrorRecordMessage");
+  function buildErrorRecord(builder) {
+    return new ErrorRecord(builder.message, builder.j, builder.cause, builder.o, builder.l);
   }
-  __name(Zj, "Zj");
-  ;
-  function ak(a) {
-    return a instanceof Error || a && a.message !== void 0 ? a.message : bk(a);
+  __name(buildErrorRecord, "buildErrorRecord");
+  function readErrorMessage(error) {
+    return error instanceof Error || error && error.message !== void 0 ? error.message : stringifyError(error);
   }
-  __name(ak, "ak");
-  function ck(a) {
-    return a instanceof Error || a && a.stack !== void 0 ? a.stack || "" : "";
+  __name(readErrorMessage, "readErrorMessage");
+  function readErrorStack(error) {
+    return error instanceof Error || error && error.stack !== void 0 ? error.stack || "" : "";
   }
-  __name(ck, "ck");
-  function dk(a, b) {
-    var c = a && a.cause !== void 0;
-    if (b >= 3 || !c) return null;
-    c = new Xj();
-    a = a.cause;
-    if (ek(a)) {
-      if (Yj(c, ak(a)), c.j = ck(a), b = dk(a, b + 1)) c.cause = b;
-    } else Yj(c, bk(a));
-    return Zj(c);
+  __name(readErrorStack, "readErrorStack");
+  function buildErrorCause(error, depth) {
+    var intermediate = error && error.cause !== void 0;
+    if (depth >= 3 || !intermediate) return null;
+    intermediate = new ErrorRecordBuilder();
+    error = error.cause;
+    if (isErrorLike(error)) {
+      if (setErrorRecordMessage(intermediate, readErrorMessage(error)), intermediate.j = readErrorStack(error), depth = buildErrorCause(error, depth + 1))
+        intermediate.cause = depth;
+    } else setErrorRecordMessage(intermediate, stringifyError(error));
+    return buildErrorRecord(intermediate);
   }
-  __name(dk, "dk");
-  function ek(a) {
-    return a instanceof Error || !!a && a.message !== void 0 && a.stack !== void 0;
+  __name(buildErrorCause, "buildErrorCause");
+  function isErrorLike(value) {
+    return value instanceof Error || !!value && value.message !== void 0 && value.stack !== void 0;
   }
-  __name(ek, "ek");
-  function bk(a) {
+  __name(isErrorLike, "isErrorLike");
+  function stringifyError(value) {
     try {
-      return ek(a) ? a.message + "\n" + a.stack : a && a instanceof Object ? JSON.stringify(a) : String(a);
-    } catch (b) {
-      return String(a);
+      return isErrorLike(value) ? value.message + "\n" + value.stack : value && value instanceof Object ? JSON.stringify(value) : String(value);
+    } catch (caughtError) {
+      return String(value);
     }
   }
-  __name(bk, "bk");
-  function fk(a, b, c) {
-    c = c === void 0 ? /* @__PURE__ */ new Map() : c;
-    var d = Yj(new Xj(), ak(a));
-    d.j = ck(a);
-    d.l = c;
-    if (a = dk(a, 0)) d.cause = a;
-    b && (d.o = b);
-    return Zj(d);
+  __name(stringifyError, "stringifyError");
+  function createErrorRecord(error, severity, metadata) {
+    metadata = metadata === void 0 ? /* @__PURE__ */ new Map() : metadata;
+    var intermediate = setErrorRecordMessage(new ErrorRecordBuilder(), readErrorMessage(error));
+    intermediate.j = readErrorStack(error);
+    intermediate.l = metadata;
+    if (error = buildErrorCause(error, 0)) intermediate.cause = error;
+    severity && (intermediate.o = severity);
+    return buildErrorRecord(intermediate);
   }
-  __name(fk, "fk");
-  ;
-  function gk(a, b, c, d) {
-    Pj.call(this, c, d);
-    this.l = a;
-    this.o = b;
+  __name(createErrorRecord, "createErrorRecord");
+  function RegexErrorClassifier(patterns, label, classification, code) {
+    ErrorClassifier.call(this, classification, code);
+    this.l = patterns;
+    this.o = label;
   }
-  __name(gk, "gk");
-  v(gk, Pj);
-  gk.prototype.j = function(a) {
-    var b = Wj(a);
-    return hk(a.message, this.l) || hk(a.j, this.o) || hk(b, this.l) || hk(b, this.o) ? "warning" : null;
+  __name(RegexErrorClassifier, "RegexErrorClassifier");
+  inheritCompiledClass(RegexErrorClassifier, ErrorClassifier);
+  RegexErrorClassifier.prototype.j = function(value) {
+    var intermediate = formatCauseChain(value);
+    return matchesAnyPattern(value.message, this.l) || matchesAnyPattern(value.j, this.o) || matchesAnyPattern(intermediate, this.l) || matchesAnyPattern(intermediate, this.o) ? "warning" : null;
   };
-  function hk(a, b) {
-    b = w(b);
-    var c = b.next(), d;
+  function matchesAnyPattern(text, patterns) {
+    patterns = getIterator(patterns);
+    var iteration = patterns.next(), intermediate;
     try {
-      for (; !c.done; c = b.next())
-        if (c.value.test(a)) return true;
+      for (; !iteration.done; iteration = patterns.next())
+        if (iteration.value.test(text)) return true;
     } finally {
-      c && !c.done && (d = b.return) && d.call(b);
+      iteration && !iteration.done && (intermediate = patterns.return) && intermediate.call(patterns);
     }
     return false;
   }
-  __name(hk, "hk");
-  ;
-  function ik(a, b, c, d, e) {
-    Pj.call(this, c, d);
-    this.l = a;
-    this.Z = b;
-    this.matchType = e;
+  __name(matchesAnyPattern, "matchesAnyPattern");
+  function TokenErrorClassifier(tokens, label, classification, code, matchType) {
+    ErrorClassifier.call(this, classification, code);
+    this.l = tokens;
+    this.Z = label;
+    this.matchType = matchType;
   }
-  __name(ik, "ik");
-  v(ik, Pj);
-  ik.prototype.j = function(a) {
+  __name(TokenErrorClassifier, "TokenErrorClassifier");
+  inheritCompiledClass(TokenErrorClassifier, ErrorClassifier);
+  TokenErrorClassifier.prototype.j = function(value) {
     switch (this.matchType) {
       case 0:
         a: {
-          var b = a.message, c = w(this.l);
-          a = c.next();
-          var d;
+          var message = value.message, iterator = getIterator(this.l);
+          value = iterator.next();
+          var iterator2;
           try {
-            for (; !a.done; a = c.next())
-              if (b === a.value) {
-                var e = true;
+            for (; !value.done; value = iterator.next())
+              if (message === value.value) {
+                var intermediate = true;
                 break a;
               }
           } finally {
-            a && !a.done && (d = c.return) && d.call(c);
+            value && !value.done && (iterator2 = iterator.return) && iterator2.call(iterator);
           }
-          e = false;
+          intermediate = false;
         }
-        return e ? "warning" : null;
+        return intermediate ? "warning" : null;
       case 1:
         a: {
-          e = a.message;
-          d = w(this.l);
-          a = d.next();
+          intermediate = value.message;
+          iterator2 = getIterator(this.l);
+          value = iterator2.next();
           try {
-            for (; !a.done; a = d.next())
-              if (e.startsWith(a.value)) {
-                b = true;
+            for (; !value.done; value = iterator2.next())
+              if (intermediate.startsWith(value.value)) {
+                message = true;
                 break a;
               }
           } finally {
-            a && !a.done && (c = d.return) && c.call(d);
+            value && !value.done && (iterator = iterator2.return) && iterator.call(iterator2);
           }
-          b = false;
+          message = false;
         }
-        return b ? "warning" : null;
+        return message ? "warning" : null;
       case 2:
-        return e = Sj(a), jk(e, this.l) || jk(e, this.Z) ? "warning" : null;
+        return intermediate = formatErrorRecord(value), includesAnyToken(intermediate, this.l) || includesAnyToken(intermediate, this.Z) ? "warning" : null;
       default:
         return null;
     }
   };
-  function jk(a, b) {
-    b = w(b);
-    var c = b.next(), d;
+  function includesAnyToken(text, tokens) {
+    tokens = getIterator(tokens);
+    var iteration = tokens.next(), intermediate;
     try {
-      for (; !c.done; c = b.next())
-        if (a.includes(c.value)) return true;
+      for (; !iteration.done; iteration = tokens.next())
+        if (text.includes(iteration.value)) return true;
     } finally {
-      c && !c.done && (d = b.return) && d.call(b);
+      iteration && !iteration.done && (intermediate = tokens.return) && intermediate.call(tokens);
     }
     return false;
   }
-  __name(jk, "jk");
-  function kk(a, b, c) {
-    return new ik(a, b, c, 0, 2);
+  __name(includesAnyToken, "includesAnyToken");
+  function createTokenClassifier(tokens, label, classification) {
+    return new TokenErrorClassifier(tokens, label, classification, 0, 2);
   }
-  __name(kk, "kk");
-  ;
-  function lk(a, b, c) {
-    Pj.call(this, a, b);
-    this.l = c();
+  __name(createTokenClassifier, "createTokenClassifier");
+  function EnvironmentErrorClassifier(classification, code, createInspector) {
+    ErrorClassifier.call(this, classification, code);
+    this.l = createInspector();
   }
-  __name(lk, "lk");
-  v(lk, Pj);
-  lk.prototype.j = function() {
+  __name(EnvironmentErrorClassifier, "EnvironmentErrorClassifier");
+  inheritCompiledClass(EnvironmentErrorClassifier, ErrorClassifier);
+  EnvironmentErrorClassifier.prototype.j = function() {
     return this.l ? null : "unsupported_severe";
   };
-  var mk = [
-    new Rj(),
-    kk(
-      `Trusted Type;TrustedHTML;TrustedScript;cannot communicate with background;zaloJSV2;kaspersky-labs;@user-script;Object Not Found Matching Id;contextChanged;Not implemented on this platform;Extension context invalidated;neurosurgeonundergo;realTimeClData;Failed to execute 'querySelectorAll' on 'Document';Promise.all(...).then(...).catch(...).finally is not a function;Error executing Chrome API, chrome.tabs;Identifier 'originalPrompt' has already been declared;User rejected the request;Could not inject ethereum provider because it's not your default extension;Cannot redefine property: googletag;Can't find variable: HTMLDialogElement;Identifier 'listenerName' has already been declared;Cannot read properties of undefined (reading 'info');Permission denied to access property "type";Error: Promise timed out;Request timeout ToolbarStatus;Can't find variable: nc;imtgo;ton is not a function;__renderMessageNode is not defined;Cannot redefine property: ethereum;unknown action:;Receiving end does not exist;get-frame-manager-configuration;Key not found;'isAWS';Identifier 'contentScriptListenerRegistered' has already been declared;window.ethereum.selectedAddress;extDomain is not defined;No Listener: tabs:outgoing.message.ready;This script should only be loaded in a browser extension;Identifier 'initCoreHelpers' has already been declared;undefined is not an object (evaluating 't.tab.customFillData');No tab with id:;The browser is shutting down.;User mapping loading timeout;Internal JSON-RPC error;TOKEN_EXPIRED;A listener indicated an asynchronous response by returning true;You must authenticate your request with an API key`.split(";"),
-      "puppeteer;kaspersky-labs;@user-script;jsQuilting;linkbolic;neurosurgeonundergo;tlscdn;https://cdnjs.cloudflare.com/ajax/libs/mathjax/;secured-pixel.com;Can't find variable: nc;imtgo;_simulateEvent;goguardian".split(";"),
+  var defaultErrorClassifiers = [
+    new StackErrorClassifier(),
+    createTokenClassifier(
+      `Trusted Type;TrustedHTML;TrustedScript;cannot communicate with background;zaloJSV2;kaspersky-labs;@user-script;Object Not Found Matching Id;contextChanged;Not implemented on this platform;Extension context invalidated;neurosurgeonundergo;realTimeClData;Failed to execute 'querySelectorAll' on 'Document';Promise.all(...).then(...).catch(...).finally is not a function;Error executing Chrome API, chrome.tabs;Identifier 'originalPrompt' has already been declared;User rejected the request;Could not inject ethereum provider because it's not your default extension;Cannot redefine property: googletag;Can't find variable: HTMLDialogElement;Identifier 'listenerName' has already been declared;Cannot read properties of undefined (reading 'info');Permission denied to access property "type";Error: Promise timed out;Request timeout ToolbarStatus;Can't find variable: nc;imtgo;ton is not a function;__renderMessageNode is not defined;Cannot redefine property: ethereum;unknown action:;Receiving end does not exist;get-frame-manager-configuration;Key not found;'isAWS';Identifier 'contentScriptListenerRegistered' has already been declared;window.ethereum.selectedAddress;extDomain is not defined;No Listener: tabs:outgoing.message.ready;This script should only be loaded in a browser extension;Identifier 'initCoreHelpers' has already been declared;undefined is not an object (evaluating 't.tab.customFillData');No tab with id:;The browser is shutting down.;User mapping loading timeout;Internal JSON-RPC error;TOKEN_EXPIRED;A listener indicated an asynchronous response by returning true;You must authenticate your request with an API key`.split(
+        ";"
+      ),
+      "puppeteer;kaspersky-labs;@user-script;jsQuilting;linkbolic;neurosurgeonundergo;tlscdn;https://cdnjs.cloudflare.com/ajax/libs/mathjax/;secured-pixel.com;Can't find variable: nc;imtgo;_simulateEvent;goguardian".split(
+        ";"
+      ),
       1
     ),
-    new gk(Ij, Hj, 1, 0),
-    kk(
-      `status is 0, navigator.onLine =;Network sync is disabled. Aborting a network request of int type;The service is currently unavailable.;Internal error encountered.;data does not exist in AF cache;There was an error during the transport or processing of this request;Failed to load gapi;Rpc failed due to xhr error. error code: 6, error:  [0];An interceptor has requested that the request be retried;8,"generic";A network error occurred;NetworkError: Connection failure due to HTTP 401;NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope';NetworkError: Load failed`.split(";"),
-      Gj,
+    new RegexErrorClassifier(ignoredErrorPatterns, injectedErrorPatterns, 1, 0),
+    createTokenClassifier(
+      `status is 0, navigator.onLine =;Network sync is disabled. Aborting a network request of int type;The service is currently unavailable.;Internal error encountered.;data does not exist in AF cache;There was an error during the transport or processing of this request;Failed to load gapi;Rpc failed due to xhr error. error code: 6, error:  [0];An interceptor has requested that the request be retried;8,"generic";A network error occurred;NetworkError: Connection failure due to HTTP 401;NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope';NetworkError: Load failed`.split(
+        ";"
+      ),
+      injectedUrlPatterns,
       2
     ),
-    new gk([], Hj, 2, 0),
-    new gk(Lj, Mj, 3, 0),
-    kk(
-      "Kg is not defined;uncaught error;The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.;Illegal invocation;Script error;zCommon;can't access dead object;Java exception was raised during method invocation;pauseVideo is not a function;ResizeObserver loop;wallet must has at least one account;xbrowser is not defined;jQuery is not defined;Cannot read properties of null (reading 'requestAnimationFrame');Class extends value undefined is not a constructor or null;GM3TooltipService: No tooltip with id;Mole was disposed;getInitialTopicListResponse is missing for stream rendering;getPeopleById call preempted;The operation is insecure;class heritage;The play() request was interrupted;args.site.enabledFeatures is undefined;frappe is not defined;Cannot set properties of undefined (setting 'hidden');Identifier 'checkOngoingMeeting' has already been declared;AutofillCallbackHandler;invalid wire type;zp_token;isReCreate;HTMLOUT is not defined;Shopify root is null;CanvasMaskingStrategy_Redact;_chromeNamespace;feature named `performanceMetrics`;feature named `webCompat`;Cannot redefine property: webdriver;reCAPTCHA Timeout;feature named `pageObserver` was not found;feature named `hover` was not found;Request timeout appSettingsDistributor.getValue;TimeoutError: operation timed out;Sink type mismatch violation blocked by CSP;__firefox__;: Java object is gone;Cannot read properties of undefined (reading 'domInteractive');: t is not defined;sendMessage(). Tab not found.;Can't find variable: __gCrWeb;WKWebView API client did not respond to this postMessage;The provider is disconnected from all chains;The user aborted a request.;Task was cancelled.;lettersVoicesDistributor".split(";"),
+    new RegexErrorClassifier([], injectedErrorPatterns, 2, 0),
+    new RegexErrorClassifier(knownInjectedNames, knownInjectedScripts, 3, 0),
+    createTokenClassifier(
+      "Kg is not defined;uncaught error;The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.;Illegal invocation;Script error;zCommon;can't access dead object;Java exception was raised during method invocation;pauseVideo is not a function;ResizeObserver loop;wallet must has at least one account;xbrowser is not defined;jQuery is not defined;Cannot read properties of null (reading 'requestAnimationFrame');Class extends value undefined is not a constructor or null;GM3TooltipService: No tooltip with id;Mole was disposed;getInitialTopicListResponse is missing for stream rendering;getPeopleById call preempted;The operation is insecure;class heritage;The play() request was interrupted;args.site.enabledFeatures is undefined;frappe is not defined;Cannot set properties of undefined (setting 'hidden');Identifier 'checkOngoingMeeting' has already been declared;AutofillCallbackHandler;invalid wire type;zp_token;isReCreate;HTMLOUT is not defined;Shopify root is null;CanvasMaskingStrategy_Redact;_chromeNamespace;feature named `performanceMetrics`;feature named `webCompat`;Cannot redefine property: webdriver;reCAPTCHA Timeout;feature named `pageObserver` was not found;feature named `hover` was not found;Request timeout appSettingsDistributor.getValue;TimeoutError: operation timed out;Sink type mismatch violation blocked by CSP;__firefox__;: Java object is gone;Cannot read properties of undefined (reading 'domInteractive');: t is not defined;sendMessage(). Tab not found.;Can't find variable: __gCrWeb;WKWebView API client did not respond to this postMessage;The provider is disconnected from all chains;The user aborted a request.;Task was cancelled.;lettersVoicesDistributor".split(
+        ";"
+      ),
       ["postUserData", "inline.cdn.mcas.ms", "evaluating 'n.standardSelectors'"],
       3
     ),
-    new gk(Nj, Hj, 5, 0),
-    kk(
-      "Service worker registration is disabled by MDA;An unknown error occurred when fetching the script;Operation has been aborted;Timed out while trying to start the Service Worker;The Service Worker system has shutdown;The user denied permission to use Service Worker;The script resource is behind a redirect, which is disallowed;The document is in an invalid state;ServiceWorker script evaluation failed;ServiceWorker cannot be started;Failed to access storage;Worker disallowed;encountered an error during installation".split(";"),
-      Gj,
+    new RegexErrorClassifier(knownInjectedUrls, injectedErrorPatterns, 5, 0),
+    createTokenClassifier(
+      "Service worker registration is disabled by MDA;An unknown error occurred when fetching the script;Operation has been aborted;Timed out while trying to start the Service Worker;The Service Worker system has shutdown;The user denied permission to use Service Worker;The script resource is behind a redirect, which is disallowed;The document is in an invalid state;ServiceWorker script evaluation failed;ServiceWorker cannot be started;Failed to access storage;Worker disallowed;encountered an error during installation".split(
+        ";"
+      ),
+      injectedUrlPatterns,
       5
     ),
-    new gk(Oj, Oj, 4, 0),
-    kk([
-      "Timeout reached for loading script https://www.gstatic.com/_/apps-fileview/_/js/",
-      "Error while loading script https://www.gstatic.com/_/apps-fileview/_/js/"
-    ], Gj, 4)
-  ], nk = /* @__PURE__ */ new Set(["SEVERE", "SEVERE_AFTER_INITIAL", "UNKNOWN", "FATAL", ""]);
-  function ok(a) {
-    this.l = a;
+    new RegexErrorClassifier(knownInjectedErrorTokens, knownInjectedErrorTokens, 4, 0),
+    createTokenClassifier(
+      [
+        "Timeout reached for loading script https://www.gstatic.com/_/apps-fileview/_/js/",
+        "Error while loading script https://www.gstatic.com/_/apps-fileview/_/js/"
+      ],
+      injectedUrlPatterns,
+      4
+    )
+  ], severeDowngradeCodes = /* @__PURE__ */ new Set(["SEVERE", "SEVERE_AFTER_INITIAL", "UNKNOWN", "FATAL", ""]);
+  function ErrorClassificationPipeline(classifiers) {
+    this.l = classifiers;
     this.j = false;
   }
-  __name(ok, "ok");
-  function pk(a, b, c, d) {
-    var e = [Error("uncaught error").message];
-    c = c === void 0 ? false : c;
-    d = d === void 0 ? ca(true) : d;
-    var f = [];
-    b.length > 0 && f.push(qk(b));
-    f.push.apply(f, pa(mk));
-    a = w(a);
-    b = a.next();
-    var g;
+  __name(ErrorClassificationPipeline, "ErrorClassificationPipeline");
+  function createClassificationPipeline(extraClassifiers, patterns, downgradeEnabled, shouldClassify) {
+    var values = [Error("uncaught error").message];
+    downgradeEnabled = downgradeEnabled === void 0 ? false : downgradeEnabled;
+    shouldClassify = shouldClassify === void 0 ? createConstantFunction(true) : shouldClassify;
+    var values2 = [];
+    patterns.length > 0 && values2.push(compileErrorPatterns(patterns));
+    values2.push.apply(values2, iterableToArray(defaultErrorClassifiers));
+    extraClassifiers = getIterator(extraClassifiers);
+    patterns = extraClassifiers.next();
+    var intermediate;
     try {
-      for (; !b.done; b = a.next()) f.push(b.value);
+      for (; !patterns.done; patterns = extraClassifiers.next()) values2.push(patterns.value);
     } finally {
-      b && !b.done && (g = a.return) && g.call(a);
+      patterns && !patterns.done && (intermediate = extraClassifiers.return) && intermediate.call(extraClassifiers);
     }
-    e.length > 0 && f.push(new ik(e, [], 3, 5, 0));
-    f.push(new Tj(3, 0));
-    c && f.push(new lk(8, 0, d));
-    return new ok(f);
+    values.length > 0 && values2.push(new TokenErrorClassifier(values, [], 3, 5, 0));
+    values2.push(new KnownErrorClassifier(3, 0));
+    downgradeEnabled && values2.push(new EnvironmentErrorClassifier(8, 0, shouldClassify));
+    return new ErrorClassificationPipeline(values2);
   }
-  __name(pk, "pk");
-  function rk(a, b) {
-    var c = "missing", d = /* @__PURE__ */ new Map(), e = true;
+  __name(createClassificationPipeline, "createClassificationPipeline");
+  function runErrorClassification(pipeline, error) {
+    var intermediate = "missing", map = /* @__PURE__ */ new Map(), intermediate2 = true;
     try {
-      c = b.o;
-      a.j && d.set("apps_telemetry.after_downgraded_severe", "true");
-      var f = w(a.l), g = f.next(), h;
+      intermediate = error.o;
+      pipeline.j && map.set("apps_telemetry.after_downgraded_severe", "true");
+      var iterator = getIterator(pipeline.l), iteration = iterator.next(), intermediate3;
       try {
-        for (; !g.done; g = f.next()) {
-          var k = g.value;
+        for (; !iteration.done; iteration = iterator.next()) {
+          var value = iteration.value;
           try {
-            var l = Qj(k, b);
-            if (l) {
-              var m = c, q = sk(a, c) ? l.Ba : c;
-              tk(l, m, q).forEach(function(x, u) {
-                d.set(u, x);
-              });
-              c = q;
+            var intermediate4 = classifyError(value, error);
+            if (intermediate4) {
+              var intermediate5 = intermediate, intermediate6 = markSevereDowngrade(pipeline, intermediate) ? intermediate4.Ba : intermediate;
+              createClassificationMetadata(intermediate4, intermediate5, intermediate6).forEach(
+                function(value2, other) {
+                  map.set(other, value2);
+                }
+              );
+              intermediate = intermediate6;
               break;
             }
-          } catch (x) {
-            e = false;
-            var t = fk(x, c);
-            d.set("apps_telemetry.handling_error", Sj(t) + "\n\nclassifier: " + k.constructor.name);
+          } catch (caughtError) {
+            intermediate2 = false;
+            var errorRecord = createErrorRecord(caughtError, intermediate);
+            map.set(
+              "apps_telemetry.handling_error",
+              formatErrorRecord(errorRecord) + "\n\nclassifier: " + value.constructor.name
+            );
           }
         }
       } finally {
-        g && !g.done && (h = f.return) && h.call(f);
+        iteration && !iteration.done && (intermediate3 = iterator.return) && intermediate3.call(iterator);
       }
-    } catch (x) {
-      e = false, a = fk(x, c), d.set(
-        "apps_telemetry.handling_error",
-        Sj(a)
-      );
+    } catch (caughtError) {
+      {
+        intermediate2 = false;
+        pipeline = createErrorRecord(caughtError, intermediate);
+        map.set("apps_telemetry.handling_error", formatErrorRecord(pipeline));
+      }
     }
-    d.set("apps_telemetry.processed", String(e));
-    return {
-      Ba: c,
-      va: d
-    };
+    map.set("apps_telemetry.processed", String(intermediate2));
+    return { Ba: intermediate, va: map };
   }
-  __name(rk, "rk");
-  function tk(a, b, c) {
-    var d = /* @__PURE__ */ new Map();
-    d.set("apps_telemetry.classification", a.ta.toString());
-    d.set("apps_telemetry.classification_code", a.la ? a.la.toString() : "");
-    d.set("apps_telemetry.incoming_severity", b);
-    d.set("apps_telemetry.outgoing_severity", c);
-    return d;
+  __name(runErrorClassification, "runErrorClassification");
+  function createClassificationMetadata(classification, error, metadata) {
+    var map = /* @__PURE__ */ new Map();
+    map.set("apps_telemetry.classification", classification.ta.toString());
+    map.set(
+      "apps_telemetry.classification_code",
+      classification.la ? classification.la.toString() : ""
+    );
+    map.set("apps_telemetry.incoming_severity", error);
+    map.set("apps_telemetry.outgoing_severity", metadata);
+    return map;
   }
-  __name(tk, "tk");
-  function sk(a, b) {
-    return nk.has(b.toUpperCase()) ? a.j = true : false;
+  __name(createClassificationMetadata, "createClassificationMetadata");
+  function markSevereDowngrade(pipeline, code) {
+    return severeDowngradeCodes.has(code.toUpperCase()) ? pipeline.j = true : false;
   }
-  __name(sk, "sk");
-  function qk(a) {
-    var b = [];
-    a = w(a);
-    var c = a.next(), d;
+  __name(markSevereDowngrade, "markSevereDowngrade");
+  function compileErrorPatterns(patterns) {
+    var values = [];
+    patterns = getIterator(patterns);
+    var iteration = patterns.next(), intermediate;
     try {
-      for (; !c.done; c = a.next()) b.push(new RegExp(c.value));
+      for (; !iteration.done; iteration = patterns.next()) values.push(new RegExp(iteration.value));
     } finally {
-      c && !c.done && (d = a.return) && d.call(a);
+      iteration && !iteration.done && (intermediate = patterns.return) && intermediate.call(patterns);
     }
-    return new gk(b, b, 7, 0);
+    return new RegexErrorClassifier(values, values, 7, 0);
   }
-  __name(qk, "qk");
-  ;
-  function uk() {
+  __name(compileErrorPatterns, "compileErrorPatterns");
+  function TelemetryObserver() {
   }
-  __name(uk, "uk");
-  uk.prototype.ga = function() {
-    if ("WorkerGlobalScope" in z && typeof z.WorkerGlobalScope === "function" && self instanceof z.WorkerGlobalScope) return /* @__PURE__ */ new Map();
+  __name(TelemetryObserver, "TelemetryObserver");
+  TelemetryObserver.prototype.ga = function() {
+    if ("WorkerGlobalScope" in runtimeGlobal && typeof runtimeGlobal.WorkerGlobalScope === "function" && self instanceof runtimeGlobal.WorkerGlobalScope)
+      return /* @__PURE__ */ new Map();
     try {
-      var a = Array.from(document.querySelectorAll("script")).filter(this.l).slice(0, 30).map(this.j).join(
-        "\n"
-      );
-    } catch (b) {
-      a = "Error getting cross-origin scripts";
+      var intermediate = Array.from(document.querySelectorAll("script")).filter(this.l).slice(0, 30).map(this.j).join("\n");
+    } catch (caughtError) {
+      intermediate = "Error getting cross-origin scripts";
     }
-    return (/* @__PURE__ */ new Map()).set("apps_telemetry.cross_origin_scripts", a);
+    return (/* @__PURE__ */ new Map()).set("apps_telemetry.cross_origin_scripts", intermediate);
   };
-  uk.prototype.l = function(a) {
-    var b = new RegExp(/^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)*google\.com(?:$|[\/#?])/);
-    return (a = a.getAttribute("src")) ? !(a.startsWith("/") || b.test(a)) : false;
+  TelemetryObserver.prototype.l = function(value) {
+    var regExp = new RegExp(/^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)*google\.com(?:$|[\/#?])/);
+    return (value = value.getAttribute("src")) ? !(value.startsWith("/") || regExp.test(value)) : false;
   };
-  uk.prototype.j = function(a) {
-    return a.innerHTML ? a.outerHTML.slice(0, a.outerHTML.indexOf(a.innerHTML)) : a.outerHTML;
+  TelemetryObserver.prototype.j = function(value) {
+    return value.innerHTML ? value.outerHTML.slice(0, value.outerHTML.indexOf(value.innerHTML)) : value.outerHTML;
   };
-  function vk() {
+  function NoopEnvironmentInspector() {
   }
-  __name(vk, "vk");
-  vk.prototype.ga = function() {
+  __name(NoopEnvironmentInspector, "NoopEnvironmentInspector");
+  NoopEnvironmentInspector.prototype.ga = function() {
     try {
-      var a = performance.getEntriesByType("resource").slice(-5).map(function(b) {
-        return ag(b.name);
+      var intermediate = performance.getEntriesByType("resource").slice(-5).map(function(value) {
+        return sanitizeReportUrl(value.name);
       }).join("\n");
-    } catch (b) {
-      a = "Error getting last 5 resources";
+    } catch (caughtError) {
+      intermediate = "Error getting last 5 resources";
     }
-    return (/* @__PURE__ */ new Map()).set("apps_telemetry.resources", a);
+    return (/* @__PURE__ */ new Map()).set("apps_telemetry.resources", intermediate);
   };
-  var wk = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
-  function xk() {
-    var a = [], b;
-    a[8] = a[13] = a[18] = a[23] = "-";
-    a[14] = "4";
-    for (b = 0; b < 36; b++)
-      if (!a[b]) {
-        var c = 0 | Math.random() * 16;
-        a[b] = wk[b == 19 ? c & 3 | 8 : c];
+  var uuidAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
+  function createUuid() {
+    var values = [], index;
+    values[8] = values[13] = values[18] = values[23] = "-";
+    values[14] = "4";
+    for (index = 0; index < 36; index++)
+      if (!values[index]) {
+        var intermediate = 0 | Math.random() * 16;
+        values[index] = uuidAlphabet[index == 19 ? intermediate & 3 | 8 : intermediate];
       }
-    return a.join("");
+    return values.join("");
   }
-  __name(xk, "xk");
-  ;
-  function yk(a, b) {
-    var c = b === void 0 ? {} : b;
-    b = c.ua;
-    b = b === void 0 ? [] : b;
-    var d = c.xb;
-    d = d === void 0 ? [] : d;
-    var e = c.Ga;
-    e = e === void 0 ? [] : e;
-    var f = c.Gb;
-    var g = c.sessionId;
-    g = g === void 0 ? xk() : g;
-    c = c.Cb;
-    this.o = pk(b, d, f === void 0 ? false : f, c === void 0 ? ca(true) : c);
-    this.j = [new wj(), new uk(), new vk()];
-    this.j.push.apply(this.j, pa(e));
-    this.sessionId = g;
-    var h;
-    this.v = (h = z.performance) == null ? void 0 : h.timeOrigin;
-    this.l = a;
-    this.l.qa(g);
+  __name(createUuid, "createUuid");
+  function TelemetryProcessor(observer, options) {
+    var intermediate = options === void 0 ? {} : options;
+    options = intermediate.ua;
+    options = options === void 0 ? [] : options;
+    var intermediate2 = intermediate.xb;
+    intermediate2 = intermediate2 === void 0 ? [] : intermediate2;
+    var intermediate3 = intermediate.Ga;
+    intermediate3 = intermediate3 === void 0 ? [] : intermediate3;
+    var intermediate4 = intermediate.Gb;
+    var sessionId = intermediate.sessionId;
+    sessionId = sessionId === void 0 ? createUuid() : sessionId;
+    intermediate = intermediate.Cb;
+    this.o = createClassificationPipeline(
+      options,
+      intermediate2,
+      intermediate4 === void 0 ? false : intermediate4,
+      intermediate === void 0 ? createConstantFunction(true) : intermediate
+    );
+    this.j = [new EnvironmentInspector(), new TelemetryObserver(), new NoopEnvironmentInspector()];
+    this.j.push.apply(this.j, iterableToArray(intermediate3));
+    this.sessionId = sessionId;
+    var intermediate5;
+    this.v = (intermediate5 = runtimeGlobal.performance) == null ? void 0 : intermediate5.timeOrigin;
+    this.l = observer;
+    this.l.qa(sessionId);
   }
-  __name(yk, "yk");
-  function zk(a, b, c, d) {
-    d["apps_telemetry.session_id"] = a.sessionId;
-    d["apps_telemetry.session_start_time_ms"] = String(a.v);
-    "apps_telemetry.processed" in d && (d["apps_telemetry.multi_processed"] = "true");
-    var e = a.ga();
-    (a = Ak(a, b, c, e)) && Bk(e, a.va);
-    e.forEach(function(g, h) {
-      d[h] = g;
+  __name(TelemetryProcessor, "TelemetryProcessor");
+  function addTelemetrySessionMetadata(processor, error, severity, context) {
+    context["apps_telemetry.session_id"] = processor.sessionId;
+    context["apps_telemetry.session_start_time_ms"] = String(processor.v);
+    "apps_telemetry.processed" in context && (context["apps_telemetry.multi_processed"] = "true");
+    var intermediate = processor.ga();
+    (processor = processTelemetryError(processor, error, severity, intermediate)) && copyMapEntries(intermediate, processor.va);
+    intermediate.forEach(function(value, other) {
+      context[other] = value;
     });
-    var f;
-    return (f = a == null ? void 0 : a.Ba) != null ? f : c;
+    var intermediate2;
+    return (intermediate2 = processor == null ? void 0 : processor.Ba) != null ? intermediate2 : severity;
   }
-  __name(zk, "zk");
-  function Ak(a, b, c, d) {
-    var e = null, f = null;
+  __name(addTelemetrySessionMetadata, "addTelemetrySessionMetadata");
+  function processTelemetryError(processor, error, severity, metadata) {
+    var intermediate = null, intermediate2 = null;
     try {
-      e = fk(b, c, d), f = rk(a.o, e);
-    } catch (g) {
-      return Ck(d, g, "apps_telemetry.processed"), null;
+      {
+        intermediate = createErrorRecord(error, severity, metadata);
+        intermediate2 = runErrorClassification(processor.o, intermediate);
+      }
+    } catch (caughtError) {
+      return recordTelemetryFailure(metadata, caughtError, "apps_telemetry.processed"), null;
     }
-    a.l.Pa(e, f);
-    return f;
+    processor.l.Pa(intermediate, intermediate2);
+    return intermediate2;
   }
-  __name(Ak, "Ak");
-  yk.prototype.ga = function() {
-    var a = /* @__PURE__ */ new Map();
+  __name(processTelemetryError, "processTelemetryError");
+  TelemetryProcessor.prototype.ga = function() {
+    var map = /* @__PURE__ */ new Map();
     try {
-      var b = w(this.j), c = b.next(), d;
+      var iterator = getIterator(this.j), iteration = iterator.next(), intermediate;
       try {
-        for (; !c.done; c = b.next()) c.value.ga().forEach(function(e, f) {
-          a.set(f, e);
-        });
+        for (; !iteration.done; iteration = iterator.next())
+          iteration.value.ga().forEach(function(value, other) {
+            map.set(other, value);
+          });
       } finally {
-        c && !c.done && (d = b.return) && d.call(b);
+        iteration && !iteration.done && (intermediate = iterator.return) && intermediate.call(iterator);
       }
-    } catch (e) {
-      Ck(a, e, "apps_telemetry.annotated");
+    } catch (caughtError) {
+      recordTelemetryFailure(map, caughtError, "apps_telemetry.annotated");
     }
-    return a;
+    return map;
   };
-  function Bk(a, b) {
-    b.forEach(function(c, d) {
-      a.set(d, c);
+  function copyMapEntries(target, source) {
+    source.forEach(function(value, other) {
+      target.set(other, value);
     });
   }
-  __name(Bk, "Bk");
-  function Ck(a, b, c) {
-    a.set(c, "false");
-    a.set("apps_telemetry.handling_error", bk(b));
+  __name(copyMapEntries, "copyMapEntries");
+  function recordTelemetryFailure(metadata, error, key) {
+    metadata.set(key, "false");
+    metadata.set("apps_telemetry.handling_error", stringifyError(error));
   }
-  __name(Ck, "Ck");
-  ;
-  var Dk = /* @__PURE__ */ new Set([1, 6, 7, 2, 0]);
-  function Ek() {
-    var a = pj(tj(Dd())), b = xd(a, 1), c = xd(a, 5);
-    return [b, c].every(function(d) {
-      return Dk.has(d);
+  __name(recordTelemetryFailure, "recordTelemetryFailure");
+  var supportedCrashClassifications = /* @__PURE__ */ new Set([1, 6, 7, 2, 0]);
+  function supportsCrashClassification() {
+    var crashClassification = readCrashClassification(
+      readCrashClientState(readTelemetryBootstrapMessage())
+    ), numberField = readNumberField(crashClassification, 1), numberField2 = readNumberField(crashClassification, 5);
+    return [numberField, numberField2].every(function(value) {
+      return supportedCrashClassifications.has(value);
     });
   }
-  __name(Ek, "Ek");
-  ;
-  function Fk(a) {
+  __name(supportsCrashClassification, "supportsCrashClassification");
+  function readBooleanFeatureFlag(flag) {
     try {
-      return je(he(), a);
-    } catch (b) {
+      return readFeatureFlag(getFeatureFlagStore(), flag);
+    } catch (caughtError) {
       return false;
     }
   }
-  __name(Fk, "Fk");
-  ;
-  function Gk(a, b) {
-    var c = a = a === void 0 ? {} : a;
-    a = c.Ga;
-    a = a === void 0 ? [] : a;
-    var d = c.ua;
-    d = d === void 0 ? [] : d;
-    var e = c.Bb;
-    e = e === void 0 ? [] : e;
-    var f = c.yb;
-    f = f === void 0 ? [] : f;
-    var g = c.Jc;
-    g = g === void 0 ? [] : g;
-    var h = c.Kc;
-    h = h === void 0 ? [] : h;
-    c = c.sessionId;
-    c = c === void 0 ? void 0 : c;
+  __name(readBooleanFeatureFlag, "readBooleanFeatureFlag");
+  function createTelemetryProcessor(options, observer) {
+    var intermediate = options = options === void 0 ? {} : options;
+    options = intermediate.Ga;
+    options = options === void 0 ? [] : options;
+    var intermediate2 = intermediate.ua;
+    intermediate2 = intermediate2 === void 0 ? [] : intermediate2;
+    var intermediate3 = intermediate.Bb;
+    intermediate3 = intermediate3 === void 0 ? [] : intermediate3;
+    var intermediate4 = intermediate.yb;
+    intermediate4 = intermediate4 === void 0 ? [] : intermediate4;
+    var intermediate5 = intermediate.Jc;
+    intermediate5 = intermediate5 === void 0 ? [] : intermediate5;
+    var intermediate6 = intermediate.Kc;
+    intermediate6 = intermediate6 === void 0 ? [] : intermediate6;
+    intermediate = intermediate.sessionId;
+    intermediate = intermediate === void 0 ? void 0 : intermediate;
     try {
-      var k = je(he(), le), l = void 0 === Pb ? 2 : 4, m = void 0, q = k.B, t = q[D] | 0, x = Nb(k, t) ? 1 : l;
-      m = !!m || x === 3;
-      x === 2 && Vc(k) && (q = k.B, t = q[D] | 0);
-      var u = fd(q, 1), N = u === Hb ? 7 : u[D] | 0, E = gd(N, t);
-      if (k = 4 & E ? false : true) {
-        4 & E && (u = Array.prototype.slice.call(u), N = 0, E = ed(E, t), t = bd(q, t, 1, u));
-        for (var ma = l = 0; l < u.length; l++) {
-          var U = Bc(u[l]);
-          U != null && (u[ma++] = U);
+      var featureFlag = readFeatureFlag(getFeatureFlagStore(), ignoredErrorsFlag), index = void 0 === repeatedFieldModeToken ? 2 : 4, intermediate7 = void 0, backingOrStateValue = featureFlag.B, intermediate8 = backingOrStateValue[arrayFlagsKey] | 0, intermediate9 = isImmutableMessage(featureFlag, intermediate8) ? 1 : index;
+      intermediate7 = !!intermediate7 || intermediate9 === 3;
+      intermediate9 === 2 && detachCopyOnWriteArray(featureFlag) && (backingOrStateValue = featureFlag.B, intermediate8 = backingOrStateValue[arrayFlagsKey] | 0);
+      var repeatedArray = getRepeatedArray(backingOrStateValue, 1), intermediate10 = repeatedArray === emptyRepeatedField ? 7 : repeatedArray[arrayFlagsKey] | 0, intermediate11 = inheritRepeatedArrayFlags(intermediate10, intermediate8);
+      if (featureFlag = 4 & intermediate11 ? false : true) {
+        4 & intermediate11 && (repeatedArray = Array.prototype.slice.call(repeatedArray), intermediate10 = 0, intermediate11 = copyRepeatedArrayFlags(intermediate11, intermediate8), intermediate8 = setArrayField(backingOrStateValue, intermediate8, 1, repeatedArray));
+        for (var index2 = index = 0; index < repeatedArray.length; index++) {
+          var string = coerceString(repeatedArray[index]);
+          string != null && (repeatedArray[index2++] = string);
         }
-        ma < l && (u.length = ma);
-        U = E |= 4;
-        U &= -513;
-        E = U & -1025;
-        E &= -4097;
+        index2 < index && (repeatedArray.length = index2);
+        string = intermediate11 |= 4;
+        string &= -513;
+        intermediate11 = string & -1025;
+        intermediate11 &= -4097;
       }
-      E !== N && (Jb(u, E), 2 & E && Object.freeze(u));
-      var Ma = u = cd(u, E, q, t, 1, x, k, m);
-    } catch (Wi) {
-      Ma = [];
+      intermediate11 !== intermediate10 && (setArrayFlags(repeatedArray, intermediate11), 2 & intermediate11 && Object.freeze(repeatedArray));
+      var intermediate12 = repeatedArray = prepareRepeatedArray(
+        repeatedArray,
+        intermediate11,
+        backingOrStateValue,
+        intermediate8,
+        1,
+        intermediate9,
+        featureFlag,
+        intermediate7
+      );
+    } catch (caughtError) {
+      intermediate12 = [];
     }
-    q = Fk(ne);
-    t = [];
-    x = t.concat;
-    u = [];
-    e.length > 0 && u.push(kk(e, [], 6));
-    f.length > 0 && u.push(new gk(f, [], 6, 0));
-    g.length > 0 && u.push(new ik(g, [], 6, 5, 0));
-    h.length > 0 && u.push(new ik(h, [], 6, 5, 1));
-    return new yk(b, {
-      ua: x.call(t, pa(u), pa(d)),
-      xb: Ma,
-      Ga: [new uj()].concat(pa(a)),
-      Gb: q,
-      sessionId: c,
-      Cb: Ek
+    backingOrStateValue = readBooleanFeatureFlag(telemetryIntegrationFlag);
+    intermediate8 = [];
+    intermediate9 = intermediate8.concat;
+    repeatedArray = [];
+    intermediate3.length > 0 && repeatedArray.push(createTokenClassifier(intermediate3, [], 6));
+    intermediate4.length > 0 && repeatedArray.push(new RegexErrorClassifier(intermediate4, [], 6, 0));
+    intermediate5.length > 0 && repeatedArray.push(new TokenErrorClassifier(intermediate5, [], 6, 5, 0));
+    intermediate6.length > 0 && repeatedArray.push(new TokenErrorClassifier(intermediate6, [], 6, 5, 1));
+    return new TelemetryProcessor(observer, {
+      ua: intermediate9.call(
+        intermediate8,
+        iterableToArray(repeatedArray),
+        iterableToArray(intermediate2)
+      ),
+      xb: intermediate12,
+      Ga: [new BootstrapConfigProvider()].concat(iterableToArray(options)),
+      Gb: backingOrStateValue,
+      sessionId: intermediate,
+      Cb: supportsCrashClassification
     });
   }
-  __name(Gk, "Gk");
-  ;
-  function Hk() {
+  __name(createTelemetryProcessor, "createTelemetryProcessor");
+  function NoopTelemetryObserver() {
   }
-  __name(Hk, "Hk");
-  Hk.prototype.Pa = n();
-  Hk.prototype.qa = n();
-  function Ik(a) {
-    a = a === void 0 ? {} : a;
-    return Gk(a, new Hk());
+  __name(NoopTelemetryObserver, "NoopTelemetryObserver");
+  NoopTelemetryObserver.prototype.Pa = createNoopFunction();
+  NoopTelemetryObserver.prototype.qa = createNoopFunction();
+  function createDefaultTelemetryProcessor(options) {
+    options = options === void 0 ? {} : options;
+    return createTelemetryProcessor(options, new NoopTelemetryObserver());
   }
-  __name(Ik, "Ik");
-  ;
-  function Jk(a) {
-    return a ? a.split("\n").filter(function(b) {
-      return b.trim() && !b.includes("signal is aborted without reason");
+  __name(createDefaultTelemetryProcessor, "createDefaultTelemetryProcessor");
+  function countRelevantStackLines(stack) {
+    return stack ? stack.split("\n").filter(function(value) {
+      return value.trim() && !value.includes("signal is aborted without reason");
     }).length : 0;
   }
-  __name(Jk, "Jk");
-  function Kk() {
-    Pj.call(this, 3, 0);
+  __name(countRelevantStackLines, "countRelevantStackLines");
+  function AbortErrorClassifier() {
+    ErrorClassifier.call(this, 3, 0);
   }
-  __name(Kk, "Kk");
-  v(Kk, Pj);
-  Kk.prototype.j = function(a) {
+  __name(AbortErrorClassifier, "AbortErrorClassifier");
+  inheritCompiledClass(AbortErrorClassifier, ErrorClassifier);
+  AbortErrorClassifier.prototype.j = function(value) {
     a: {
-      for (; a; ) {
-        var b = a.message.includes("signal is aborted without reason"), c = Jk(a.j) === 2;
-        if (!b || !c) {
-          a = false;
+      for (; value; ) {
+        var intermediate = value.message.includes("signal is aborted without reason"), intermediate2 = countRelevantStackLines(value.j) === 2;
+        if (!intermediate || !intermediate2) {
+          value = false;
           break a;
         }
-        a = a.cause;
+        value = value.cause;
       }
-      a = true;
+      value = true;
     }
-    return a ? "warning" : null;
+    return value ? "warning" : null;
   };
   try {
-    Nk = (Mk = (Lk = window) == null ? void 0 : Lk.top) != null ? Mk : z;
-    Nk.U3bHHf != null || (Nk.U3bHHf = 0);
-    Nk.U3bHHf++;
-  } catch (a) {
-    z.U3bHHf != null || (z.U3bHHf = 0), z.U3bHHf++;
+    telemetryTopWindow = (topWindowValue = (topWindowCandidate = window) == null ? void 0 : topWindowCandidate.top) != null ? topWindowValue : runtimeGlobal;
+    telemetryTopWindow.U3bHHf != null || (telemetryTopWindow.U3bHHf = 0);
+    telemetryTopWindow.U3bHHf++;
+  } catch (caughtError) {
+    {
+      runtimeGlobal.U3bHHf != null || (runtimeGlobal.U3bHHf = 0);
+      runtimeGlobal.U3bHHf++;
+    }
   }
-  ;
-  var Ok;
-  if (z == null ? 0 : (Ok = z.Symbol) == null ? 0 : Ok.for) {
-    Pk = /* @__PURE__ */ Symbol.for("google.goem");
-    z[Pk] || (z[Pk] = /* @__PURE__ */ new WeakMap());
+  var globalSymbolConstructor;
+  if (runtimeGlobal == null ? 0 : (globalSymbolConstructor = runtimeGlobal.Symbol) == null ? 0 : globalSymbolConstructor.for) {
+    globalErrorMapSymbol = /* @__PURE__ */ Symbol.for("google.goem");
+    runtimeGlobal[globalErrorMapSymbol] || (runtimeGlobal[globalErrorMapSymbol] = /* @__PURE__ */ new WeakMap());
   }
-  ;
   "#".replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, "\\$1").replace(/\x08/g, "\\x08");
-  function Qk(a, b) {
-    var c = a.__wiz;
-    c || (c = a.__wiz = {});
-    return c[b.toString()];
+  function getWizEventHandlers(element, eventType) {
+    var __wiz = element.__wiz;
+    __wiz || (__wiz = element.__wiz = {});
+    return __wiz[eventType.toString()];
   }
-  __name(Qk, "Qk");
-  ;
-  var Rk = {};
-  var Sk = {};
-  function Tk(a) {
-    var b = document.body, c = Wa(b.getAttribute("jsaction") || "");
-    var d = ["u0pjoe"];
-    var e = w(d), f = e.next(), g;
+  __name(getWizEventHandlers, "getWizEventHandlers");
+  var parsedActionCache = {};
+  var actionPatternCache = {};
+  function registerClientAction(callback) {
+    var body = document.body, intermediate = trimString(body.getAttribute("jsaction") || "");
+    var values = ["u0pjoe"];
+    var iterator = getIterator(values), iteration = iterator.next(), intermediate2;
     try {
-      for (; !f.done; f = e.next()) {
-        var h = f.value;
-        var k = c;
-        if (k) {
-          var l = Rk[k];
-          if (l) var m = !!l[h.toString()];
+      for (; !iteration.done; iteration = iterator.next()) {
+        var value = iteration.value;
+        var intermediate3 = intermediate;
+        if (intermediate3) {
+          var intermediate4 = parsedActionCache[intermediate3];
+          if (intermediate4) var intermediate5 = !!intermediate4[value.toString()];
           else {
-            var q = Sk[h.toString()];
-            q || (q = new RegExp("(^\\s*" + h + "\\s*:|[\\s;]" + h + "\\s*:)"), Sk[h.toString()] = q);
-            m = q.test(k);
+            var intermediate6 = actionPatternCache[value.toString()];
+            intermediate6 || (intermediate6 = new RegExp("(^\\s*" + value + "\\s*:|[\\s;]" + value + "\\s*:)"), actionPatternCache[value.toString()] = intermediate6);
+            intermediate5 = intermediate6.test(intermediate3);
           }
-        } else m = false;
-        m || (c && !/;$/.test(c) && (c += ";"), c += h + ":.CLIENT", Uk(b, c));
-        var t = Qk(b, h);
-        t ? t.push(a) : b.__wiz[h.toString()] = [a];
+        } else intermediate5 = false;
+        intermediate5 || (intermediate && !/;$/.test(intermediate) && (intermediate += ";"), intermediate += value + ":.CLIENT", setJsAction(body, intermediate));
+        var wizEventHandlers = getWizEventHandlers(body, value);
+        wizEventHandlers ? wizEventHandlers.push(callback) : body.__wiz[value.toString()] = [callback];
       }
     } finally {
-      f && !f.done && (g = e.return) && g.call(e);
+      iteration && !iteration.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
     }
-    return {
-      et: d,
-      eb: a,
-      el: b
-    };
+    return { et: values, eb: callback, el: body };
   }
-  __name(Tk, "Tk");
-  function Uk(a, b) {
-    a.setAttribute("jsaction", b);
-    "__jsaction" in a && delete a.__jsaction;
+  __name(registerClientAction, "registerClientAction");
+  function setJsAction(element, actions) {
+    element.setAttribute("jsaction", actions);
+    "__jsaction" in element && delete element.__jsaction;
   }
-  __name(Uk, "Uk");
-  ;
-  function Vk(a) {
-    W.call(this);
-    this.l = a;
+  __name(setJsAction, "setJsAction");
+  function EntryPointProtector(errorHandler) {
+    Disposable.call(this);
+    this.l = errorHandler;
   }
-  __name(Vk, "Vk");
-  B(Vk, W);
-  Vk.prototype.j = function(a) {
-    return Wk(this, a);
+  __name(EntryPointProtector, "EntryPointProtector");
+  inheritClosureClass(EntryPointProtector, Disposable);
+  EntryPointProtector.prototype.j = function(value) {
+    return getProtectedFunction(this, value);
   };
-  function Xk(a, b) {
-    a = Object.prototype.hasOwnProperty.call(a, Na) && a[Na] || (a[Na] = ++Oa);
-    return (b ? "__wrapper_" : "__protected_") + a + "__";
+  function protectedFunctionKey(protector, wrapper) {
+    protector = Object.prototype.hasOwnProperty.call(protector, objectUidKey) && protector[objectUidKey] || (protector[objectUidKey] = ++nextObjectUid);
+    return (wrapper ? "__wrapper_" : "__protected_") + protector + "__";
   }
-  __name(Xk, "Xk");
-  function Wk(a, b) {
-    var c = Xk(a, true);
-    b[c] || ((b[c] = Yk(a, b))[Xk(a, false)] = b);
-    return b[c];
+  __name(protectedFunctionKey, "protectedFunctionKey");
+  function getProtectedFunction(protector, callback) {
+    var intermediate = protectedFunctionKey(protector, true);
+    callback[intermediate] || ((callback[intermediate] = createProtectedFunction(protector, callback))[protectedFunctionKey(protector, false)] = callback);
+    return callback[intermediate];
   }
-  __name(Wk, "Wk");
-  function Yk(a, b) {
-    function c() {
-      if (a.na()) return b.apply(this, arguments);
+  __name(getProtectedFunction, "getProtectedFunction");
+  function createProtectedFunction(protector, callback) {
+    function helper() {
+      if (protector.na()) return callback.apply(this, arguments);
       try {
-        return b.apply(this, arguments);
-      } catch (d) {
-        Zk(a, d);
+        return callback.apply(this, arguments);
+      } catch (caughtError) {
+        handleProtectedError(protector, caughtError);
       }
     }
-    __name(c, "c");
-    c[Xk(a, false)] = b;
-    return c;
+    __name(helper, "helper");
+    helper[protectedFunctionKey(protector, false)] = callback;
+    return helper;
   }
-  __name(Yk, "Yk");
-  function Zk(a, b) {
-    if (!(b && typeof b === "object" && typeof b.message === "string" && b.message.indexOf(
-      "Error in protected function: "
-    ) == 0 || typeof b === "string" && b.indexOf(
-      "Error in protected function: "
-    ) == 0)) throw a.l(b), new $k(b);
+  __name(createProtectedFunction, "createProtectedFunction");
+  function handleProtectedError(protector, error) {
+    if (!(error && typeof error === "object" && typeof error.message === "string" && error.message.indexOf("Error in protected function: ") == 0 || typeof error === "string" && error.indexOf("Error in protected function: ") == 0))
+      throw protector.l(error), new ProtectedFunctionError(error);
   }
-  __name(Zk, "Zk");
-  function al(a) {
-    var b = b || z.window || z.globalThis;
-    "onunhandledrejection" in b && (b.onunhandledrejection = function(c) {
-      Zk(a, c && c.reason ? c.reason : Error("uncaught error"));
+  __name(handleProtectedError, "handleProtectedError");
+  function protectUnhandledRejections(protector) {
+    var intermediate = intermediate || runtimeGlobal.window || runtimeGlobal.globalThis;
+    "onunhandledrejection" in intermediate && (intermediate.onunhandledrejection = function(value) {
+      handleProtectedError(
+        protector,
+        value && value.reason ? value.reason : Error("uncaught error")
+      );
     });
   }
-  __name(al, "al");
-  function bl(a, b) {
-    var c = z.window || z.globalThis, d = c[b];
-    if (!d) throw Error(b + " not on global?");
-    c[b] = function(e, f) {
-      typeof e === "string" && (e = Ra(Sa, e));
-      e && (arguments[0] = e = Wk(a, e));
-      if (d.apply) return d.apply(this, arguments);
-      var g = e;
+  __name(protectUnhandledRejections, "protectUnhandledRejections");
+  function protectGlobalTimer(protector, name) {
+    var intermediate = runtimeGlobal.window || runtimeGlobal.globalThis, callback = intermediate[name];
+    if (!callback) throw Error(name + " not on global?");
+    intermediate[name] = function(value, other) {
+      typeof value === "string" && (value = partialApply(evaluateGlobally, value));
+      value && (arguments[0] = value = getProtectedFunction(protector, value));
+      if (callback.apply) return callback.apply(this, arguments);
+      var value2 = value;
       if (arguments.length > 2) {
-        var h = Array.prototype.slice.call(arguments, 2);
-        g = /* @__PURE__ */ __name(function() {
-          e.apply(this, h);
-        }, "g");
+        var intermediate2 = Array.prototype.slice.call(arguments, 2);
+        value2 = /* @__PURE__ */ __name(function() {
+          value.apply(this, intermediate2);
+        }, "value2");
       }
-      return d(g, f);
+      return callback(value2, other);
     };
-    c[b][Xk(a, false)] = d;
+    intermediate[name][protectedFunctionKey(protector, false)] = callback;
   }
-  __name(bl, "bl");
-  Vk.prototype.N = function() {
-    var a = z.window || z.globalThis;
-    var b = a.setTimeout;
-    b = b[Xk(this, false)] || b;
-    a.setTimeout = b;
-    b = a.setInterval;
-    b = b[Xk(this, false)] || b;
-    a.setInterval = b;
-    Vk.W.N.call(this);
+  __name(protectGlobalTimer, "protectGlobalTimer");
+  EntryPointProtector.prototype.N = function() {
+    var intermediate = runtimeGlobal.window || runtimeGlobal.globalThis;
+    var setTimeout2 = intermediate.setTimeout;
+    setTimeout2 = setTimeout2[protectedFunctionKey(this, false)] || setTimeout2;
+    intermediate.setTimeout = setTimeout2;
+    setTimeout2 = intermediate.setInterval;
+    setTimeout2 = setTimeout2[protectedFunctionKey(this, false)] || setTimeout2;
+    intermediate.setInterval = setTimeout2;
+    EntryPointProtector.W.N.call(this);
   };
-  function $k(a) {
-    Ua.call(this, "Error in protected function: " + (a && a.message ? String(a.message) : String(a)), a);
-    (a = a && a.stack) && typeof a === "string" && (this.stack = a);
+  function ProtectedFunctionError(error) {
+    ClosureError.call(
+      this,
+      "Error in protected function: " + (error && error.message ? String(error.message) : String(error)),
+      error
+    );
+    (error = error && error.stack) && typeof error === "string" && (this.stack = error);
   }
-  __name($k, "$k");
-  B($k, Ua);
-  function cl() {
+  __name(ProtectedFunctionError, "ProtectedFunctionError");
+  inheritClosureClass(ProtectedFunctionError, ClosureError);
+  function AbstractXhrFactory() {
   }
-  __name(cl, "cl");
-  ;
-  var dl;
-  function el() {
+  __name(AbstractXhrFactory, "AbstractXhrFactory");
+  var xhrFactoryInstance;
+  function NativeXhrFactory() {
   }
-  __name(el, "el");
-  B(el, cl);
-  el.prototype.l = function() {
+  __name(NativeXhrFactory, "NativeXhrFactory");
+  inheritClosureClass(NativeXhrFactory, AbstractXhrFactory);
+  NativeXhrFactory.prototype.l = function() {
     return new XMLHttpRequest();
   };
-  dl = new el();
-  function fl(a) {
-    Z.call(this);
+  xhrFactoryInstance = new NativeXhrFactory();
+  function XhrIo(factory) {
+    EventTarget.call(this);
     this.headers = /* @__PURE__ */ new Map();
-    this.V = a || null;
+    this.V = factory || null;
     this.o = false;
     this.j = null;
     this.M = "";
@@ -6206,134 +6459,145 @@
     this.R = "";
     this.U = false;
   }
-  __name(fl, "fl");
-  B(fl, Z);
-  var gl = /^https?$/i, hl = ["POST", "PUT"], il = [];
-  p = fl.prototype;
-  p.fb = function() {
+  __name(XhrIo, "XhrIo");
+  inheritClosureClass(XhrIo, EventTarget);
+  var httpSchemePattern = /^https?$/i, methodsWithRequestBody = ["POST", "PUT"], activeXhrRequests = [];
+  prototypeAlias = XhrIo.prototype;
+  prototypeAlias.fb = function() {
     this.dispose();
-    eb(il, this);
+    removeArrayValue(activeXhrRequests, this);
   };
-  p.send = function(a, b, c, d) {
-    if (this.j) throw Error("[goog.net.XhrIo] Object is active with another request=" + this.M + "; newUri=" + a);
-    b = b ? b.toUpperCase() : "GET";
-    this.M = a;
+  prototypeAlias.send = function(value, iterator, options, context) {
+    if (this.j)
+      throw Error(
+        "[goog.net.XhrIo] Object is active with another request=" + this.M + "; newUri=" + value
+      );
+    iterator = iterator ? iterator.toUpperCase() : "GET";
+    this.M = value;
     this.C = 0;
     this.H = false;
     this.o = true;
-    this.j = this.V ? this.V.l() : dl.l();
-    this.j.onreadystatechange = eg(A(this.Qa, this));
+    this.j = this.V ? this.V.l() : xhrFactoryInstance.l();
+    this.j.onreadystatechange = wrapAsyncContext(bindFunction(this.Qa, this));
     try {
-      this.L = true, this.j.open(b, String(a), true), this.L = false;
-    } catch (t) {
-      jl(this);
+      {
+        this.L = true;
+        this.j.open(iterator, String(value), true);
+        this.L = false;
+      }
+    } catch (caughtError) {
+      timeoutXhr(this);
       return;
     }
-    a = c || "";
-    c = new Map(this.headers);
-    if (d)
-      if (Object.getPrototypeOf(d) === Object.prototype)
-        for (var e in d) c.set(e, d[e]);
-      else if (typeof d.keys === "function" && typeof d.get === "function") {
-        e = w(d.keys());
-        var f = e.next(), g;
+    value = options || "";
+    options = new Map(this.headers);
+    if (context)
+      if (Object.getPrototypeOf(context) === Object.prototype)
+        for (var iterator2 in context) options.set(iterator2, context[iterator2]);
+      else if (typeof context.keys === "function" && typeof context.get === "function") {
+        iterator2 = getIterator(context.keys());
+        var iteration = iterator2.next(), intermediate;
         try {
-          for (; !f.done; f = e.next()) {
-            var h = f.value;
-            c.set(h, d.get(h));
+          for (; !iteration.done; iteration = iterator2.next()) {
+            var value2 = iteration.value;
+            options.set(value2, context.get(value2));
           }
         } finally {
-          f && !f.done && (g = e.return) && g.call(e);
+          iteration && !iteration.done && (intermediate = iterator2.return) && intermediate.call(iterator2);
         }
-      } else throw Error("Unknown input type for opt_headers: " + String(d));
-    d = Array.from(c.keys()).find(function(t) {
-      return "content-type" == t.toLowerCase();
+      } else throw Error("Unknown input type for opt_headers: " + String(context));
+    context = Array.from(options.keys()).find(function(value5) {
+      return "content-type" == value5.toLowerCase();
     });
-    g = z.FormData && a instanceof z.FormData;
-    !(cb(hl, b) >= 0) || d || g || c.set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
-    b = w(c);
-    d = b.next();
-    var k;
+    intermediate = runtimeGlobal.FormData && value instanceof runtimeGlobal.FormData;
+    !(arrayIndexOf(methodsWithRequestBody, iterator) >= 0) || context || intermediate || options.set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
+    iterator = getIterator(options);
+    context = iterator.next();
+    var intermediate2;
     try {
-      for (; !d.done; d = b.next()) {
-        var l = w(d.value), m = l.next().value, q = l.next().value;
-        this.j.setRequestHeader(m, q);
+      for (; !context.done; context = iterator.next()) {
+        var iterator3 = getIterator(context.value), value3 = iterator3.next().value, value4 = iterator3.next().value;
+        this.j.setRequestHeader(value3, value4);
       }
     } finally {
-      d && !d.done && (k = b.return) && k.call(b);
+      context && !context.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
     }
     this.R && (this.j.responseType = this.R);
     "withCredentials" in this.j && this.j.withCredentials !== this.U && (this.j.withCredentials = this.U);
     try {
-      this.A && (clearTimeout(this.A), this.A = null), this.O > 0 && (this.A = setTimeout(
-        this.Db.bind(this),
-        this.O
-      )), this.G = true, this.j.send(a), this.G = false;
-    } catch (t) {
-      jl(this);
+      {
+        this.A && (clearTimeout(this.A), this.A = null);
+        this.O > 0 && (this.A = setTimeout(this.Db.bind(this), this.O));
+        this.G = true;
+        this.j.send(value);
+        this.G = false;
+      }
+    } catch (caughtError) {
+      timeoutXhr(this);
     }
   };
-  p.Db = function() {
-    typeof Ga != "undefined" && this.j && (this.C = 8, this.dispatchEvent("timeout"), this.abort(8));
+  prototypeAlias.Db = function() {
+    typeof closureNamespace != "undefined" && this.j && (this.C = 8, this.dispatchEvent("timeout"), this.abort(8));
   };
-  function jl(a) {
-    a.o = false;
-    a.j && (a.v = true, a.j.abort(), a.v = false);
-    a.C = 5;
-    kl(a);
-    ll(a);
+  function timeoutXhr(request) {
+    request.o = false;
+    request.j && (request.v = true, request.j.abort(), request.v = false);
+    request.C = 5;
+    dispatchXhrError(request);
+    cleanupXhr(request);
   }
-  __name(jl, "jl");
-  function kl(a) {
-    a.H || (a.H = true, a.dispatchEvent("complete"), a.dispatchEvent("error"));
+  __name(timeoutXhr, "timeoutXhr");
+  function dispatchXhrError(request) {
+    request.H || (request.H = true, request.dispatchEvent("complete"), request.dispatchEvent("error"));
   }
-  __name(kl, "kl");
-  p.abort = function(a) {
-    this.j && this.o && (this.o = false, this.v = true, this.j.abort(), this.v = false, this.C = a || 7, this.dispatchEvent("complete"), this.dispatchEvent("abort"), ll(this));
+  __name(dispatchXhrError, "dispatchXhrError");
+  prototypeAlias.abort = function(value) {
+    this.j && this.o && (this.o = false, this.v = true, this.j.abort(), this.v = false, this.C = value || 7, this.dispatchEvent("complete"), this.dispatchEvent("abort"), cleanupXhr(this));
   };
-  p.N = function() {
-    this.j && (this.o && (this.o = false, this.v = true, this.j.abort(), this.v = false), ll(this, true));
-    fl.W.N.call(this);
+  prototypeAlias.N = function() {
+    this.j && (this.o && (this.o = false, this.v = true, this.j.abort(), this.v = false), cleanupXhr(this, true));
+    XhrIo.W.N.call(this);
   };
-  p.Qa = function() {
-    this.na() || (this.L || this.G || this.v ? ml(this) : this.Aa());
+  prototypeAlias.Qa = function() {
+    this.na() || (this.L || this.G || this.v ? processXhrReadyState(this) : this.Aa());
   };
-  p.Aa = function() {
-    ml(this);
+  prototypeAlias.Aa = function() {
+    processXhrReadyState(this);
   };
-  function ml(a) {
-    if (a.o && typeof Ga != "undefined") {
-      if (a.G && (a.j ? a.j.readyState : 0) == 4) setTimeout(a.Qa.bind(a), 0);
-      else if (a.dispatchEvent("readystatechange"), (a.j ? a.j.readyState : 0) == 4) {
-        a.o = false;
+  function processXhrReadyState(request) {
+    if (request.o && typeof closureNamespace != "undefined") {
+      if (request.G && (request.j ? request.j.readyState : 0) == 4)
+        setTimeout(request.Qa.bind(request), 0);
+      else if (request.dispatchEvent("readystatechange"), (request.j ? request.j.readyState : 0) == 4) {
+        request.o = false;
         try {
-          fj(a) ? (a.dispatchEvent("complete"), a.dispatchEvent("success")) : (a.C = 6, kl(a));
+          isSuccessfulXhr(request) ? (request.dispatchEvent("complete"), request.dispatchEvent("success")) : (request.C = 6, dispatchXhrError(request));
         } finally {
-          ll(a);
+          cleanupXhr(request);
         }
       }
     }
   }
-  __name(ml, "ml");
-  function ll(a, b) {
-    if (a.j) {
-      a.A && (clearTimeout(a.A), a.A = null);
-      var c = a.j;
-      a.j = null;
-      b || a.dispatchEvent("ready");
+  __name(processXhrReadyState, "processXhrReadyState");
+  function cleanupXhr(request, disposing) {
+    if (request.j) {
+      request.A && (clearTimeout(request.A), request.A = null);
+      var intermediate = request.j;
+      request.j = null;
+      disposing || request.dispatchEvent("ready");
       try {
-        c.onreadystatechange = null;
-      } catch (d) {
+        intermediate.onreadystatechange = null;
+      } catch (caughtError) {
       }
     }
   }
-  __name(ll, "ll");
-  p.isActive = function() {
+  __name(cleanupXhr, "cleanupXhr");
+  prototypeAlias.isActive = function() {
     return !!this.j;
   };
-  function fj(a) {
-    var b = ej(a);
-    a: switch (b) {
+  function isSuccessfulXhr(request) {
+    var xhrStatus = readXhrStatus(request);
+    a: switch (xhrStatus) {
       case 200:
       case 201:
       case 202:
@@ -6341,513 +6605,549 @@
       case 206:
       case 304:
       case 1223:
-        var c = true;
+        var intermediate = true;
         break a;
       default:
-        c = false;
+        intermediate = false;
     }
-    if (!c) {
-      if (b = b === 0) a = String(a.M).match(Vf)[1] || null, !a && z.self && z.self.location && (a = z.self.location.protocol.slice(0, -1)), b = !gl.test(a ? a.toLowerCase() : "");
-      c = b;
+    if (!intermediate) {
+      if (xhrStatus = xhrStatus === 0) {
+        request = String(request.M).match(urlPartsPattern)[1] || null;
+        !request && runtimeGlobal.self && runtimeGlobal.self.location && (request = runtimeGlobal.self.location.protocol.slice(0, -1));
+        xhrStatus = !httpSchemePattern.test(request ? request.toLowerCase() : "");
+      }
+      intermediate = xhrStatus;
     }
-    return c;
+    return intermediate;
   }
-  __name(fj, "fj");
-  function ej(a) {
+  __name(isSuccessfulXhr, "isSuccessfulXhr");
+  function readXhrStatus(request) {
     try {
-      return (a.j ? a.j.readyState : 0) > 2 ? a.j.status : -1;
-    } catch (b) {
+      return (request.j ? request.j.readyState : 0) > 2 ? request.j.status : -1;
+    } catch (caughtError) {
       return -1;
     }
   }
-  __name(ej, "ej");
-  kg(function(a) {
-    fl.prototype.Aa = a(fl.prototype.Aa);
+  __name(readXhrStatus, "readXhrStatus");
+  registerEntryPoint(function(callback) {
+    XhrIo.prototype.Aa = callback(XhrIo.prototype.Aa);
   });
-  function nl(a, b, c) {
-    Z.call(this);
-    this.A = b || null;
+  function GlobalErrorHandler(reportUrl, context, disabled) {
+    EventTarget.call(this);
+    this.A = context || null;
     this.v = {};
-    this.C = ol;
-    this.H = a;
-    if (!c) {
+    this.C = sendErrorReport;
+    this.H = reportUrl;
+    if (!disabled) {
       this.j = null;
-      this.j = new Vk(A(this.o, this));
-      bl(this.j, "setTimeout");
-      bl(this.j, "setInterval");
-      a = this.j;
-      b = z.window || z.globalThis;
-      c = [
+      this.j = new EntryPointProtector(bindFunction(this.o, this));
+      protectGlobalTimer(this.j, "setTimeout");
+      protectGlobalTimer(this.j, "setInterval");
+      reportUrl = this.j;
+      context = runtimeGlobal.window || runtimeGlobal.globalThis;
+      disabled = [
         "requestAnimationFrame",
         "mozRequestAnimationFrame",
         "webkitAnimationFrame",
         "msRequestAnimationFrame"
       ];
-      for (var d = 0; d < c.length; d++) {
-        var e = c[d];
-        c[d] in b && bl(a, e);
+      for (var index = 0; index < disabled.length; index++) {
+        var intermediate = disabled[index];
+        disabled[index] in context && protectGlobalTimer(reportUrl, intermediate);
       }
-      a = this.j;
-      jg = true;
-      b = A(a.j, a);
-      for (c = 0; c < hg.length; c++) hg[c](b);
-      ig.push(a);
+      reportUrl = this.j;
+      entryPointsMonitored = true;
+      context = bindFunction(reportUrl.j, reportUrl);
+      for (disabled = 0; disabled < entryPointCallbacks.length; disabled++)
+        entryPointCallbacks[disabled](context);
+      entryPointMonitors.push(reportUrl);
     }
   }
-  __name(nl, "nl");
-  B(nl, Z);
-  function pl(a, b) {
-    ni.call(this, "c");
-    this.error = a;
-    this.aa = b;
+  __name(GlobalErrorHandler, "GlobalErrorHandler");
+  inheritClosureClass(GlobalErrorHandler, EventTarget);
+  function GlobalErrorEvent(error, context) {
+    BaseEvent.call(this, "c");
+    this.error = error;
+    this.aa = context;
   }
-  __name(pl, "pl");
-  B(pl, ni);
-  function ql(a, b) {
-    return new nl(a, b, void 0);
+  __name(GlobalErrorEvent, "GlobalErrorEvent");
+  inheritClosureClass(GlobalErrorEvent, BaseEvent);
+  function createGlobalErrorHandler(reportUrl, context) {
+    return new GlobalErrorHandler(reportUrl, context, void 0);
   }
-  __name(ql, "ql");
-  function ol(a, b, c, d) {
-    if (d instanceof Map) {
-      var e = {};
-      d = w(d);
-      var f = d.next(), g;
+  __name(createGlobalErrorHandler, "createGlobalErrorHandler");
+  function sendErrorReport(url, payload, method, context) {
+    if (context instanceof Map) {
+      var record = {};
+      context = getIterator(context);
+      var iteration = context.next(), intermediate;
       try {
-        for (; !f.done; f = d.next()) {
-          var h = w(f.value), k = h.next().value, l = h.next().value;
-          e[k] = l;
+        for (; !iteration.done; iteration = context.next()) {
+          var iterator = getIterator(iteration.value), value = iterator.next().value, value2 = iterator.next().value;
+          record[value] = value2;
         }
       } finally {
-        f && !f.done && (g = d.return) && g.call(d);
+        iteration && !iteration.done && (intermediate = context.return) && intermediate.call(context);
       }
-    } else e = d;
-    g = new fl();
-    il.push(g);
-    g.l.add("ready", g.fb, true, void 0, void 0);
-    g.send(a, b, c, e);
+    } else record = context;
+    intermediate = new XhrIo();
+    activeXhrRequests.push(intermediate);
+    intermediate.l.add("ready", intermediate.fb, true, void 0, void 0);
+    intermediate.send(url, payload, method, record);
   }
-  __name(ol, "ol");
-  function rl(a, b) {
-    a.C = b;
+  __name(sendErrorReport, "sendErrorReport");
+  function setErrorTransport(handler, transport) {
+    handler.C = transport;
   }
-  __name(rl, "rl");
-  nl.prototype.o = function(a, b) {
-    a = a.error || a;
-    b = b ? Qh(b) : {};
-    a instanceof Error && Sh(b, sb(a));
-    var c = Df(a);
-    if (this.A) try {
-      this.A(c, b, a);
-    } catch (t) {
-    }
-    var d = c.message.substring(0, 1900);
-    if (!(a instanceof Ua) || a.j) {
-      var e = c.fileName, f = c.lineNumber;
-      a = c.stack;
+  __name(setErrorTransport, "setErrorTransport");
+  GlobalErrorHandler.prototype.o = function(value, other) {
+    value = value.error || value;
+    other = other ? shallowCloneObject(other) : {};
+    value instanceof Error && extendObject(other, readErrorContext(value));
+    var errorDetails = normalizeErrorDetails(value);
+    if (this.A)
       try {
-        var g = V(this.H, "script", e, "error", d, "line", f);
+        this.A(errorDetails, other, value);
+      } catch (caughtError) {
+      }
+    var intermediate = errorDetails.message.substring(0, 1900);
+    if (!(value instanceof ClosureError) || value.j) {
+      var fileName = errorDetails.fileName, lineNumber = errorDetails.lineNumber;
+      value = errorDetails.stack;
+      try {
+        var intermediate2 = appendQueryParameters(
+          this.H,
+          "script",
+          fileName,
+          "error",
+          intermediate,
+          "line",
+          lineNumber
+        );
         a: {
-          for (var h in this.v) {
-            var k = false;
+          for (var intermediate3 in this.v) {
+            var intermediate4 = false;
             break a;
           }
-          k = true;
+          intermediate4 = true;
         }
-        if (!k) {
-          k = g;
-          var l = $f(this.v);
-          g = Xf(k, l);
+        if (!intermediate4) {
+          intermediate4 = intermediate2;
+          var intermediate5 = encodeQueryObject(this.v);
+          intermediate2 = appendEncodedQuery(intermediate4, intermediate5);
         }
-        l = {};
-        l.trace = a;
-        if (b)
-          for (var m in b) l["context." + m] = b[m];
-        var q = $f(l);
-        this.C(g, "POST", q, this.G);
-      } catch (t) {
+        intermediate5 = {};
+        intermediate5.trace = value;
+        if (other)
+          for (var intermediate6 in other)
+            intermediate5["context." + intermediate6] = other[intermediate6];
+        var intermediate7 = encodeQueryObject(intermediate5);
+        this.C(intermediate2, "POST", intermediate7, this.G);
+      } catch (caughtError) {
       }
     }
     try {
-      this.dispatchEvent(new pl(
-        c,
-        b
-      ));
-    } catch (t) {
+      this.dispatchEvent(new GlobalErrorEvent(errorDetails, other));
+    } catch (caughtError) {
     }
   };
-  nl.prototype.N = function() {
-    bg(this.j);
-    nl.W.N.call(this);
+  GlobalErrorHandler.prototype.N = function() {
+    disposeIfPossible(this.j);
+    GlobalErrorHandler.W.N.call(this);
   };
-  function sl() {
+  function LogTimeOrigin() {
     this.j = Date.now();
   }
-  __name(sl, "sl");
-  var tl = null;
-  sl.prototype.set = function(a) {
-    this.j = a;
+  __name(LogTimeOrigin, "LogTimeOrigin");
+  var logTimeOrigin = null;
+  LogTimeOrigin.prototype.set = function(value) {
+    this.j = value;
   };
-  sl.prototype.reset = function() {
+  LogTimeOrigin.prototype.reset = function() {
     this.set(Date.now());
   };
-  sl.prototype.get = ba("j");
-  function ul(a) {
-    this.v = a || "";
-    tl || (tl = new sl());
-    this.D = tl;
+  LogTimeOrigin.prototype.get = createPropertyGetter("j");
+  function LogFormatter(prefix) {
+    this.v = prefix || "";
+    logTimeOrigin || (logTimeOrigin = new LogTimeOrigin());
+    this.D = logTimeOrigin;
   }
-  __name(ul, "ul");
-  ul.prototype.j = true;
-  ul.prototype.l = true;
-  ul.prototype.o = false;
-  function vl(a) {
-    return a < 10 ? "0" + a : String(a);
+  __name(LogFormatter, "LogFormatter");
+  LogFormatter.prototype.j = true;
+  LogFormatter.prototype.l = true;
+  LogFormatter.prototype.o = false;
+  function padTwoDigits(value) {
+    return value < 10 ? "0" + value : String(value);
   }
-  __name(vl, "vl");
-  function wl(a) {
-    ul.call(this, a);
+  __name(padTwoDigits, "padTwoDigits");
+  function TextLogFormatter(prefix) {
+    LogFormatter.call(this, prefix);
   }
-  __name(wl, "wl");
-  B(wl, ul);
-  function xl(a, b) {
-    var c = [];
-    c.push(a.v, " ");
-    if (a.l) {
-      var d = c.push, e = new Date(b.o());
-      d.call(c, "[", vl(e.getFullYear() - 2e3) + vl(e.getMonth() + 1) + vl(e.getDate()) + " " + vl(e.getHours()) + ":" + vl(e.getMinutes()) + ":" + vl(e.getSeconds()) + "." + vl(Math.floor(e.getMilliseconds() / 10)), "] ");
+  __name(TextLogFormatter, "TextLogFormatter");
+  inheritClosureClass(TextLogFormatter, LogFormatter);
+  function formatLogRecord(formatter, record) {
+    var values = [];
+    values.push(formatter.v, " ");
+    if (formatter.l) {
+      var push = values.push, date = new Date(record.o());
+      push.call(
+        values,
+        "[",
+        padTwoDigits(date.getFullYear() - 2e3) + padTwoDigits(date.getMonth() + 1) + padTwoDigits(date.getDate()) + " " + padTwoDigits(date.getHours()) + ":" + padTwoDigits(date.getMinutes()) + ":" + padTwoDigits(date.getSeconds()) + "." + padTwoDigits(Math.floor(date.getMilliseconds() / 10)),
+        "] "
+      );
     }
-    d = c.push;
-    e = a.D.get();
-    e = (b.o() - e) / 1e3;
-    var f = e.toFixed(3), g = 0;
-    if (e < 1) g = 2;
+    push = values.push;
+    date = formatter.D.get();
+    date = (record.o() - date) / 1e3;
+    var intermediate = date.toFixed(3), index = 0;
+    if (date < 1) index = 2;
     else
-      for (; e < 100; ) g++, e *= 10;
-    for (; g-- > 0; ) f = " " + f;
-    d.call(c, "[", f, "s] ");
-    c.push("[", b.l(), "] ");
-    c.push(b.getMessage());
-    a.o && (b = b.j(), b !== void 0 && c.push("\n", b instanceof Error ? b.message : String(b)));
-    a.j && c.push("\n");
-    return c.join("");
+      for (; date < 100; ) {
+        index++;
+        date *= 10;
+      }
+    for (; index-- > 0; ) intermediate = " " + intermediate;
+    push.call(values, "[", intermediate, "s] ");
+    values.push("[", record.l(), "] ");
+    values.push(record.getMessage());
+    formatter.o && (record = record.j(), record !== void 0 && values.push("\n", record instanceof Error ? record.message : String(record)));
+    formatter.j && values.push("\n");
+    return values.join("");
   }
-  __name(xl, "xl");
-  ;
-  function yl(a) {
-    a = a === void 0 ? new zl() : a;
-    Z.call(this);
-    var b = this;
+  __name(formatLogRecord, "formatLogRecord");
+  function ErrorReporter(options) {
+    options = options === void 0 ? new ErrorReporterOptions() : options;
+    EventTarget.call(this);
+    var instance = this;
     this.R = {};
     this.j = null;
     this.o = {};
-    this.M = new Yi(this);
-    this.ib = a.J;
-    this.U = a.L;
-    this.Wa = a.H;
-    this.gb = a.A;
-    this.Xa = a.M;
-    var c = a.l;
-    this.Ua = (a.v || Ik)({
-      Bb: lj,
-      yb: mj,
-      ua: [new Kk()]
+    this.M = new EventHandler(this);
+    this.ib = options.J;
+    this.U = options.L;
+    this.Wa = options.H;
+    this.gb = options.A;
+    this.Xa = options.M;
+    var intermediate = options.l;
+    this.Ua = (options.v || createDefaultTelemetryProcessor)({
+      Bb: knownInjectedErrorMessages,
+      yb: knownInjectedErrorPatterns,
+      ua: [new AbortErrorClassifier()]
     });
-    this.cb = a.P;
-    this.V = new mi();
-    var d = new fl();
-    Al(this, c);
-    this.G = new gj(d, c, void 0, void 0, void 0);
-    dg(this, this.G);
-    this.v = a.j ? a.j : uh(c, "docs-sup") + uh(c, "docs-jepp") + "/jserror";
-    if (d = uh(c, "jobset")) this.v = V(this.v, "jobset", d);
-    if (d = uh(c, "docs-ci")) this.v = V(this.v, "id", d);
-    d = uh(c, "docs-pid");
-    qh(c.get("docs-eaotx")) && d && (this.v = V(this.v, "ouid", d));
-    this.fa = th(c, "docs-srmoe") || 0;
-    this.ab = qh(c.get("docs-oesf"));
-    this.Fa = th(c, "docs-srmour") || 0;
-    this.bb = qh(c.get("docs-oursf"));
-    d = a.D || this.Fa > 0 && Math.random() < this.Fa;
-    this.Ya = qh(c.get("docs-wesf"));
-    Bl(this);
-    Tg = /* @__PURE__ */ __name(function(g) {
-      return Cl(b, g, "promise rejection");
-    }, "Tg");
-    var e = th(c, "docs-srmdue") || 0;
-    if (e > 0 && Math.random() < e) {
-      var f = qh(c.get("docs-duesf"));
-      $g = /* @__PURE__ */ __name(function(g) {
-        Cl(b, g, "deferred error", f, "isDeferredUnhandledErrback");
-      }, "$g");
-    } else $g = n();
-    e = th(c, "docs-srmxue") || 0;
-    e = e > 0 && Math.random() < e;
-    c.get("docs-xduesf");
-    e && Af();
-    d && (d = new Vk(function(g) {
-      g = Dl(g, "native promise rejection");
-      var h = {};
-      h = (h.isUnhandledRejection = "true", h);
-      b.bb ? El(b, g, h) : b.info(g, h);
-    }), al(d), dg(this, d));
+    this.cb = options.P;
+    this.V = new ReloadPrompt();
+    var xhrIo = new XhrIo();
+    addExperimentMetadata(this, intermediate);
+    this.G = new BufferedLogTransport(xhrIo, intermediate, void 0, void 0, void 0);
+    ownDisposable(this, this.G);
+    this.v = options.j ? options.j : readStringClientFlag(intermediate, "docs-sup") + readStringClientFlag(intermediate, "docs-jepp") + "/jserror";
+    if (xhrIo = readStringClientFlag(intermediate, "jobset"))
+      this.v = appendQueryParameters(this.v, "jobset", xhrIo);
+    if (xhrIo = readStringClientFlag(intermediate, "docs-ci"))
+      this.v = appendQueryParameters(this.v, "id", xhrIo);
+    xhrIo = readStringClientFlag(intermediate, "docs-pid");
+    parseBooleanFlag(intermediate.get("docs-eaotx")) && xhrIo && (this.v = appendQueryParameters(this.v, "ouid", xhrIo));
+    this.fa = readNumericClientFlag(intermediate, "docs-srmoe") || 0;
+    this.ab = parseBooleanFlag(intermediate.get("docs-oesf"));
+    this.Fa = readNumericClientFlag(intermediate, "docs-srmour") || 0;
+    this.bb = parseBooleanFlag(intermediate.get("docs-oursf"));
+    xhrIo = options.D || this.Fa > 0 && Math.random() < this.Fa;
+    this.Ya = parseBooleanFlag(intermediate.get("docs-wesf"));
+    installErrorReporter(this);
+    unhandledRejectionHandler = /* @__PURE__ */ __name(function(value) {
+      return handleReportedEvent(instance, value, "promise rejection");
+    }, "unhandledRejectionHandler");
+    var intermediate2 = readNumericClientFlag(intermediate, "docs-srmdue") || 0;
+    if (intermediate2 > 0 && Math.random() < intermediate2) {
+      var booleanFlag = parseBooleanFlag(intermediate.get("docs-duesf"));
+      rethrowError = /* @__PURE__ */ __name(function(value) {
+        handleReportedEvent(
+          instance,
+          value,
+          "deferred error",
+          booleanFlag,
+          "isDeferredUnhandledErrback"
+        );
+      }, "rethrowError");
+    } else rethrowError = createNoopFunction();
+    intermediate2 = readNumericClientFlag(intermediate, "docs-srmxue") || 0;
+    intermediate2 = intermediate2 > 0 && Math.random() < intermediate2;
+    intermediate.get("docs-xduesf");
+    intermediate2 && initializeDisposableChildren();
+    xhrIo && (xhrIo = new EntryPointProtector(function(value) {
+      value = normalizeReportedEvent(value, "native promise rejection");
+      var record = {};
+      record = (record.isUnhandledRejection = "true", record);
+      instance.bb ? reportFatalError(instance, value, record) : instance.info(value, record);
+    }), protectUnhandledRejections(xhrIo), ownDisposable(this, xhrIo));
     this.L = null;
-    typeof document !== "undefined" && document.body && (this.L = Tk(function(g) {
-      var h = {};
-      h = (h.isWizError = "true", h);
-      g = w(g.data.errors);
-      var k = g.next(), l;
+    typeof document !== "undefined" && document.body && (this.L = registerClientAction(function(iterator) {
+      var record = {};
+      record = (record.isWizError = "true", record);
+      iterator = getIterator(iterator.data.errors);
+      var iteration = iterator.next(), intermediate3;
       try {
-        for (; !k.done; k = g.next()) {
-          var m = k.value.error;
-          b.Ya ? El(b, m, h) : b.info(m, h);
+        for (; !iteration.done; iteration = iterator.next()) {
+          var error = iteration.value.error;
+          instance.Ya ? reportFatalError(instance, error, record) : instance.info(error, record);
         }
       } finally {
-        k && !k.done && (l = g.return) && l.call(g);
+        iteration && !iteration.done && (intermediate3 = iterator.return) && intermediate3.call(iterator);
       }
     }));
-    this.O = a.o;
+    this.O = options.o;
     this.C = false;
     this.H = true;
     this.A = false;
-    this.ea = uh(c, "docs-jern");
-    this.Va = a.G;
-    this.Ta = a.C.concat(Object.values(xf));
+    this.ea = readStringClientFlag(intermediate, "docs-jern");
+    this.Va = options.G;
+    this.Ta = options.C.concat(Object.values(telemetryContextKeys));
   }
-  __name(yl, "yl");
-  v(yl, Z);
-  function Bl(a) {
-    var b = b === void 0 ? false : b;
-    if (Fl) {
-      if (Gl != null) throw Error('ErrorReporter already installed. at "' + Gl.stack + '"');
+  __name(ErrorReporter, "ErrorReporter");
+  inheritCompiledClass(ErrorReporter, EventTarget);
+  function installErrorReporter(reporter) {
+    var intermediate = intermediate === void 0 ? false : intermediate;
+    if (errorReporterInstalled) {
+      if (errorReporterInstallStack != null)
+        throw Error('ErrorReporter already installed. at "' + errorReporterInstallStack.stack + '"');
       throw Error("ErrorReporter already installed.");
     }
-    Fl = true;
-    Gl = Error();
-    a.j = ql(a.v, function(e, f, g) {
-      return Hl(a, e, f, g);
+    errorReporterInstalled = true;
+    errorReporterInstallStack = Error();
+    reporter.j = createGlobalErrorHandler(reporter.v, function(value, other, options) {
+      return enrichReportContext(reporter, value, other, options);
     });
-    var c = {};
-    a.Wa && (c["X-No-Abort"] = "1");
-    a.j.G = c;
-    rl(a.j, function(e, f, g, h) {
-      a.H && a.G.send(e, f, g, h);
+    var record = {};
+    reporter.Wa && (record["X-No-Abort"] = "1");
+    reporter.j.G = record;
+    setErrorTransport(reporter.j, function(value, other, options, context) {
+      reporter.H && reporter.G.send(value, other, options, context);
     });
-    if (a.fa > 0 && Math.random() < a.fa) {
-      c = {};
-      var d = (c.isWindowOnError = "true", c);
-      a.ab ? Cf(function(e) {
-        El(a, e.error instanceof Error ? e.error : Error(e.message), d);
-      }) : Cf(function(e) {
-        a.log(e.error instanceof Error ? e.error : Error(e.message), d);
+    if (reporter.fa > 0 && Math.random() < reporter.fa) {
+      record = {};
+      var intermediate2 = (record.isWindowOnError = "true", record);
+      reporter.ab ? installGlobalErrorListener(function(value) {
+        reportFatalError(
+          reporter,
+          value.error instanceof Error ? value.error : Error(value.message),
+          intermediate2
+        );
+      }) : installGlobalErrorListener(function(value) {
+        reporter.log(
+          value.error instanceof Error ? value.error : Error(value.message),
+          intermediate2
+        );
       });
     }
-    a.M.listen(a.j, "c", function(e) {
-      var f = b;
-      f = f === void 0 ? false : f;
-      e.aa.severity = e.aa["severity-unprefixed"] || e.aa.severity;
-      var g = e.aa.severity;
-      (g = g == "fatal" || g == "postmortem") && !a.gb && (a.ib && !f ? a.V.notify(e, e.aa) : a.V.notify(
-        void 0,
-        e.aa
-      ));
-      a.dispatchEvent(new Li(g ? "a" : "b", e.error, e.aa));
+    reporter.M.listen(reporter.j, "c", function(value) {
+      var intermediate3 = intermediate;
+      intermediate3 = intermediate3 === void 0 ? false : intermediate3;
+      value.aa.severity = value.aa["severity-unprefixed"] || value.aa.severity;
+      var severity = value.aa.severity;
+      (severity = severity == "fatal" || severity == "postmortem") && !reporter.gb && (reporter.ib && !intermediate3 ? reporter.V.notify(value, value.aa) : reporter.V.notify(void 0, value.aa));
+      reporter.dispatchEvent(new ErrorEvent(severity ? "a" : "b", value.error, value.aa));
     });
   }
-  __name(Bl, "Bl");
-  function Al(a, b) {
-    b = new jj(b);
-    var c = b.j, d;
-    for (d in c) {
-      var e = c[d];
-      e && (a.o["expflag-" + d] = e.toString());
+  __name(installErrorReporter, "installErrorReporter");
+  function addExperimentMetadata(reporter, values) {
+    values = new ExperimentMetadata(values);
+    var intermediate = values.j, intermediate2;
+    for (intermediate2 in intermediate) {
+      var intermediate3 = intermediate[intermediate2];
+      intermediate3 && (reporter.o["expflag-" + intermediate2] = intermediate3.toString());
     }
-    a.o.experimentIds = b.l.join(",");
+    reporter.o.experimentIds = values.l.join(",");
   }
-  __name(Al, "Al");
-  function El(a, b, c) {
-    a.A = false;
-    Il(b, "fatal");
-    if (!a.j) {
-      if (b instanceof nf) throw b.j;
-      throw If(b);
+  __name(addExperimentMetadata, "addExperimentMetadata");
+  function reportFatalError(reporter, error, context) {
+    reporter.A = false;
+    setErrorSeverity(error, "fatal");
+    if (!reporter.j) {
+      if (error instanceof XplatException) throw error.j;
+      throw normalizeErrorWithContext(error);
     }
-    a.j.o(b, Jl(a, b, c));
-    if (a.Xa) {
-      c = Jl(a, b, c);
-      c.is_forceFatal = 1;
-      var d = b instanceof nf ? b.j : b;
-      Hl(a, d, c);
-      b = If(d);
-      a = ", context:" + JSON.stringify(Jl(a, d, c));
-      b.message += a;
-      throw b;
+    reporter.j.o(error, buildReportContext(reporter, error, context));
+    if (reporter.Xa) {
+      context = buildReportContext(reporter, error, context);
+      context.is_forceFatal = 1;
+      var intermediate = error instanceof XplatException ? error.j : error;
+      enrichReportContext(reporter, intermediate, context);
+      error = normalizeErrorWithContext(intermediate);
+      reporter = ", context:" + JSON.stringify(buildReportContext(reporter, intermediate, context));
+      error.message += reporter;
+      throw error;
     }
   }
-  __name(El, "El");
-  function Kl(a, b, c) {
-    a.A = false;
-    Il(b, "warning");
-    a.j && a.j.o(b, Jl(a, b, c));
+  __name(reportFatalError, "reportFatalError");
+  function reportError(reporter, error, context) {
+    reporter.A = false;
+    setErrorSeverity(error, "warning");
+    reporter.j && reporter.j.o(error, buildReportContext(reporter, error, context));
   }
-  __name(Kl, "Kl");
-  yl.prototype.info = function(a, b, c) {
-    this.A = c || false;
-    Il(a, "incident");
-    this.j && this.j.o(a, Jl(this, a, b));
+  __name(reportError, "reportError");
+  ErrorReporter.prototype.info = function(value, other, options) {
+    this.A = options || false;
+    setErrorSeverity(value, "incident");
+    this.j && this.j.o(value, buildReportContext(this, value, other));
   };
-  yl.prototype.log = function(a, b, c) {
-    this.A = !!c;
-    Il(a, "incident");
-    this.j && this.j.o(a, Jl(this, a, b));
+  ErrorReporter.prototype.log = function(value, other, options) {
+    this.A = !!options;
+    setErrorSeverity(value, "incident");
+    this.j && this.j.o(value, buildReportContext(this, value, other));
   };
-  function Dl(a, b) {
-    if (a && typeof a === "object" && a.type === "error") {
-      var c = a.error;
-      a = JSON.stringify({
-        error: c && c.message ? c.message : "Missing error cause.",
-        stack: c && c.stack ? c.stack : "Missing error cause.",
-        message: a.message,
-        filename: a.filename,
-        lineno: a.lineno,
-        colno: a.colno,
-        type: a.type
+  function normalizeReportedEvent(event, context) {
+    if (event && typeof event === "object" && event.type === "error") {
+      var error = event.error;
+      event = JSON.stringify({
+        error: error && error.message ? error.message : "Missing error cause.",
+        stack: error && error.stack ? error.stack : "Missing error cause.",
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        type: event.type
       });
-      b = Error("Unhandled " + b + " with ErrorEvent: " + a);
-    } else b = typeof a === "string" ? Error("Unhandled " + b + " with: " + a) : typeof a === "number" ? Error(
-      "Unhandled " + b + " with number: " + a
-    ) : a == null ? Error("Unhandled " + b + ' with "null/undefined"') : a;
-    return b;
+      context = Error("Unhandled " + context + " with ErrorEvent: " + event);
+    } else
+      context = typeof event === "string" ? Error("Unhandled " + context + " with: " + event) : typeof event === "number" ? Error("Unhandled " + context + " with number: " + event) : event == null ? Error("Unhandled " + context + ' with "null/undefined"') : event;
+    return context;
   }
-  __name(Dl, "Dl");
-  function Cl(a, b, c, d, e) {
-    d = d === void 0 ? true : d;
-    b = Dl(b, c);
-    c = {};
-    e && (c[e] = "true");
-    d ? Va(b) : a.info(b, c);
+  __name(normalizeReportedEvent, "normalizeReportedEvent");
+  function handleReportedEvent(reporter, event, context, rethrow, contextKey) {
+    rethrow = rethrow === void 0 ? true : rethrow;
+    event = normalizeReportedEvent(event, context);
+    context = {};
+    contextKey && (context[contextKey] = "true");
+    rethrow ? throwAsynchronously(event) : reporter.info(event, context);
   }
-  __name(Cl, "Cl");
-  function Ll(a, b, c) {
+  __name(handleReportedEvent, "handleReportedEvent");
+  function protectCallback(reporter, callback, receiver) {
     return function() {
       a: {
-        var d = Aa.apply(0, arguments);
-        if (a.j) {
+        var intermediate = collectRestArguments.apply(0, arguments);
+        if (reporter.j) {
           try {
-            var e = b.apply(c, d);
+            var intermediate2 = callback.apply(receiver, intermediate);
             break a;
-          } catch (f) {
-            El(a, f);
+          } catch (caughtError) {
+            reportFatalError(reporter, caughtError);
           }
-          e = void 0;
-        } else e = b.apply(c, d);
+          intermediate2 = void 0;
+        } else intermediate2 = callback.apply(receiver, intermediate);
       }
-      return e;
+      return intermediate2;
     };
   }
-  __name(Ll, "Ll");
-  function Ml(a, b) {
-    a.j && b.then(void 0, function(c) {
-      El(a, c instanceof Error ? c : Error(c));
+  __name(protectCallback, "protectCallback");
+  function monitorPromise(reporter, promise) {
+    reporter.j && promise.then(void 0, function(value) {
+      reportFatalError(reporter, value instanceof Error ? value : Error(value));
     });
-    return b;
+    return promise;
   }
-  __name(Ml, "Ml");
-  function Jl(a, b, c) {
-    b instanceof nf && (b = b.j);
-    c = c ? Qh(c) : {};
-    c.severity = sb(b).severity;
-    (b = b && b.reportSeverity) && (c.reportSeverity = b);
-    a.U && (c.errorGroupId = a.U);
-    return c;
+  __name(monitorPromise, "monitorPromise");
+  function buildReportContext(reporter, error, context) {
+    error instanceof XplatException && (error = error.j);
+    context = context ? shallowCloneObject(context) : {};
+    context.severity = readErrorContext(error).severity;
+    (error = error && error.reportSeverity) && (context.reportSeverity = error);
+    reporter.U && (context.errorGroupId = reporter.U);
+    return context;
   }
-  __name(Jl, "Jl");
-  function Nl(a, b) {
-    if (a && typeof a === "object" && !a.message && a.constructor && a.constructor instanceof Function && (a.constructor.name ? a.constructor.name : Ff(a.constructor)) === "Object") {
-      b.unknownErrorToStringResult = Object.prototype.toString.call(a);
-      for (var c = JSON, d = c.stringify, e = {}, f = Object.keys(a), g = 0, h = 0; h < f.length && g < 10; h++) {
-        var k = f[h];
+  __name(buildReportContext, "buildReportContext");
+  function inferErrorMessage(error, context) {
+    if (error && typeof error === "object" && !error.message && error.constructor && error.constructor instanceof Function && (error.constructor.name ? error.constructor.name : getFunctionName(error.constructor)) === "Object") {
+      context.unknownErrorToStringResult = Object.prototype.toString.call(error);
+      for (var JSON2 = JSON, stringify = JSON2.stringify, record = {}, intermediate = Object.keys(error), index = 0, index2 = 0; index2 < intermediate.length && index < 10; index2++) {
+        var intermediate2 = intermediate[index2];
         try {
-          typeof a[k] !== "function" && (e[k] = String(a[k]).substring(0, 100), g++);
-        } catch (l) {
+          typeof error[intermediate2] !== "function" && (record[intermediate2] = String(error[intermediate2]).substring(0, 100), index++);
+        } catch (caughtError) {
         }
       }
-      b.unknownErrorContent = d.call(c, e);
+      context.unknownErrorContent = stringify.call(JSON2, record);
     }
   }
-  __name(Nl, "Nl");
-  function Hl(a, b, c, d) {
-    var e = a.C;
+  __name(inferErrorMessage, "inferErrorMessage");
+  function enrichReportContext(reporter, error, context, fatal) {
+    var backingOrStateValue = reporter.C;
     try {
-      a.X(b, c, d);
-    } catch (g) {
-      throw e && !a.O && (a.H = false), a.C = true, c.provideLogDataError = g.message, c.severity || (c.severity = "fatal"), If(g);
+      reporter.X(error, context, fatal);
+    } catch (caughtError) {
+      throw backingOrStateValue && !reporter.O && (reporter.H = false), reporter.C = true, context.provideLogDataError = caughtError.message, context.severity || (context.severity = "fatal"), normalizeErrorWithContext(caughtError);
     } finally {
-      if (c["severity-unprefixed"] = c.severity || "fatal", c.severity = "" + c["severity-unprefixed"], !a.Va)
-        for (var f in c) typeof c[f] === "number" || c[f] instanceof Number || typeof c[f] === "boolean" || c[f] instanceof Boolean || a.Ta.includes(f) || f in c && delete c[f];
+      if (context["severity-unprefixed"] = context.severity || "fatal", context.severity = "" + context["severity-unprefixed"], !reporter.Va)
+        for (var intermediate in context)
+          typeof context[intermediate] === "number" || context[intermediate] instanceof Number || typeof context[intermediate] === "boolean" || context[intermediate] instanceof Boolean || reporter.Ta.includes(intermediate) || intermediate in context && delete context[intermediate];
     }
   }
-  __name(Hl, "Hl");
-  yl.prototype.X = function(a, b, c) {
-    Nl(c || a, b);
-    for (var d in this.R) try {
-      b[d] = this.R[d](a);
-    } catch (h) {
-    }
-    b.errorReportTimeMs || (b.errorReportTimeMs = Date.now().toString());
-    Object.assign(b, this.o);
-    if ((Tf(), 0) > 0) {
-      var e = new wl(), f = "";
-      Sf(function(h) {
-        f += xl(e, h);
-      });
-      b.clientLog = f;
-    }
-    c = b.severity || "fatal";
-    (d = b.reportSeverity || a && a.reportSeverity) && (d = Ol(d.toLowerCase())) && (c = d);
-    this.cb || (c = zk(this.Ua, a, c, b));
-    this.ea && (b.reportName = this.ea + "_" + c);
-    b.isArrayPrototypeIntact = kj().toString();
-    if (!("WorkerGlobalScope" in z && self instanceof z.WorkerGlobalScope)) {
+  __name(enrichReportContext, "enrichReportContext");
+  ErrorReporter.prototype.X = function(value, other, options) {
+    inferErrorMessage(options || value, other);
+    for (var intermediate in this.R)
       try {
-        var g = !!document.getElementById("docs-editor");
-      } catch (h) {
-        g = false;
+        other[intermediate] = this.R[intermediate](value);
+      } catch (caughtError) {
       }
-      b.isEditorElementAttached = g.toString();
+    other.errorReportTimeMs || (other.errorReportTimeMs = Date.now().toString());
+    Object.assign(other, this.o);
+    if ((getLogBuffer(), 0) > 0) {
+      var textLogFormatter = new TextLogFormatter(), intermediate2 = "";
+      forEachBufferedLog(function(value2) {
+        intermediate2 += formatLogRecord(textLogFormatter, value2);
+      });
+      other.clientLog = intermediate2;
     }
-    b.documentCharacterSet = document.characterSet;
-    b.origin = String(z.origin);
-    g = a.stack || "";
-    if (g.trim().length == 0 || g == "Not available") b["stacklessError-reportingStack"] = Hf(yl.prototype.X), [a.message].concat(pa(Object.keys(b)), pa(Object.values(b))).some(function(h) {
-      return h && h.includes("<eye3");
-    }) || (b.eye3Hint = "<eye3-stackless title='Stackless JS Error - " + a.name + "'/>");
-    this.C && !this.O ? (this.H = this.A, c == "fatal" ? c = "postmortem" : c == "incident" && (c = "warningafterdeath")) : c == "fatal" && (this.C = true);
-    this.A = false;
-    b.severity = c;
-  };
-  yl.prototype.N = function() {
-    Fl = false;
-    if (this.L) {
-      var a = this.L, b = w(a.et), c = b.next(), d;
+    options = other.severity || "fatal";
+    (intermediate = other.reportSeverity || value && value.reportSeverity) && (intermediate = normalizeSeverity(intermediate.toLowerCase())) && (options = intermediate);
+    this.cb || (options = addTelemetrySessionMetadata(this.Ua, value, options, other));
+    this.ea && (other.reportName = this.ea + "_" + options);
+    other.isArrayPrototypeIntact = isArrayPrototypeIntact().toString();
+    if (!("WorkerGlobalScope" in runtimeGlobal && self instanceof runtimeGlobal.WorkerGlobalScope)) {
       try {
-        for (; !c.done; c = b.next()) {
-          var e = c.value, f = Qk(a.el, e);
-          if (f && (eb(f, a.eb), !f.length)) {
-            var g = a.el, h = Wa(g.getAttribute("jsaction") || ""), k = e + ":.CLIENT";
-            h = h.replace(k + ";", "");
-            h = h.replace(k, "");
-            Uk(g, h);
+        var intermediate3 = !!document.getElementById("docs-editor");
+      } catch (caughtError) {
+        intermediate3 = false;
+      }
+      other.isEditorElementAttached = intermediate3.toString();
+    }
+    other.documentCharacterSet = document.characterSet;
+    other.origin = String(runtimeGlobal.origin);
+    intermediate3 = value.stack || "";
+    if (intermediate3.trim().length == 0 || intermediate3 == "Not available") {
+      other["stacklessError-reportingStack"] = captureStackTrace(ErrorReporter.prototype.X);
+      [value.message].concat(iterableToArray(Object.keys(other)), iterableToArray(Object.values(other))).some(function(value2) {
+        return value2 && value2.includes("<eye3");
+      }) || (other.eye3Hint = "<eye3-stackless title='Stackless JS Error - " + value.name + "'/>");
+    }
+    this.C && !this.O ? (this.H = this.A, options == "fatal" ? options = "postmortem" : options == "incident" && (options = "warningafterdeath")) : options == "fatal" && (this.C = true);
+    this.A = false;
+    other.severity = options;
+  };
+  ErrorReporter.prototype.N = function() {
+    errorReporterInstalled = false;
+    if (this.L) {
+      var intermediate = this.L, iterator = getIterator(intermediate.et), iteration = iterator.next(), intermediate2;
+      try {
+        for (; !iteration.done; iteration = iterator.next()) {
+          var value = iteration.value, wizEventHandlers = getWizEventHandlers(intermediate.el, value);
+          if (wizEventHandlers && (removeArrayValue(wizEventHandlers, intermediate.eb), !wizEventHandlers.length)) {
+            var intermediate3 = intermediate.el, intermediate4 = trimString(intermediate3.getAttribute("jsaction") || ""), intermediate5 = value + ":.CLIENT";
+            intermediate4 = intermediate4.replace(intermediate5 + ";", "");
+            intermediate4 = intermediate4.replace(intermediate5, "");
+            setJsAction(intermediate3, intermediate4);
           }
         }
       } finally {
-        c && !c.done && (d = b.return) && d.call(b);
+        iteration && !iteration.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
       }
     }
-    cg(this.M, this.j, this.G);
-    Z.prototype.N.call(this);
+    disposeAll(this.M, this.j, this.G);
+    EventTarget.prototype.N.call(this);
   };
-  var Fl = false, Gl = null;
-  function zl() {
+  var errorReporterInstalled = false, errorReporterInstallStack = null;
+  function ErrorReporterOptions() {
     this.L = this.l = void 0;
     this.A = this.M = this.J = false;
     this.j = void 0;
@@ -6857,15 +7157,15 @@
     this.P = this.D = false;
     this.v = void 0;
   }
-  __name(zl, "zl");
-  function Il(a, b) {
-    a instanceof nf && (a = a.j);
-    rb(a, "severity", b);
+  __name(ErrorReporterOptions, "ErrorReporterOptions");
+  function setErrorSeverity(error, severity) {
+    error instanceof XplatException && (error = error.j);
+    attachErrorContext(error, "severity", severity);
   }
-  __name(Il, "Il");
-  function Ol(a) {
-    if (!a) return null;
-    switch (a) {
+  __name(setErrorSeverity, "setErrorSeverity");
+  function normalizeSeverity(severity) {
+    if (!severity) return null;
+    switch (severity) {
       case "severe":
       case "fatal":
         return "fatal";
@@ -6883,171 +7183,189 @@
         return null;
     }
   }
-  __name(Ol, "Ol");
-  ;
-  function Pl() {
-    var a = this;
-    this.promise = new Promise(function(b, c) {
-      a.resolve = b;
-      a.reject = c;
+  __name(normalizeSeverity, "normalizeSeverity");
+  function NativePromiseResolver() {
+    var instance = this;
+    this.promise = new Promise(function(value, other) {
+      instance.resolve = value;
+      instance.reject = other;
     });
   }
-  __name(Pl, "Pl");
-  ;
-  function Ql() {
+  __name(NativePromiseResolver, "NativePromiseResolver");
+  function NativeCrashStorage() {
     this.o = window.crashReport;
-    this.v = new Pl();
+    this.v = new NativePromiseResolver();
     this.j = 0;
     this.l = /* @__PURE__ */ new Map();
   }
-  __name(Ql, "Ql");
-  Ql.prototype.initialize = function(a) {
-    a = a === void 0 ? 10240 : a;
-    var b = this, c, d, e, f, g, h, k, l, m, q, t, x;
-    return za(new ya(new ua(function(u) {
-      switch (u.j) {
-        case 1:
-          if (b.j !== 0) return u.return(b.v.promise);
-          b.j = 1;
-          u.O(2, 3);
-          return u.G(b.o.initialize(a), 5);
-        case 5:
-          b.v.resolve();
-          b.j = 2;
-          c = w(b.l);
-          d = c.next();
-          try {
-            for (; !d.done; d = c.next()) f = d.value, g = w(f), h = g.next().value, k = g.next().value, l = h, m = k, q = void 0, b.set(l, (q = m) != null ? q : "");
-          } finally {
-            d && !d.done && (e = c.return) && e.call(c);
+  __name(NativeCrashStorage, "NativeCrashStorage");
+  NativeCrashStorage.prototype.initialize = function(value) {
+    value = value === void 0 ? 10240 : value;
+    var instance = this, iterator, intermediate, intermediate2, intermediate3, iterator2, intermediate4, intermediate5, intermediate6, intermediate7, intermediate8, intermediate9, intermediate10;
+    return runAsyncGenerator(
+      new GeneratorIterator(
+        new GeneratorEngine(function(iterator3) {
+          switch (iterator3.j) {
+            case 1:
+              if (instance.j !== 0) return iterator3.return(instance.v.promise);
+              instance.j = 1;
+              iterator3.O(2, 3);
+              return iterator3.G(instance.o.initialize(value), 5);
+            case 5:
+              instance.v.resolve();
+              instance.j = 2;
+              iterator = getIterator(instance.l);
+              intermediate = iterator.next();
+              try {
+                for (; !intermediate.done; intermediate = iterator.next()) {
+                  intermediate3 = intermediate.value;
+                  iterator2 = getIterator(intermediate3);
+                  intermediate4 = iterator2.next().value;
+                  intermediate5 = iterator2.next().value;
+                  intermediate6 = intermediate4;
+                  intermediate7 = intermediate5;
+                  intermediate8 = void 0;
+                  instance.set(
+                    intermediate6,
+                    (intermediate8 = intermediate7) != null ? intermediate8 : ""
+                  );
+                }
+              } finally {
+                intermediate && !intermediate.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
+              }
+            case 3:
+              iterator3.M();
+              instance.l.clear();
+              iterator3.P(4);
+              break;
+            case 2:
+              intermediate9 = iterator3.L();
+              instance.j = 3;
+              intermediate10 = Error("Failed to initialize crash storage", { cause: intermediate9 });
+              intermediate10.reportSeverity = "warning";
+              instance.v.reject(intermediate10);
+              iterator3.ha(3);
+              break;
+            case 4:
+              return iterator3.return(instance.v.promise);
           }
-        case 3:
-          u.M();
-          b.l.clear();
-          u.P(4);
-          break;
-        case 2:
-          t = u.L();
-          b.j = 3;
-          x = Error("Failed to initialize crash storage", {
-            cause: t
-          });
-          x.reportSeverity = "warning";
-          b.v.reject(x);
-          u.ha(3);
-          break;
-        case 4:
-          return u.return(b.v.promise);
-      }
-    })));
+        })
+      )
+    );
   };
-  Ql.prototype.Na = function() {
+  NativeCrashStorage.prototype.Na = function() {
     return this.j !== 0;
   };
-  Ql.prototype.set = function(a, b) {
+  NativeCrashStorage.prototype.set = function(value, other) {
     if (this.j !== 3)
-      if (this.j !== 2) this.l.size < 100 || this.l.has(a) ? this.l.set(a, b) : this.l.set(
-        "cache_full",
-        "true"
-      );
-      else try {
-        this.o.set(a, b);
-      } catch (c) {
-      }
+      if (this.j !== 2)
+        this.l.size < 100 || this.l.has(value) ? this.l.set(value, other) : this.l.set("cache_full", "true");
+      else
+        try {
+          this.o.set(value, other);
+        } catch (caughtError) {
+        }
   };
-  Ql.prototype.delete = function(a) {
+  NativeCrashStorage.prototype.delete = function(value) {
     if (this.j !== 3)
-      if (this.j !== 2) this.l.delete(a);
-      else try {
-        typeof this.o.delete === "function" ? this.o.delete(a) : this.o.remove(a);
-      } catch (b) {
-      }
+      if (this.j !== 2) this.l.delete(value);
+      else
+        try {
+          typeof this.o.delete === "function" ? this.o.delete(value) : this.o.remove(value);
+        } catch (caughtError) {
+        }
   };
-  function Rl() {
+  function NoopCrashStorage() {
     this.j = false;
   }
-  __name(Rl, "Rl");
-  Rl.prototype.initialize = function() {
+  __name(NoopCrashStorage, "NoopCrashStorage");
+  NoopCrashStorage.prototype.initialize = function() {
     this.j = true;
     return Promise.resolve();
   };
-  Rl.prototype.Na = ba("j");
-  Rl.prototype.set = n();
-  Rl.prototype.delete = n();
-  var Sl = new Rl();
-  var Tl = ["SEVERE", "FATAL"];
-  function Ul() {
+  NoopCrashStorage.prototype.Na = createPropertyGetter("j");
+  NoopCrashStorage.prototype.set = createNoopFunction();
+  NoopCrashStorage.prototype.delete = createNoopFunction();
+  var crashStorage = new NoopCrashStorage();
+  var severeSeverityNames = ["SEVERE", "FATAL"];
+  function CrashTelemetryObserver() {
     this.l = this.o = 1;
-    this.j = new Gd();
+    this.j = new TelemetryBootstrapMessage();
   }
-  __name(Ul, "Ul");
-  Ul.prototype.Pa = function(a, b) {
-    var c = b == null ? void 0 : b.va.get("apps_telemetry.outgoing_severity");
-    a = c != null ? c : a.o;
-    if (a = this.o === 1 && !!a && Tl.includes(a.toUpperCase())) this.o = 2;
-    b = b == null ? void 0 : b.va.get("apps_telemetry.incoming_severity");
-    if (c = this.l === 1 && !!b && !!c && b.toUpperCase() !== c.toUpperCase()) this.l = 2;
-    if (a || c) c = od(this.j, sj, 3), b = new rj(), b = Bd(b, 1, this.o), b = Bd(b, 2, this.l), sd(
-      c,
-      rj,
-      5,
-      b
-    ), Vl(this);
+  __name(CrashTelemetryObserver, "CrashTelemetryObserver");
+  CrashTelemetryObserver.prototype.Pa = function(value, other) {
+    var intermediate = other == null ? void 0 : other.va.get("apps_telemetry.outgoing_severity");
+    value = intermediate != null ? intermediate : value.o;
+    if (value = this.o === 1 && !!value && severeSeverityNames.includes(value.toUpperCase()))
+      this.o = 2;
+    other = other == null ? void 0 : other.va.get("apps_telemetry.incoming_severity");
+    if (intermediate = this.l === 1 && !!other && !!intermediate && other.toUpperCase() !== intermediate.toUpperCase())
+      this.l = 2;
+    if (value || intermediate) {
+      intermediate = getMutableNestedMessage(this.j, CrashMetadataMessage, 3);
+      other = new CrashSeverityMessage();
+      other = setNumberField(other, 1, this.o);
+      other = setNumberField(other, 2, this.l);
+      setNestedMessage(intermediate, CrashSeverityMessage, 5, other);
+      persistCrashTelemetry(this);
+    }
   };
-  Ul.prototype.qa = function(a) {
+  CrashTelemetryObserver.prototype.qa = function(value) {
     a: {
-      var b = od(this.j, oj, 1);
-      var c = qj;
-      Wc(b);
-      if (void 0 === Qb) {
-        if (kd(b, c, 4) !== 4) {
-          b = void 0;
+      var mutableNestedMessage = getMutableNestedMessage(this.j, CrashClientStateMessage, 1);
+      var crashStateOneofFields2 = crashStateOneofFields;
+      assertMessageMutable(mutableNestedMessage);
+      if (void 0 === nestedFieldModeToken) {
+        if (getActiveOneofField(mutableNestedMessage, crashStateOneofFields2, 4) !== 4) {
+          mutableNestedMessage = void 0;
           break a;
         }
-      } else jd(b.B, void 0, c, 4);
-      b = od(b, nj, 4);
+      } else setOneofCase(mutableNestedMessage.B, void 0, crashStateOneofFields2, 4);
+      mutableNestedMessage = getMutableNestedMessage(
+        mutableNestedMessage,
+        CrashClassificationMessage,
+        4
+      );
     }
-    b.qa(a);
-    Vl(this);
+    mutableNestedMessage.qa(value);
+    persistCrashTelemetry(this);
   };
-  function Vl(a) {
-    var b = Sl, c = b.set;
-    a = JSON.stringify(Mc(a.j));
-    c.call(b, "appsTelemetryCrashReportData", a);
+  function persistCrashTelemetry(observer) {
+    var crashStorage2 = crashStorage, set = crashStorage2.set;
+    observer = JSON.stringify(serializeMessage(observer.j));
+    set.call(crashStorage2, "appsTelemetryCrashReportData", observer);
   }
-  __name(Vl, "Vl");
-  ;
-  function Wl(a) {
-    a = a === void 0 ? {} : a;
-    if (!Sl.Na()) {
+  __name(persistCrashTelemetry, "persistCrashTelemetry");
+  function createCrashTelemetryProcessor(options) {
+    options = options === void 0 ? {} : options;
+    if (!crashStorage.Na()) {
       try {
-        var b = Fk(me);
-      } catch (c) {
-        b = false;
+        var booleanFeatureFlag = readBooleanFeatureFlag(crashStorageFlag);
+      } catch (caughtError) {
+        booleanFeatureFlag = false;
       }
-      Sl = b && window.crashReport ? new Ql() : new Rl();
-      Sl.initialize();
+      crashStorage = booleanFeatureFlag && window.crashReport ? new NativeCrashStorage() : new NoopCrashStorage();
+      crashStorage.initialize();
     }
-    return Gk(a, new Ul());
+    return createTelemetryProcessor(options, new CrashTelemetryObserver());
   }
-  __name(Wl, "Wl");
-  ;
-  function Xl(a) {
-    this.v = a.Hb || null;
-    this.o = a.Lc || false;
+  __name(createCrashTelemetryProcessor, "createCrashTelemetryProcessor");
+  function FetchXhrFactory(options) {
+    this.v = options.Hb || null;
+    this.o = options.Lc || false;
     this.j = void 0;
   }
-  __name(Xl, "Xl");
-  B(Xl, cl);
-  Xl.prototype.l = function() {
-    var a = new Yl(this.v, this.o);
-    this.j && (a.G = this.j);
-    return a;
+  __name(FetchXhrFactory, "FetchXhrFactory");
+  inheritClosureClass(FetchXhrFactory, AbstractXhrFactory);
+  FetchXhrFactory.prototype.l = function() {
+    var fetchXmlHttpRequest = new FetchXmlHttpRequest(this.v, this.o);
+    this.j && (fetchXmlHttpRequest.G = this.j);
+    return fetchXmlHttpRequest;
   };
-  function Yl(a, b) {
-    Z.call(this);
-    this.X = a;
-    this.L = b;
+  function FetchXmlHttpRequest(fetchScope, streamBinaryChunks) {
+    EventTarget.call(this);
+    this.X = fetchScope;
+    this.L = streamBinaryChunks;
     this.G = void 0;
     this.status = this.readyState = 0;
     this.responseType = this.v = this.o = this.statusText = "";
@@ -7060,365 +7378,366 @@
     this.R = this.C = this.H = null;
     this.M = new AbortController();
   }
-  __name(Yl, "Yl");
-  B(Yl, Z);
-  p = Yl.prototype;
-  p.open = function(a, b) {
+  __name(FetchXmlHttpRequest, "FetchXmlHttpRequest");
+  inheritClosureClass(FetchXmlHttpRequest, EventTarget);
+  prototypeAlias = FetchXmlHttpRequest.prototype;
+  prototypeAlias.open = function(value, other) {
     if (this.readyState != 0) throw this.abort(), Error("Error reopening a connection");
-    this.U = a;
-    this.V = b;
+    this.U = value;
+    this.V = other;
     this.readyState = 1;
-    Zl(this);
+    notifyReadyStateChange(this);
   };
-  p.send = function(a) {
+  prototypeAlias.send = function(value) {
     if (this.readyState != 1) throw this.abort(), Error("need to call open() first. ");
     if (this.M.signal.aborted) throw this.abort(), Error("Request was aborted.");
     this.j = true;
-    var b = {
+    var record = {
       headers: this.O,
       method: this.U,
       credentials: this.G,
       cache: void 0,
       signal: this.M.signal
     };
-    a && (b.body = a);
-    (this.X || z).fetch(new Request(this.V, b)).then(this.nb.bind(this), this.ma.bind(this));
+    value && (record.body = value);
+    (this.X || runtimeGlobal).fetch(new Request(this.V, record)).then(this.nb.bind(this), this.ma.bind(this));
   };
-  p.abort = function() {
+  prototypeAlias.abort = function() {
     this.o = this.v = "";
     this.O = new Headers();
     this.status = 0;
     this.M.abort("Request was aborted.");
-    this.C && this.C.cancel("Request was aborted.").catch(n());
-    this.readyState >= 1 && this.j && this.readyState != 4 && (this.j = false, $l(this));
+    this.C && this.C.cancel("Request was aborted.").catch(createNoopFunction());
+    this.readyState >= 1 && this.j && this.readyState != 4 && (this.j = false, completeFetchRequest(this));
     this.readyState = 0;
   };
-  p.nb = function(a) {
-    if (this.j && (this.H = a, this.A || (this.status = this.H.status, this.statusText = this.H.statusText, this.A = a.headers, this.readyState = 2, Zl(this)), this.j && (this.readyState = 3, Zl(this), this.j)))
-      if (this.responseType === "arraybuffer") a.arrayBuffer().then(this.lb.bind(this), this.ma.bind(this));
-      else if (a.body && z.ReadableStream) {
-        this.C = a.body.getReader();
+  prototypeAlias.nb = function(value) {
+    if (this.j && (this.H = value, this.A || (this.status = this.H.status, this.statusText = this.H.statusText, this.A = value.headers, this.readyState = 2, notifyReadyStateChange(this)), this.j && (this.readyState = 3, notifyReadyStateChange(this), this.j)))
+      if (this.responseType === "arraybuffer")
+        value.arrayBuffer().then(this.lb.bind(this), this.ma.bind(this));
+      else if (value.body && runtimeGlobal.ReadableStream) {
+        this.C = value.body.getReader();
         if (this.L) {
-          if (this.responseType) throw Error(
-            'responseType must be empty for "streamBinaryChunks" mode responses.'
-          );
+          if (this.responseType)
+            throw Error('responseType must be empty for "streamBinaryChunks" mode responses.');
           this.o = [];
-        } else this.o = this.v = "", this.R = new TextDecoder();
-        am(this);
-      } else a.text().then(this.mb.bind(this), this.ma.bind(this));
+        } else {
+          this.o = this.v = "";
+          this.R = new TextDecoder();
+        }
+        readNextResponseChunk(this);
+      } else value.text().then(this.mb.bind(this), this.ma.bind(this));
   };
-  function am(a) {
-    a.C.read().then(a.kb.bind(a)).catch(a.ma.bind(a));
+  function readNextResponseChunk(request) {
+    request.C.read().then(request.kb.bind(request)).catch(request.ma.bind(request));
   }
-  __name(am, "am");
-  p.kb = function(a) {
+  __name(readNextResponseChunk, "readNextResponseChunk");
+  prototypeAlias.kb = function(value) {
     if (this.j) {
-      if (this.L && a.value) this.o.push(a.value);
+      if (this.L && value.value) this.o.push(value.value);
       else if (!this.L) {
-        var b = a.value ? a.value : new Uint8Array(0);
-        if (b = this.R.decode(b, {
-          stream: !a.done
-        })) this.o = this.v += b;
+        var intermediate = value.value ? value.value : new Uint8Array(0);
+        if (intermediate = this.R.decode(intermediate, { stream: !value.done }))
+          this.o = this.v += intermediate;
       }
-      a.done ? $l(this) : Zl(this);
-      this.readyState == 3 && am(this);
+      value.done ? completeFetchRequest(this) : notifyReadyStateChange(this);
+      this.readyState == 3 && readNextResponseChunk(this);
     }
   };
-  p.mb = function(a) {
-    this.j && (this.o = this.v = a, $l(this));
+  prototypeAlias.mb = function(value) {
+    this.j && (this.o = this.v = value, completeFetchRequest(this));
   };
-  p.lb = function(a) {
-    this.j && (this.o = a, $l(this));
+  prototypeAlias.lb = function(value) {
+    this.j && (this.o = value, completeFetchRequest(this));
   };
-  p.ma = function() {
-    this.j && $l(this);
+  prototypeAlias.ma = function() {
+    this.j && completeFetchRequest(this);
   };
-  function $l(a) {
-    a.readyState = 4;
-    a.H = null;
-    a.C = null;
-    a.R = null;
-    Zl(a);
+  function completeFetchRequest(request) {
+    request.readyState = 4;
+    request.H = null;
+    request.C = null;
+    request.R = null;
+    notifyReadyStateChange(request);
   }
-  __name($l, "$l");
-  p.setRequestHeader = function(a, b) {
-    this.O.append(a, b);
+  __name(completeFetchRequest, "completeFetchRequest");
+  prototypeAlias.setRequestHeader = function(value, other) {
+    this.O.append(value, other);
   };
-  p.getResponseHeader = function(a) {
-    return this.A ? this.A.get(a.toLowerCase()) || "" : "";
+  prototypeAlias.getResponseHeader = function(value) {
+    return this.A ? this.A.get(value.toLowerCase()) || "" : "";
   };
-  p.getAllResponseHeaders = function() {
+  prototypeAlias.getAllResponseHeaders = function() {
     if (!this.A) return "";
-    for (var a = [], b = this.A.entries(), c = b.next(); !c.done; ) c = c.value, a.push(c[0] + ": " + c[1]), c = b.next();
-    return a.join("\r\n");
+    for (var values = [], iterator = this.A.entries(), iteration = iterator.next(); !iteration.done; ) {
+      iteration = iteration.value;
+      values.push(iteration[0] + ": " + iteration[1]);
+      iteration = iterator.next();
+    }
+    return values.join("\r\n");
   };
-  function Zl(a) {
-    a.onreadystatechange && a.onreadystatechange.call(a);
+  function notifyReadyStateChange(request) {
+    request.onreadystatechange && request.onreadystatechange.call(request);
   }
-  __name(Zl, "Zl");
-  Object.defineProperty(Yl.prototype, "withCredentials", {
+  __name(notifyReadyStateChange, "notifyReadyStateChange");
+  Object.defineProperty(FetchXmlHttpRequest.prototype, "withCredentials", {
     get: /* @__PURE__ */ __name(function() {
       return this.G === "include";
     }, "get"),
-    set: /* @__PURE__ */ __name(function(a) {
-      this.G = a ? "include" : "same-origin";
+    set: /* @__PURE__ */ __name(function(value) {
+      this.G = value ? "include" : "same-origin";
     }, "set")
   });
-  function bm(a) {
+  function SampledLogger(samplePercentage) {
     this.j = null;
-    this.l = a < 1;
-    this.o = a < 0.01;
+    this.l = samplePercentage < 1;
+    this.o = samplePercentage < 0.01;
   }
-  __name(bm, "bm");
-  function cm(a, b, c) {
-    c = c === void 0 ? {} : c;
-    a.o && (c.sampling_samplePercentage = 0.01.toString(), a.j.info(b, c));
+  __name(SampledLogger, "SampledLogger");
+  function logSampledInfo(logger, error, context) {
+    context = context === void 0 ? {} : context;
+    logger.o && (context.sampling_samplePercentage = 0.01.toString(), logger.j.info(error, context));
   }
-  __name(cm, "cm");
-  function dm(a, b, c) {
-    c = c === void 0 ? {} : c;
-    a.l && (c.sampling_samplePercentage = 1 .toString(), Kl(a.j, b, c));
+  __name(logSampledInfo, "logSampledInfo");
+  function logSampledError(logger, error, context) {
+    context = context === void 0 ? {} : context;
+    logger.l && (context.sampling_samplePercentage = 1 .toString(), reportError(logger.j, error, context));
   }
-  __name(dm, "dm");
-  ;
-  function em(a) {
-    this.B = G(a);
+  __name(logSampledError, "logSampledError");
+  function ErrorMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(em, "em");
-  v(em, J);
-  em.prototype.getMessage = function() {
-    return wd(this, 1);
+  __name(ErrorMessage, "ErrorMessage");
+  inheritCompiledClass(ErrorMessage, ArrayMessage);
+  ErrorMessage.prototype.getMessage = function() {
+    return readStringOrDefault(this, 1);
   };
-  function fm(a) {
-    this.B = G(a);
+  function FrameResponseMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(fm, "fm");
-  v(fm, J);
-  function gm(a) {
-    this.B = G(a);
+  __name(FrameResponseMessage, "FrameResponseMessage");
+  inheritCompiledClass(FrameResponseMessage, ArrayMessage);
+  function DomainPolicyResponseMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(gm, "gm");
-  v(gm, J);
-  function hm(a) {
-    this.B = G(a);
+  __name(DomainPolicyResponseMessage, "DomainPolicyResponseMessage");
+  inheritCompiledClass(DomainPolicyResponseMessage, ArrayMessage);
+  function WebsiteResponseMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(hm, "hm");
-  v(hm, J);
-  function im(a, b) {
-    return Bd(a, 1, b);
+  __name(WebsiteResponseMessage, "WebsiteResponseMessage");
+  inheritCompiledClass(WebsiteResponseMessage, ArrayMessage);
+  function setWebsiteResponseType(message, type) {
+    return setNumberField(message, 1, type);
   }
-  __name(im, "im");
-  hm.prototype.Ma = function() {
-    return I(this, fm, 3);
+  __name(setWebsiteResponseType, "setWebsiteResponseType");
+  WebsiteResponseMessage.prototype.Ma = function() {
+    return readNestedMessage(this, FrameResponseMessage, 3);
   };
-  hm.prototype.wa = function() {
-    return I(this, em, 5);
+  WebsiteResponseMessage.prototype.wa = function() {
+    return readNestedMessage(this, ErrorMessage, 5);
   };
-  function jm(a) {
-    this.B = G(a);
+  function OffscreenResponseMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(jm, "jm");
-  v(jm, J);
-  function km(a) {
-    var b = new jm();
-    return Bd(b, 1, a);
+  __name(OffscreenResponseMessage, "OffscreenResponseMessage");
+  inheritCompiledClass(OffscreenResponseMessage, ArrayMessage);
+  function createOffscreenResponse(type) {
+    var offscreenResponseMessage = new OffscreenResponseMessage();
+    return setNumberField(offscreenResponseMessage, 1, type);
   }
-  __name(km, "km");
-  jm.prototype.wa = function() {
-    return I(this, em, 3);
+  __name(createOffscreenResponse, "createOffscreenResponse");
+  OffscreenResponseMessage.prototype.wa = function() {
+    return readNestedMessage(this, ErrorMessage, 3);
   };
-  jm.prototype.Ma = function() {
-    return I(this, fm, 4);
+  OffscreenResponseMessage.prototype.Ma = function() {
+    return readNestedMessage(this, FrameResponseMessage, 4);
   };
-  function vm(a) {
-    this.B = G(a);
+  function FrameConfigurationMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(vm, "vm");
-  v(vm, J);
-  function wm(a) {
-    this.B = G(a);
+  __name(FrameConfigurationMessage, "FrameConfigurationMessage");
+  inheritCompiledClass(FrameConfigurationMessage, ArrayMessage);
+  function FrameConnectionMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(wm, "wm");
-  v(wm, J);
-  function xm(a) {
-    this.B = G(a);
+  __name(FrameConnectionMessage, "FrameConnectionMessage");
+  inheritCompiledClass(FrameConnectionMessage, ArrayMessage);
+  function AlarmMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(xm, "xm");
-  v(xm, J);
-  function ym(a) {
-    this.B = G(a);
+  __name(AlarmMessage, "AlarmMessage");
+  inheritCompiledClass(AlarmMessage, ArrayMessage);
+  function FrameRequestMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(ym, "ym");
-  v(ym, J);
-  function zm(a) {
-    this.B = G(a);
+  __name(FrameRequestMessage, "FrameRequestMessage");
+  inheritCompiledClass(FrameRequestMessage, ArrayMessage);
+  function UserChangeMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(zm, "zm");
-  v(zm, J);
-  function Am(a) {
-    this.B = G(a);
+  __name(UserChangeMessage, "UserChangeMessage");
+  inheritCompiledClass(UserChangeMessage, ArrayMessage);
+  function OffscreenRequestMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Am, "Am");
-  v(Am, J);
-  function Bm(a, b) {
-    return Bd(a, 1, b);
+  __name(OffscreenRequestMessage, "OffscreenRequestMessage");
+  inheritCompiledClass(OffscreenRequestMessage, ArrayMessage);
+  function setOffscreenRequestType(message, type) {
+    return setNumberField(message, 1, type);
   }
-  __name(Bm, "Bm");
-  function Cm(a, b) {
-    return sd(a, ym, 5, b);
+  __name(setOffscreenRequestType, "setOffscreenRequestType");
+  function setOffscreenFrameRequest(message, request) {
+    return setNestedMessage(message, FrameRequestMessage, 5, request);
   }
-  __name(Cm, "Cm");
-  ;
-  function Wm(a) {
-    this.B = G(a);
+  __name(setOffscreenFrameRequest, "setOffscreenFrameRequest");
+  function EnableOfflineMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Wm, "Wm");
-  v(Wm, J);
-  function Xm(a) {
-    this.B = G(a);
+  __name(EnableOfflineMessage, "EnableOfflineMessage");
+  inheritCompiledClass(EnableOfflineMessage, ArrayMessage);
+  function DomainPolicyRequestMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Xm, "Xm");
-  v(Xm, J);
-  function Ym(a) {
-    this.B = G(a);
+  __name(DomainPolicyRequestMessage, "DomainPolicyRequestMessage");
+  inheritCompiledClass(DomainPolicyRequestMessage, ArrayMessage);
+  function WebsiteRequestMessage(array) {
+    this.B = initializeMessageArray(array);
   }
-  __name(Ym, "Ym");
-  v(Ym, J);
-  function Zm() {
-    A(this.o, this);
-    this.j = new wl();
+  __name(WebsiteRequestMessage, "WebsiteRequestMessage");
+  inheritCompiledClass(WebsiteRequestMessage, ArrayMessage);
+  function ConsoleLogger() {
+    bindFunction(this.o, this);
+    this.j = new TextLogFormatter();
     this.j.l = false;
     this.j.o = false;
     this.l = this.j.j = false;
     this.v = {};
   }
-  __name(Zm, "Zm");
-  function $m(a) {
-    1 != a.l && (a.l = true);
+  __name(ConsoleLogger, "ConsoleLogger");
+  function enableConsoleLogger(logger) {
+    1 != logger.l && (logger.l = true);
   }
-  __name($m, "$m");
-  Zm.prototype.o = function(a) {
-    function b(f) {
-      if (f) {
-        if (f.value >= Nf.value) return "error";
-        if (f.value >= Of.value) return "warn";
-        if (f.value >= Pf.value) return "log";
+  __name(enableConsoleLogger, "enableConsoleLogger");
+  ConsoleLogger.prototype.o = function(value) {
+    function helper(helper2) {
+      if (helper2) {
+        if (helper2.value >= SEVERE_LOG_LEVEL.value) return "error";
+        if (helper2.value >= WARNING_LOG_LEVEL.value) return "warn";
+        if (helper2.value >= CONFIG_LOG_LEVEL.value) return "log";
       }
       return "debug";
     }
-    __name(b, "b");
-    if (!this.v[a.l()]) {
-      var c = xl(this.j, a), d = an;
-      if (d) {
-        var e = b(a.v());
-        bn(d, e, c, a.j());
+    __name(helper, "helper");
+    if (!this.v[value.l()]) {
+      var intermediate = formatLogRecord(this.j, value), runtimeConsole2 = runtimeConsole;
+      if (runtimeConsole2) {
+        var intermediate2 = helper(value.v());
+        writeConsoleLog(runtimeConsole2, intermediate2, intermediate, value.j());
       }
     }
   };
-  var an = z.console;
-  function bn(a, b, c, d) {
-    if (a[b]) a[b](c, d === void 0 ? "" : d);
-    else a.log(c, d === void 0 ? "" : d);
+  var runtimeConsole = runtimeGlobal.console;
+  function writeConsoleLog(consoleObject, method, message, context) {
+    if (consoleObject[method]) consoleObject[method](message, context === void 0 ? "" : context);
+    else consoleObject.log(message, context === void 0 ? "" : context);
   }
-  __name(bn, "bn");
-  ;
-  var cn = new Xl({
-    Hb: self
-  });
-  cn.j = "same-origin";
-  dl = cn;
-  var ja;
-  var ka;
-  var la;
-  var Lk;
-  var Mk;
-  var Nk;
-  var Pk;
+  __name(writeConsoleLog, "writeConsoleLog");
+  var defaultFetchXhrFactory = new FetchXhrFactory({ Hb: self });
+  defaultFetchXhrFactory.j = "same-origin";
+  xhrFactoryInstance = defaultFetchXhrFactory;
+  var supportsProtoAssignment;
+  var prototypeProbe;
+  var prototypeProbeInstance;
+  var topWindowCandidate;
+  var topWindowValue;
+  var telemetryTopWindow;
+  var globalErrorMapSymbol;
 
   // src/background/runtime-api.js
-  var LegacyPromise = X;
-  var Disposable = W;
-  var createDeferred = Hg;
-  var asLegacyPromise = Ag;
-  var rejectOptedOut = Bg;
-  var normalizeError = T;
-  var attachErrorContext = rb;
-  var ownDisposable = dg;
-  var EventHandler = Yi;
-  var createSessionId = qf;
-  var schedule = Ri;
-  var waitForOffscreenStartup = Si;
-  var serialize = Mc;
-  var readType = zd;
-  var readNumber = xd;
-  var readString = yd;
-  var readOptionalString = wd;
-  var readBoolean = /* @__PURE__ */ __name((message) => !!td(message, 2), "readBoolean");
-  var readNested = I;
-  var setString = Ad;
-  var setNumber = Bd;
-  var setNested = sd;
-  var setBoolean = /* @__PURE__ */ __name((message, field, value) => ad(message, field, sc(value)), "setBoolean");
-  var readEchoType = /* @__PURE__ */ __name((message) => vc(H(message, 1)), "readEchoType");
-  var hasStringField = /* @__PURE__ */ __name((message, field) => Bc(H(message, field)) != null, "hasStringField");
+  var LegacyPromise2 = LegacyPromise;
+  var Disposable2 = Disposable;
+  var createDeferred2 = createDeferred;
+  var asLegacyPromise2 = asLegacyPromise;
+  var rejectOptedOut2 = rejectOptedOut;
+  var normalizeError2 = normalizeError;
+  var attachErrorContext2 = attachErrorContext;
+  var ownDisposable2 = ownDisposable;
+  var EventHandler2 = EventHandler;
+  var createSessionId2 = createSessionId;
+  var schedule2 = schedule;
+  var waitForOffscreenStartup2 = waitForOffscreenStartup;
+  var serialize = serializeMessage;
+  var readType = readMessageType;
+  var readNumber = readNumberField;
+  var readString = readStringField;
+  var readOptionalString = readStringOrDefault;
+  var readBoolean = /* @__PURE__ */ __name((message) => !!readBooleanField(message, 2), "readBoolean");
+  var readNested = readNestedMessage;
+  var setString = setStringField;
+  var setNumber = setNumberField;
+  var setNested = setNestedMessage;
+  var setBoolean = /* @__PURE__ */ __name((message, field, value) => setMessageField(message, field, requireBoolean(value)), "setBoolean");
+  var readEchoType = /* @__PURE__ */ __name((message) => coerceInt32(getMessageField(message, 1)), "readEchoType");
+  var hasStringField = /* @__PURE__ */ __name((message, field) => coerceString(getMessageField(message, field)) != null, "hasStringField");
   var Messages = Object.freeze({
-    Error: em,
-    FrameResponse: fm,
-    DomainPolicyResponse: gm,
-    WebsiteResponse: hm,
-    OffscreenResponse: jm,
-    FrameConfiguration: vm,
-    FrameConnection: wm,
-    Alarm: xm,
-    FrameRequest: ym,
-    UserChange: zm,
-    OffscreenRequest: Am,
-    EnableOffline: Wm,
-    DomainPolicyRequest: Xm,
-    WebsiteRequest: Ym
+    Error: ErrorMessage,
+    FrameResponse: FrameResponseMessage,
+    DomainPolicyResponse: DomainPolicyResponseMessage,
+    WebsiteResponse: WebsiteResponseMessage,
+    OffscreenResponse: OffscreenResponseMessage,
+    FrameConfiguration: FrameConfigurationMessage,
+    FrameConnection: FrameConnectionMessage,
+    Alarm: AlarmMessage,
+    FrameRequest: FrameRequestMessage,
+    UserChange: UserChangeMessage,
+    OffscreenRequest: OffscreenRequestMessage,
+    EnableOffline: EnableOfflineMessage,
+    DomainPolicyRequest: DomainPolicyRequestMessage,
+    WebsiteRequest: WebsiteRequestMessage
   });
   var getOffscreenError = /* @__PURE__ */ __name((response) => response.wa(), "getOffscreenError");
   var getFrameResponse = /* @__PURE__ */ __name((response) => response.Ma(), "getFrameResponse");
   function createUrl(value) {
-    return new Th(value);
+    return new MutableUrl(value);
   }
   __name(createUrl, "createUrl");
-  var setPath = Wh;
-  var setQuery = gi;
-  var setScheme = Uh;
-  var SampledLogger = class {
+  var setPath = setUrlPath;
+  var setQuery = setUrlQueryParameter;
+  var setScheme = setUrlScheme;
+  var SampledLogger2 = class {
     static {
       __name(this, "SampledLogger");
     }
     constructor(samplePercentage) {
-      this.raw = new bm(samplePercentage);
+      this.raw = new SampledLogger(samplePercentage);
     }
     bind(reporter) {
       this.raw.j = reporter;
     }
     info(error, context) {
-      return cm(this.raw, error, context);
+      return logSampledInfo(this.raw, error, context);
     }
     error(error, context) {
-      return dm(this.raw, error, context);
+      return logSampledError(this.raw, error, context);
     }
   };
   function initializeConsoleLogging() {
-    const logger = new Zm();
-    $m(logger);
+    const logger = new ConsoleLogger();
+    enableConsoleLogger(logger);
     return logger;
   }
   __name(initializeConsoleLogging, "initializeConsoleLogging");
   function createErrorReporter(errorUrl, reportNonFatalErrors, sessionId) {
-    const options = new zl();
+    const options = new ErrorReporterOptions();
     options.J = false;
     options.A = true;
     options.j = errorUrl;
     options.o = true;
-    options.l = nh();
+    options.l = getFlagService();
     options.D = false;
-    options.v = Wl;
-    const reporter = new yl(options);
+    options.v = createCrashTelemetryProcessor;
+    const reporter = new ErrorReporter(options);
     reporter.o.sessionTypeName = "offline-event-page";
     reporter.o.reportsNonFatalErrors = String(reportNonFatalErrors);
     reporter.o.sid = String(sessionId);
@@ -7426,9 +7745,9 @@
   }
   __name(createErrorReporter, "createErrorReporter");
   var reporterContext = /* @__PURE__ */ __name((reporter) => reporter.o, "reporterContext");
-  var reportError = Kl;
-  var protectCallback = Ll;
-  var monitorPromise = Ml;
+  var reportError2 = reportError;
+  var protectCallback2 = protectCallback;
+  var monitorPromise2 = monitorPromise;
   var unwrapMessageEvent = /* @__PURE__ */ __name((event) => event.j, "unwrapMessageEvent");
 
   // src/shared/message-types.js
@@ -7465,7 +7784,7 @@
 
   // src/background/offline-state.js
   function readStorage(storageArea, keys) {
-    return new LegacyPromise((resolve, reject) => {
+    return new LegacyPromise2((resolve, reject) => {
       storageArea.get(keys, (values) => {
         if (chrome.runtime.lastError) reject(Error(chrome.runtime.lastError));
         else resolve(values);
@@ -7474,7 +7793,7 @@
   }
   __name(readStorage, "readStorage");
   function writeLocalState(values) {
-    return new LegacyPromise((resolve, reject) => {
+    return new LegacyPromise2((resolve, reject) => {
       chrome.storage.local.set(values, () => {
         if (chrome.runtime.lastError) reject(Error(chrome.runtime.lastError));
         else resolve();
@@ -7496,7 +7815,7 @@
   __name(enableOffline, "enableOffline");
   function disableOffline() {
     return writeLocalState({ offlineOptedIn: false }).then(
-      () => new LegacyPromise((resolve, reject) => {
+      () => new LegacyPromise2((resolve, reject) => {
         chrome.storage.local.remove("optedInUserOuid", () => {
           if (chrome.runtime.lastError) reject(Error(chrome.runtime.lastError));
           else resolve();
@@ -7549,7 +7868,7 @@
   function queryDomainPolicy(request) {
     const domain = readString(request, 1);
     const reads = [getAllowedDomains(), getAutoEnabledDomains()];
-    return new LegacyPromise((resolve, reject) => {
+    return new LegacyPromise2((resolve, reject) => {
       const values = [];
       let outstanding = reads.length;
       reads.forEach(
@@ -7571,7 +7890,7 @@
 
   // src/background/runtime-messaging.js
   function sendOffscreenRequest(request) {
-    const reply = createDeferred();
+    const reply = createDeferred2();
     chrome.runtime.sendMessage(serialize(request), void 0, (wireResponse) => {
       const runtime = chrome.runtime;
       if (wireResponse === void 0) {
@@ -7589,8 +7908,8 @@
       else reply.resolve(response);
     });
     return reply.promise.catch((error) => {
-      error = normalizeError(error);
-      attachErrorContext(
+      error = normalizeError2(error);
+      attachErrorContext2(
         error,
         "offscreenDocumentRequestType",
         readNumber(request, 1).toString()
@@ -7626,13 +7945,13 @@
   }
   __name(documentCheckContextKey, "documentCheckContextKey");
   function rethrowWithContext(error, context) {
-    error = normalizeError(error);
+    error = normalizeError2(error);
     for (const [key, value] of Object.entries(context))
-      attachErrorContext(error, key, value);
+      attachErrorContext2(error, key, value);
     throw error;
   }
   __name(rethrowWithContext, "rethrowWithContext");
-  var OffscreenManager = class extends Disposable {
+  var OffscreenManager = class extends Disposable2 {
     static {
       __name(this, "OffscreenManager");
     }
@@ -7642,7 +7961,7 @@
       this.extensionVersion = extensionVersion;
       this.sessionId = sessionId;
       this.samplePercentage = samplePercentage;
-      this.frameReady = createDeferred();
+      this.frameReady = createDeferred2();
       this.frameConnected = false;
       const url = createUrl();
       setPath(url, "offscreendocument.html");
@@ -7653,14 +7972,14 @@
         reasons: ["IFRAME_SCRIPTING"],
         justification: "Use iframe to access user data under docs.google.com domain"
       };
-      this.logger = new SampledLogger(samplePercentage);
+      this.logger = new SampledLogger2(samplePercentage);
     }
     markFrameConnected() {
       this.frameConnected = true;
       this.frameReady.resolve();
     }
     resetConnection() {
-      this.frameReady = createDeferred();
+      this.frameReady = createDeferred2();
       this.frameConnected = false;
     }
     close() {
@@ -7727,14 +8046,14 @@
       const context = {
         sendingOffscreenDocumentRequestType: readNumber(request, 1).toString()
       };
-      return asLegacyPromise(this.ensureDocument(context)).then(() => waitForOffscreenStartup()).then(() => sendOffscreenRequest(request)).catch((error) => {
+      return asLegacyPromise2(this.ensureDocument(context)).then(() => waitForOffscreenStartup2()).then(() => sendOffscreenRequest(request)).catch((error) => {
         if (!(error instanceof Error && isDisconnectedChannel(error.message))) {
           return Promise.reject(error instanceof Error ? error : Error(error));
         }
         this.logger.info(error, context);
-        return asLegacyPromise(hasOffscreenDocument()).then((exists) => {
+        return asLegacyPromise2(hasOffscreenDocument()).then((exists) => {
           context[documentCheckContextKey(1)] = exists.toString();
-        }).then(() => this.forceRecreateDocument(context)).then(() => waitForOffscreenStartup()).then(() => sendOffscreenRequest(request));
+        }).then(() => this.forceRecreateDocument(context)).then(() => waitForOffscreenStartup2()).then(() => sendOffscreenRequest(request));
       }).catch((error) => rethrowWithContext(error, context));
     }
     requestFrame(frameRequest) {
@@ -7769,13 +8088,13 @@
     sendToConnectedFrame(request, context, attempt) {
       return this.frameReady.promise.then(() => hasOffscreenDocument()).then((exists) => {
         context[documentCheckContextKey(attempt)] = exists.toString();
-        return exists ? asLegacyPromise() : this.restoreFrame();
+        return exists ? asLegacyPromise2() : this.restoreFrame();
       }).then(() => this.frameReady.promise).then(() => sendOffscreenRequest(request)).then((response) => getFrameResponse(response)).catch((error) => rethrowWithContext(error, context));
     }
     restoreFrame() {
       this.resetConnection();
       return getOptInStatus().then(
-        (status) => status === OptInStatus.ENABLED ? getOptedInUserId().then((userId) => this.recreateFrame(userId)) : rejectOptedOut()
+        (status) => status === OptInStatus.ENABLED ? getOptedInUserId().then((userId) => this.recreateFrame(userId)) : rejectOptedOut2()
       );
     }
     // Closure Disposable invokes this hook. Keep its ABI name at this boundary.
@@ -7795,7 +8114,7 @@
       this.logger = logger;
     }
     start(force = false) {
-      return new LegacyPromise((resolve) => {
+      return new LegacyPromise2((resolve) => {
         chrome.alarms.get("heartbeat", (existingAlarm) => {
           if (!existingAlarm)
             chrome.alarms.create("heartbeat", {
@@ -7803,7 +8122,7 @@
             });
           if (!existingAlarm || force) {
             this.forwardAlarm("heartbeat").catch(
-              (error) => this.logger.error(normalizeError(error), {
+              (error) => this.logger.error(normalizeError2(error), {
                 context: "startHeartbeat_triggerAlarm"
               })
             );
@@ -7813,7 +8132,7 @@
       });
     }
     stop() {
-      return new LegacyPromise(
+      return new LegacyPromise2(
         (resolve) => chrome.alarms.clear("heartbeat", () => resolve())
       );
     }
@@ -7824,26 +8143,26 @@
     return chrome.runtime.getManifest().version || "unknown";
   }
   __name(getExtensionVersion, "getExtensionVersion");
-  var ExtensionController = class extends Disposable {
+  var ExtensionController = class extends Disposable2 {
     static {
       __name(this, "ExtensionController");
     }
     constructor() {
       super();
-      this.sessionId = createSessionId();
+      this.sessionId = createSessionId2();
       this.reporter = null;
       this.docsDomain = null;
       this.accountRecoveryAttempted = false;
       this.consoleLogger = initializeConsoleLogging();
-      this.initialized = createDeferred();
+      this.initialized = createDeferred2();
       chrome.alarms.onAlarm.addListener(
         (alarm) => this.initialized.promise.then(
-          () => monitorPromise(
+          () => monitorPromise2(
             this.reporter,
-            protectCallback(this.reporter, this.onAlarm, this)(alarm)
+            protectCallback2(this.reporter, this.onAlarm, this)(alarm)
           )
         ).catch(
-          (error) => this.logger.error(normalizeError(error), {
+          (error) => this.logger.error(normalizeError2(error), {
             extension_codePath: "onAlarm_listener"
           })
         )
@@ -7852,12 +8171,12 @@
         (request, sender, reply) => this.onWebsiteMessage(request, reply)
       );
       chrome.runtime.onMessage.addListener(this.onOffscreenMessage.bind(this));
-      this.events = new EventHandler(this);
-      ownDisposable(this, this.events);
+      this.events = new EventHandler2(this);
+      ownDisposable2(this, this.events);
       this.events.listen(self, "message", this.onWindowMessage);
       this.samplePercentage = Math.random() * 100;
       this.reportNonFatalErrors = this.samplePercentage < 1;
-      this.logger = new SampledLogger(this.samplePercentage);
+      this.logger = new SampledLogger2(this.samplePercentage);
       this.offscreen = new OffscreenManager(
         getExtensionVersion(),
         this.sessionId,
@@ -7869,7 +8188,7 @@
       );
       chrome.runtime.onConnectExternal.addListener(() => {
       });
-      schedule(this.scheduleRecoveryAlarm, Timing.WORKER_RECOVERY_MS, this);
+      schedule2(this.scheduleRecoveryAlarm, Timing.WORKER_RECOVERY_MS, this);
     }
     getDocsOrigin() {
       return setScheme(createUrl("//" + this.docsDomain), "https");
@@ -7887,24 +8206,24 @@
           this.sessionId
         );
         this.initialized.resolve();
-        ownDisposable(this, this.reporter);
+        ownDisposable2(this, this.reporter);
         this.logger.bind(this.reporter);
         this.offscreen.logger.bind(this.reporter);
         this.offscreen.docsOrigin = this.getDocsOrigin();
-        ownDisposable(this, this.offscreen);
-        const restore = protectCallback(
+        ownDisposable2(this, this.offscreen);
+        const restore = protectCallback2(
           this.reporter,
           this.restoreSavedState,
           this
         );
-        return asLegacyPromise(
-          monitorPromise(
+        return asLegacyPromise2(
+          monitorPromise2(
             this.reporter,
-            asLegacyPromise().then(() => restore())
+            asLegacyPromise2().then(() => restore())
           )
         );
       }).catch((error) => {
-        normalizeError(error);
+        normalizeError2(error);
       });
     }
     restoreSavedState() {
@@ -7936,7 +8255,7 @@
       setQuery(url, "optin", status);
       self.fetch(new Request(url.toString(), { method: "post", mode: "cors" })).then(() => {
       }).catch((error) => {
-        reportError(this.reporter, normalizeError(error));
+        reportError2(this.reporter, normalizeError2(error));
       });
     }
     scheduleRecoveryAlarm() {
@@ -7958,7 +8277,7 @@
       ).then((response) => {
         event.ports[0].postMessage(serialize(response));
       }).catch(
-        (error) => this.logger.error(normalizeError(error), {
+        (error) => this.logger.error(normalizeError2(error), {
           context: "onMessageFromOfflineFrame_postMessage"
         })
       );
@@ -7972,7 +8291,7 @@
           error = Error(
             "Failed to reply to request because listen port was disconnected."
           );
-        } else error = normalizeError(error);
+        } else error = normalizeError2(error);
         this.logger.error(error, { requestType: readType(request) });
       });
       return true;
@@ -8001,7 +8320,7 @@
               )
             );
           }).catch(
-            (error) => this.logger.error(normalizeError(error), {
+            (error) => this.logger.error(normalizeError2(error), {
               context: "saveFrameConnectInfo"
             })
           );
@@ -8016,7 +8335,7 @@
           const change = readNested(request, Messages.UserChange, 6);
           const userId = change == null ? void 0 : readOptionalString(change, 1);
           (userId ? this.recoverAccount(userId) : this.optOut()).then(() => reply(serialize(response))).catch(
-            (error) => this.logger.error(normalizeError(error), {
+            (error) => this.logger.error(normalizeError2(error), {
               context: "detectUserIsOptedOut"
             })
           );
@@ -8028,7 +8347,7 @@
       return true;
     }
     dispatchSafely(request, connectionPort) {
-      return asLegacyPromise().then(this.dispatch.bind(this, request, connectionPort)).catch((error) => {
+      return asLegacyPromise2().then(this.dispatch.bind(this, request, connectionPort)).catch((error) => {
         error = error instanceof Error ? error : Error(error);
         const response = new Messages.WebsiteResponse();
         const payload = new Messages.Error();
@@ -8077,7 +8396,7 @@
             return response;
           });
         case WebsiteRequest.FORWARD_TO_FRAME:
-          return asLegacyPromise(
+          return asLegacyPromise2(
             this.offscreen.requestFrame(
               readNested(request, Messages.FrameRequest, 4)
             )
@@ -8091,10 +8410,10 @@
     }
     recoverAccount(userId) {
       if (this.accountRecoveryAttempted)
-        return asLegacyPromise(this.offscreen.close());
+        return asLegacyPromise2(this.offscreen.close());
       this.logger.info(Error("Extension frame connected with the wrong OUID."));
       this.accountRecoveryAttempted = true;
-      return asLegacyPromise(this.offscreen.recreateFrame(userId));
+      return asLegacyPromise2(this.offscreen.recreateFrame(userId));
     }
     optOut() {
       return disableOffline().then(() => this.heartbeat.stop()).then(() => this.offscreen.close());
@@ -8110,7 +8429,7 @@
       );
       const alarm = setString(new Messages.Alarm(), 1, name);
       setNested(request, Messages.Alarm, 2, alarm);
-      return asLegacyPromise(this.offscreen.requestFrame(request));
+      return asLegacyPromise2(this.offscreen.requestFrame(request));
     }
   };
 

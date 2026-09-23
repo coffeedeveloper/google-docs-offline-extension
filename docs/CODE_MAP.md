@@ -68,3 +68,9 @@ Google frame 的 window message 经 [FrameMessageRouter](../src/offscreen/frame-
 | `userId` / `docsOrigin` / `extensionVersion` | 当前配置的账号 OUID、Google origin、扩展版本 |
 
 兼容层仍有短字段名和 codec 访问器，集中在两个 `runtime-api.js`。这是已知的库边界，不是把旧的业务函数换个名称再藏回原始 bundle。
+
+## 运行库内部也可以按语义阅读
+
+两个 vendor 已按词法作用域还原函数和变量名，并加入章节/状态机说明。阅读入口是 [运行库设计与维护指南](../src/vendor/README.md)，例如 `createDeferred → LegacyPromise → settlePromise` 和 `setNestedMessage → setMessageField → serializeMessage`。
+
+全局与局部的原符号映射位于 [vendor-symbol-map.json](../research/vendor-symbol-map.json)。需同时选择 background/offscreen 和 scope，不能把两个 bundle 的同字母符号当成同一实现。短属性 ABI 仍保留，并在构造器旁解释；后台 `QueryData.xa` 与隐藏页 `QueryData.la` 就是不同属性布局的例子。

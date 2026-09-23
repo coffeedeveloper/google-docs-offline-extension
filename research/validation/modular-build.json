@@ -1,7 +1,7 @@
 {
   "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
   "version": "1.110.1",
-  "claim": "Unchanged baseline/assets and extracted vendor tokens; deterministic modular bundles and matching source maps. Business behavior requires differential/browser tests; no business AST-equivalence claim.",
+  "claim": "Unchanged baseline/assets; vendor source-range hashes, scope-normalized AST equivalence and reproducible semantic renaming; unchanged ABI properties. Deterministic bundles/maps. Runtime behavior still requires differential/browser tests; names/stacks differ, no universal behavioral-equivalence claim.",
   "baselineFiles": 88,
   "byteIdenticalResources": 85,
   "vendorFiles": [
@@ -19,19 +19,19 @@
     },
     {
       "file": "service_worker_bin_prod.js.map",
-      "sha256": "5d80a853c89e8dbdf0513fc0ce580e4ede2889b3294af463c90de596809bfce8"
+      "sha256": "c1dfdc596d3a67eee4432059aec29b61864c7203954435b5c35278670661e1fe"
     },
     {
       "file": "service_worker_bin_prod.js",
-      "sha256": "4739ef32eb0780f6ce79db656fb5707b3ce4a12dffdc7364f6d6ccb14d6f26f8"
+      "sha256": "f9a3f109b2ba468513038cf4887129893905993083ffa2a26030190c5ba76ca5"
     },
     {
       "file": "offscreendocument_main.js.map",
-      "sha256": "45fe4995510c29743751efbf5af462280d4ec9caf8c63ed93fb05433e233dae6"
+      "sha256": "1c86588978062f85bea22b2a3f2e791c18aff7fa27ab84f6a96e90deb820db63"
     },
     {
       "file": "offscreendocument_main.js",
-      "sha256": "c78e52623614de33bb1d6cad6804899fc77d29bd72345161f28be9ec87a019a9"
+      "sha256": "6c1d2cf13587cef7b873b9a12bbed837942120a64ffead840e2b7b8cf3f05f6e"
     }
   ]
 }

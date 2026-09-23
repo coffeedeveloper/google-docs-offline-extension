@@ -18,6 +18,8 @@
     "demo:chrome": "pnpm --filter @offline-docs/demo run demo:chrome",
     "google:chrome": "pnpm run build:google && node scripts/google-docs-live-session.mjs",
     "verify": "node scripts/verify.mjs",
+    "vendor:generate": "node scripts/readable-vendor.mjs",
+    "vendor:check": "node scripts/readable-vendor.mjs --check",
     "test": "pnpm run test:google && pnpm --filter @offline-docs/demo test",
     "test:google": "node --test tests/*.test.mjs",
     "check": "pnpm run build && pnpm run verify && pnpm test",

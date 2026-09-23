@@ -23,7 +23,7 @@ Demo 页面位于 `http://localhost:4173`，使用 React 组件实现文件列�
 
 上一版只是格式化和职责注释，不满足可维护源码的要求。当前版本已经把业务控制流重写为命名明确的 ES modules：账号状态、企业策略、后台调度、隐藏页面管理、iframe 握手与消息转发分别维护，构建后执行这些模块，不是“另写一份示意代码，实际仍执行原来的业务 bundle”。
 
-命名和模块边界是根据控制流重建的，不是 Google 原始源码。通用 Closure runtime、数组协议编解码、遥测和安全 URL 库仍保留编译符号，隔离在 `src/vendor/`，业务模块通过 `runtime-api.js` 的语义接口使用它们。
+命名和模块边界是根据控制流重建的，不是 Google 原始源码。`src/vendor/` 中的 Closure runtime、数组协议、遥测和安全 URL 库也已进行语义命名、局部变量还原及中文职责/状态机说明；兼容性敏感的短属性 ABI 保留。业务模块通过 `runtime-api.js` 使用它们，详见 [运行库阅读与维护指南](src/vendor/README.md)。
 
 ## 从哪里读
 
@@ -38,6 +38,7 @@ Demo 页面位于 `http://localhost:4173`，使用 React 组件实现文件列�
 3. [OffscreenManager](src/background/offscreen-manager.js)：创建、握手门闩、重试和重建。
 4. [OffscreenController](src/offscreen/offscreen-controller.js) 与 [GoogleIframeManager](src/offscreen/iframe-manager.js)：Google iframe 的 DOM、端口与生命周期。
 5. [消息协议](docs/PROTOCOL.md)：数字类型和数组字段的含义。
+6. [运行库设计与还原边界](src/vendor/README.md)：Promise 取消链、消息 copy-on-write、安全 URL、字段 ABI 和一致性检查。
 
 ## 工程结构
 
@@ -48,7 +49,7 @@ src/
   offscreen/        Google iframe、连接计数、空闲关闭、消息路由、总控制器
   page/             网页扩展能力探测
   shared/           消息类型、状态与时间常量
-  vendor/           可追溯提取的编译运行库与协议实现（非业务阅读入口）
+  vendor/           语义化运行库与协议实现，附职责章节、中文注释及原始符号映射
 extension/          src 构建出的 3 个 JS + source maps，及原始 manifest/资源
 original/           用户样本的不可修改约定基线
 scripts/            构建、vendor 提取、校验、真实浏览器回归
@@ -78,8 +79,9 @@ pnpm test:browser
 
 - 修改业务：编辑 `src/background/`、`src/offscreen/` 等模块，补充对照测试。
 - `pnpm build`：构建两个目标；`pnpm build:google` 将三个 Google 入口打包成经典 IIFE，保留原 manifest 入口；输出未压缩并附 source map。
-- `pnpm verify`：验证原始哈希、资源、vendor 提取的 token、构建可复现性、source map 内容与扩展 ID。**不再要求重构业务的 AST 与压缩原版相同。**
-- `pnpm test:google`：22 项原版/重构版行为对照；`pnpm test` 另包含 Demo 的数据、来源与适配隔离测试。
+- `pnpm vendor:generate` / `pnpm vendor:check`：重新生成可读运行库 / 只检查生成结果和绑定结构；命名规则见 `scripts/vendor-names.mjs`。
+- `pnpm verify`：验证原始哈希、资源、vendor 的词法绑定归一化 AST、生成映射、构建可复现性、source map 内容与扩展 ID。**不要求重构业务的 AST 与压缩原版相同。**
+- `pnpm test:google`：22 项扩展行为对照 + 20 项运行库/还原器测试；`pnpm test` 另包含 7 项 Demo 数据、来源与适配隔离测试。
 - `pnpm test:integration`：构建并验证 Demo 的 8 条核心离线链路及 4 组 React 控件交互，需先停止 4173 开发服务。
 - `pnpm test:all`：顺序运行构建/单元检查和两个浏览器测试套件。
 - `pnpm test:browser`：两个隔离 profile 中测试真实 Chromium 扩展 API；使用合成页面和账号，不登录 Google，也不访问用户文档。
@@ -92,7 +94,7 @@ pnpm test:browser
 
 在**单独的 Chrome 测试 profile** 打开 `chrome://extensions/`，启用开发者模式，Load unpacked 选择 `extension/`。保留公钥使 ID 仍为 `ghbmnnjooekpmoecnnnilnnbdlolhkhi`，不要在用户正式 profile 中与原版混用。本次没有替换已安装扩展。
 
-22 项差分测试和真实浏览器回归提供已覆盖路径的行为证据，不是所有执行路径的形式化等价证明。重构改变函数名、作用域、堆栈、`toString()` 及可能的时序性能；完整 Google 离线编辑、并发合并和重连上传仍需按 [实践指南](docs/PRACTICE.md) 单独验收。
+扩展和运行库差分测试、真实浏览器回归提供已覆盖路径的行为证据，不是所有执行路径的形式化等价证明。重构改变函数名、诊断堆栈、`toString()` 及可能的时序性能；完整 Google 离线编辑、并发合并和重连上传仍需按 [实践指南](docs/PRACTICE.md) 单独验收。
 
 扩展依赖包外的 Google iframe、网页 Service Worker、Docs 编辑器和后端。它不是独立离线编辑器。自研文档系统应复用设计原则，不应复用 Google ID；`content_capabilities` 的 Chromium stable 白名单能力也不能直接照搬。
 

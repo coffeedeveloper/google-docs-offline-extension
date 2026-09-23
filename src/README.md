@@ -16,22 +16,22 @@
 | `offscreen/lifetime.js` | 外部连接计数、60 秒空闲、1 小时上限 | Service Worker 的浏览器生命周期 |
 | `offscreen/frame-message-router.js` | window message 校验、请求分发与错误回复 | 新增来源权限策略 |
 | 两个 `runtime-messaging.js` | runtime 消息序列化、异步回复、错误上下文 | 自动重试策略 |
-| 两个 `runtime-api.js` | 给原始库提供语义名称、屏蔽短字段名 | 决定业务路径 |
+| 两个 `runtime-api.js` | 适配语义化运行库、屏蔽短属性 ABI | 决定业务路径 |
 | `vendor/` | Closure 基础库、wire codec、遥测、安全 URL | 账号状态和业务控制器 |
 
 Google iframe 与扩展 origin 不同；它与 `docs.google.com` 网页属于相同 origin。“Google 同源 frame”不要理解为与扩展页同源。
 
 ## 为什么不把运行库全部手写掉
 
-Google 编译产物的 Promise、数组消息内部标志、错误报告和 Trusted Types 辅助逻辑，不等价于随手替换成原生 Promise、JSON 对象和普通 `iframe.src`。本次优先让实际业务可读，同时保留这些兼容性敏感实现。
+Google 编译产物的 Promise、数组消息内部标志、错误报告和 Trusted Types 辅助逻辑，不等价于随手替换成原生 Promise、JSON 对象和普通 `iframe.src`。当前运行库已经做了语义化命名和中文职责/状态机注释，同时保留这些兼容性敏感算法。
 
-- 通用运行库由 `scripts/extract-vendor.mjs` 从基线精确区间提取，只有格式化和 export 声明；`research/vendor-provenance.json` 记录原始哈希与区间。
+- 通用运行库由 `scripts/readable-vendor.mjs` 从基线精确区间生成，按词法绑定重命名、展开压缩布尔量和独立逗号表达式语句；`research/vendor-provenance.json` 记录原始哈希与区间，`research/vendor-symbol-map.json` 记录逐绑定映射。
 - 后台被编译器特化为企业策略读取的 `Eg()` 没有作为运行库保留；已显式重建为 `domain-policy.js`，避免遗漏业务和悬空引用。
 - 两个 bundle 的短符号不是同一个命名空间，不能合并同名符号。兼容层分别映射。
 - `N()` 是原始 Disposable 会调用的析构钩子，必须保持该 ABI 名；业务状态和方法使用清晰命名。
 - `.ta` / `.Ra` 是 offscreen 原始 Promise 的恢复方法，现有调用保留其调度语义；它们不是业务状态名。
 
-需要继续研究库内部时，从 `runtime-api.js` 的具体引用反查，不要从 vendor 第一行顺读。这里没有声称 vendor 内部已经全面反混淆。
+需要研究库内部时，从 [vendor 阅读指南](vendor/README.md) 或 `runtime-api.js` 的语义调用进入。全局名称和关键局部变量已还原；编译器复用的临时值及短属性 ABI 仍有保留，不宣称恢复了 Google 原始源码。
 
 ## 三个构建入口
 
@@ -45,7 +45,7 @@ esbuild 输出未压缩 IIFE，`keepNames: true`，保留函数名供调试，`t
 
 `src/` 同时是 `@offline-docs/extension-runtime` workspace 包：Google 目标直接编译这里的入口，Demo 通过 `workspace:*` 解析同一份源码，不再复制 upstream。Demo 的定制只存在于其 adapter/构建层。
 
-仅运行 `pnpm build` 不会重新提取 vendor；日常迭代不会覆盖 `src/`。只有明确执行 `node scripts/extract-vendor.mjs` 才重新生成 vendor 和来源记录。变更提取区间后，必须重新审阅边界、执行全部检查。
+仅运行 `pnpm build` 不会重新生成 vendor；日常迭代不会覆盖 `src/`。使用 `pnpm vendor:generate` 更新可读运行库，`pnpm vendor:check` 只校验；旧的 `node scripts/extract-vendor.mjs` 也转入同一流程，不会恢复成仅格式化版本。修改规则后必须执行全部检查；升级原始版本需重新审阅区间、命名和字段 ABI。
 
 ## 保持原版行为的约定
 
@@ -55,5 +55,5 @@ esbuild 输出未压缩 IIFE，`keepNames: true`，保留函数名供调试，`t
 4. 隐藏页配置只初始化一次；“重建 iframe”不等于“更新这一页的配置”。这是观测到的原版行为，已做对照测试。
 5. 账号不匹配只恢复一次，之后关闭；不要在重构中变成无限重试。
 6. heartbeat 的立即转发不阻塞启用请求，5 分钟配置不承诺精确定时。
-7. 14 秒握手超时进入失败路径后，原版还等待额外 14 秒及日志排空，不能简化成第 14 秒直接关闭。
+7. 14 秒握手超时进入失败路径后，原版让日志排空与额外 14 秒延迟竞速；任一完成就继续关闭，不是等待两者全部结束，也不能直接跳过这一步。
 8. 不在等价重构中顺便更改消息来源校验、协议、安全策略或重试规则；面向自研文档系统的产品化改进应另行设计和测试。

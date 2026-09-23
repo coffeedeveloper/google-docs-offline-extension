@@ -1,3003 +1,3599 @@
-// Generated compiler runtime, telemetry and wire codecs. See ../README.md.
-'use strict';
-
-function aa() {
-  return function(a) {
-    return a
-  }
-}
-
-function n() {
-  return function() {}
-}
-
-function p(a) {
-  return function() {
-    return this[a]
-  }
-}
-
-function ba(a) {
-  return function() {
-    return a
-  }
-}
-var q, ca = typeof Object.create == "function" ? Object.create : function(a) {
-    function b() {}
-    b.prototype = a;
-    return new b
-  },
-  da = typeof Object.defineProperties == "function" ? Object.defineProperty : function(a, b, c) {
-    if (a == Array.prototype || a == Object.prototype) return a;
-    a[b] = c.value;
-    return a
+/**
+ * offscreen 运行库：从固定样本按词法绑定语义化还原。
+ * 维护入口：src/vendor/README.md；重新生成：pnpm vendor:generate。
+ * 保留原算法、执行顺序、短属性 ABI 和许可证；名称不是 Google 原始源码。
+ */
+"use strict";
+/**
+ * 编译器兼容层：继承、迭代器、generator 状态机与内建 polyfill。保留特性探测及初始化顺序。
+ */
+function createIdentityFunction() {
+  return function (value) {
+    return value;
   };
-
-function ea(a) {
-  a = ["object" == typeof globalThis && globalThis, a, "object" == typeof window && window, "object" ==
-    typeof self && self, "object" == typeof global && global
+}
+function createNoopFunction() {
+  return function () {};
+}
+function createPropertyGetter(propertyName) {
+  return function () {
+    return this[propertyName];
+  };
+}
+function createConstantFunction(value) {
+  return function () {
+    return value;
+  };
+}
+var prototypeAlias,
+  createObjectWithPrototype =
+    typeof Object.create == "function"
+      ? Object.create
+      : function (value) {
+          function helper() {}
+          helper.prototype = value;
+          return new helper();
+        },
+  definePropertyCompat =
+    typeof Object.defineProperties == "function"
+      ? Object.defineProperty
+      : function (value, other, options) {
+          if (value == Array.prototype || value == Object.prototype) return value;
+          value[other] = options.value;
+          return value;
+        };
+function findGlobalObject(candidate) {
+  candidate = [
+    "object" == typeof globalThis && globalThis,
+    candidate,
+    "object" == typeof window && window,
+    "object" == typeof self && self,
+    "object" == typeof global && global,
   ];
-  for (var b = 0; b < a.length; ++b) {
-    var c = a[b];
-    if (c && c.Math == Math) return c
+  for (var index = 0; index < candidate.length; ++index) {
+    var intermediate = candidate[index];
+    if (intermediate && intermediate.Math == Math) return intermediate;
   }
   throw Error("Cannot find global object");
 }
-var fa = ea(this);
-
-function v(a, b) {
-  if (b) a: {
-    var c = fa;a = a.split(".");
-    for (var d = 0; d < a.length - 1; d++) {
-      var e = a[d];
-      if (!(e in c)) break a;
-      c = c[e]
+var polyfillGlobal = findGlobalObject(this);
+function installPolyfill(qualifiedName, factory) {
+  if (factory)
+    a: {
+      var polyfillGlobal2 = polyfillGlobal;
+      qualifiedName = qualifiedName.split(".");
+      for (var index = 0; index < qualifiedName.length - 1; index++) {
+        var intermediate = qualifiedName[index];
+        if (!(intermediate in polyfillGlobal2)) break a;
+        polyfillGlobal2 = polyfillGlobal2[intermediate];
+      }
+      qualifiedName = qualifiedName[qualifiedName.length - 1];
+      index = polyfillGlobal2[qualifiedName];
+      factory = factory(index);
+      factory != index &&
+        factory != null &&
+        definePropertyCompat(polyfillGlobal2, qualifiedName, {
+          configurable: true,
+          writable: true,
+          value: factory,
+        });
     }
-    a = a[a.length - 1];d = c[a];b = b(d);b != d && b != null && da(c, a, {
-      configurable: !0,
-      writable: !0,
-      value: b
-    })
-  }
 }
-var ha;
-if (typeof Object.setPrototypeOf == "function") ha = Object.setPrototypeOf;
+var setPrototypeOfImplementation;
+if (typeof Object.setPrototypeOf == "function")
+  setPrototypeOfImplementation = Object.setPrototypeOf;
 else {
-  var ia;
+  var supportsProtoAssignment;
   a: {
-    var ja = {
-        a: !0
-      },
-      la = {};
+    var prototypeProbe = { a: true },
+      prototypeProbeInstance = {};
     try {
-      la.__proto__ = ja;
-      ia = la.a;
-      break a
-    } catch (a) {}
-    ia = !1
+      prototypeProbeInstance.__proto__ = prototypeProbe;
+      supportsProtoAssignment = prototypeProbeInstance.a;
+      break a;
+    } catch (caughtError) {}
+    supportsProtoAssignment = false;
   }
-  ha = ia ? function(a, b) {
-    a.__proto__ = b;
-    if (a.__proto__ !== b) throw new TypeError(a + " is not extensible");
-    return a
-  } : null
+  setPrototypeOfImplementation = supportsProtoAssignment
+    ? function (value, other) {
+        value.__proto__ = other;
+        if (value.__proto__ !== other) throw new TypeError(value + " is not extensible");
+        return value;
+      }
+    : null;
 }
-var ma = ha;
-
-function x(a, b) {
-  a.prototype = ca(b.prototype);
-  a.prototype.constructor = a;
-  if (ma) ma(a, b);
+var setPrototypeOfCompat = setPrototypeOfImplementation;
+function inheritCompiledClass(subclass, superclass) {
+  subclass.prototype = createObjectWithPrototype(superclass.prototype);
+  subclass.prototype.constructor = subclass;
+  if (setPrototypeOfCompat) setPrototypeOfCompat(subclass, superclass);
   else
-    for (var c in b)
-      if (c != "prototype")
+    for (var intermediate in superclass)
+      if (intermediate != "prototype")
         if (Object.defineProperties) {
-          var d = Object.getOwnPropertyDescriptor(b, c);
-          d && Object.defineProperty(a, c, d)
-        } else a[c] = b[c];
-  a.W = b.prototype
+          var ownPropertyDescriptor = Object.getOwnPropertyDescriptor(superclass, intermediate);
+          ownPropertyDescriptor &&
+            Object.defineProperty(subclass, intermediate, ownPropertyDescriptor);
+        } else subclass[intermediate] = superclass[intermediate];
+  subclass.W = superclass.prototype;
 }
-
-function na(a) {
-  var b = 0;
-  return function() {
-    return b < a.length ? {
-      done: !1,
-      value: a[b++]
-    } : {
-      done: !0
-    }
-  }
-}
-
-function y(a) {
-  var b = typeof Symbol != "undefined" && Symbol.iterator && a[Symbol.iterator];
-  if (b) return b.call(a);
-  if (typeof a.length == "number") return {
-    next: na(a)
+function createArrayIteratorNext(values) {
+  var index = 0;
+  return function () {
+    return index < values.length ? { done: false, value: values[index++] } : { done: true };
   };
-  throw Error(String(a) + " is not an iterable or ArrayLike");
 }
-
-function oa(a) {
-  if (!(a instanceof Array)) {
-    a = y(a);
-    for (var b, c = []; !(b = a.next()).done;) c.push(b.value);
-    a = c
+function getIterator(iterable) {
+  var intermediate = typeof Symbol != "undefined" && Symbol.iterator && iterable[Symbol.iterator];
+  if (intermediate) return intermediate.call(iterable);
+  if (typeof iterable.length == "number") return { next: createArrayIteratorNext(iterable) };
+  throw Error(String(iterable) + " is not an iterable or ArrayLike");
+}
+function iterableToArray(iterable) {
+  if (!(iterable instanceof Array)) {
+    iterable = getIterator(iterable);
+    for (var intermediate, values = []; !(intermediate = iterable.next()).done; )
+      values.push(intermediate.value);
+    iterable = values;
   }
-  return a
+  return iterable;
+}
+function assertIteratorResult(result) {
+  if (!(result instanceof Object))
+    throw new TypeError("Iterator result " + result + " is not an object");
 }
 
-function pa(a) {
-  if (!(a instanceof Object)) throw new TypeError("Iterator result " + a + " is not an object");
-}
-
-function z() {
-  this.G = !1;
+/**
+ * 保留字段 ABI：j=下一状态地址，G=执行中，o=委托迭代器，I=yield 返回值。
+ */
+function GeneratorContext() {
+  this.G = false;
   this.o = null;
   this.I = void 0;
   this.j = 1;
   this.v = this.A = 0;
-  this.J = this.l = null
+  this.J = this.l = null;
 }
-
-function qa(a) {
-  if (a.G) throw new TypeError("Generator is already running");
-  a.G = !0
+function enterGenerator(context) {
+  if (context.G) throw new TypeError("Generator is already running");
+  context.G = true;
 }
-z.prototype.B = function(a) {
-  this.I = a
+GeneratorContext.prototype.B = function (value) {
+  this.I = value;
 };
-
-function ra(a, b) {
-  a.l = {
-    Ia: b,
-    Na: !0
-  };
-  a.j = a.A || a.v
+function setGeneratorException(context, error) {
+  context.l = { Ia: error, Na: true };
+  context.j = context.A || context.v;
 }
-z.prototype.getNextAddressJsc = p("j");
-z.prototype.getYieldResultJsc = p("I");
-z.prototype.return = function(a) {
-  this.l = {
-    return: a
-  };
-  this.j = this.v
+GeneratorContext.prototype.getNextAddressJsc = createPropertyGetter("j");
+GeneratorContext.prototype.getYieldResultJsc = createPropertyGetter("I");
+GeneratorContext.prototype.return = function (value) {
+  this.l = { return: value };
+  this.j = this.v;
 };
-z.prototype["return"] = z.prototype.return;
-z.prototype.S = function(a) {
-  this.l = {
-    ga: a
-  };
-  this.v < a ? (this.j = a, this.l = null) : this.j = this.v
+GeneratorContext.prototype["return"] = GeneratorContext.prototype.return;
+GeneratorContext.prototype.S = function (value) {
+  this.l = { ga: value };
+  this.v < value ? ((this.j = value), (this.l = null)) : (this.j = this.v);
 };
-z.prototype.jumpThroughFinallyBlocks = z.prototype.S;
-z.prototype.F = function(a, b) {
-  this.j = b;
-  return {
-    value: a
-  }
+GeneratorContext.prototype.jumpThroughFinallyBlocks = GeneratorContext.prototype.S;
+GeneratorContext.prototype.F = function (value, other) {
+  this.j = other;
+  return { value: value };
 };
-z.prototype.yield = z.prototype.F;
-z.prototype.ea = function(a, b) {
-  a = y(a);
-  var c = a.next();
-  pa(c);
-  if (c.done) this.I = c.value, this.j = b;
-  else return this.o = a, this.F(c.value, b)
+GeneratorContext.prototype.yield = GeneratorContext.prototype.F;
+GeneratorContext.prototype.ea = function (iterator, other) {
+  iterator = getIterator(iterator);
+  var iteration = iterator.next();
+  assertIteratorResult(iteration);
+  if (iteration.done) {
+    this.I = iteration.value;
+    this.j = other;
+  } else return ((this.o = iterator), this.F(iteration.value, other));
 };
-z.prototype.yieldAll = z.prototype.ea;
-z.prototype.ga = function(a) {
-  this.j = a
+GeneratorContext.prototype.yieldAll = GeneratorContext.prototype.ea;
+GeneratorContext.prototype.ga = function (value) {
+  this.j = value;
 };
-z.prototype.jumpTo = z.prototype.ga;
-z.prototype.U = function() {
-  this.j = 0
+GeneratorContext.prototype.jumpTo = GeneratorContext.prototype.ga;
+GeneratorContext.prototype.U = function () {
+  this.j = 0;
 };
-z.prototype.jumpToEnd = z.prototype.U;
-z.prototype.O = function(a, b) {
-  this.A = a;
-  b != void 0 && (this.v = b)
+GeneratorContext.prototype.jumpToEnd = GeneratorContext.prototype.U;
+GeneratorContext.prototype.O = function (value, other) {
+  this.A = value;
+  other != void 0 && (this.v = other);
 };
-z.prototype.setCatchFinallyBlocks = z.prototype.O;
-z.prototype.da = function(a) {
+GeneratorContext.prototype.setCatchFinallyBlocks = GeneratorContext.prototype.O;
+GeneratorContext.prototype.da = function (value) {
   this.A = 0;
-  this.v = a || 0
+  this.v = value || 0;
 };
-z.prototype.setFinallyBlock = z.prototype.da;
-z.prototype.V = function(a, b) {
-  this.j = a;
-  this.A = b || 0
+GeneratorContext.prototype.setFinallyBlock = GeneratorContext.prototype.da;
+GeneratorContext.prototype.V = function (value, other) {
+  this.j = value;
+  this.A = other || 0;
 };
-z.prototype.leaveTryBlock = z.prototype.V;
-z.prototype.L = function(a) {
-  this.A = a || 0;
-  a = this.l.Ia;
+GeneratorContext.prototype.leaveTryBlock = GeneratorContext.prototype.V;
+GeneratorContext.prototype.L = function (value) {
+  this.A = value || 0;
+  value = this.l.Ia;
   this.l = null;
-  return a
+  return value;
 };
-z.prototype.enterCatchBlock = z.prototype.L;
-z.prototype.M = function(a, b, c) {
-  c ? this.J[c] = this.l : this.J = [this.l];
-  this.A = a || 0;
-  this.v = b || 0;
-  this.l = null
+GeneratorContext.prototype.enterCatchBlock = GeneratorContext.prototype.L;
+GeneratorContext.prototype.M = function (value, other, options) {
+  options ? (this.J[options] = this.l) : (this.J = [this.l]);
+  this.A = value || 0;
+  this.v = other || 0;
+  this.l = null;
 };
-z.prototype.enterFinallyBlock = z.prototype.M;
-z.prototype.R = function(a, b) {
-  b = this.J.splice(b || 0)[0];
-  (b = this.l = this.l || b) ? b.Na ? this.j = this.A || this.v : b.ga != void 0 && this.v < b.ga ? (this
-    .j = b.ga, this.l = null) : this.j = this.v: this.j = a
+GeneratorContext.prototype.enterFinallyBlock = GeneratorContext.prototype.M;
+GeneratorContext.prototype.R = function (value, other) {
+  other = this.J.splice(other || 0)[0];
+  (other = this.l = this.l || other)
+    ? other.Na
+      ? (this.j = this.A || this.v)
+      : other.ga != void 0 && this.v < other.ga
+        ? ((this.j = other.ga), (this.l = null))
+        : (this.j = this.v)
+    : (this.j = value);
 };
-z.prototype.leaveFinallyBlock = z.prototype.R;
-z.prototype.P = function(a) {
-  return new sa(a)
+GeneratorContext.prototype.leaveFinallyBlock = GeneratorContext.prototype.R;
+GeneratorContext.prototype.P = function (value) {
+  return new GeneratorPropertyIterator(value);
 };
-z.prototype.forIn = z.prototype.P;
-
-function sa(a) {
-  this.o = a;
+GeneratorContext.prototype.forIn = GeneratorContext.prototype.P;
+function GeneratorPropertyIterator(object) {
+  this.o = object;
   this.j = [];
-  for (var b in a) this.j.push(b);
-  this.j.reverse()
+  for (var intermediate in object) this.j.push(intermediate);
+  this.j.reverse();
 }
-sa.prototype.l = function() {
-  for (; this.j.length > 0;) {
-    var a = this.j.pop();
-    if (a in this.o) return a
+GeneratorPropertyIterator.prototype.l = function () {
+  for (; this.j.length > 0; ) {
+    var intermediate = this.j.pop();
+    if (intermediate in this.o) return intermediate;
   }
-  return null
+  return null;
 };
-sa.prototype.getNext = sa.prototype.l;
-
-function ta(a) {
-  this.j = new z;
-  this.l = a
+GeneratorPropertyIterator.prototype.getNext = GeneratorPropertyIterator.prototype.l;
+function GeneratorEngine(program) {
+  this.j = new GeneratorContext();
+  this.l = program;
 }
-
-function ua(a, b) {
-  qa(a.j);
-  var c = a.j.o;
-  if (c) return va(a, "return" in c ? c["return"] : function(d) {
-    return {
-      value: d,
-      done: !0
-    }
-  }, b, a.j.return);
-  a.j.return(b);
-  return wa(a)
+function returnFromGenerator(engine, value) {
+  enterGenerator(engine.j);
+  var intermediate = engine.j.o;
+  if (intermediate)
+    return advanceDelegatedIterator(
+      engine,
+      "return" in intermediate
+        ? intermediate["return"]
+        : function (value2) {
+            return { value: value2, done: true };
+          },
+      value,
+      engine.j.return,
+    );
+  engine.j.return(value);
+  return runGenerator(engine);
 }
-
-function va(a, b, c, d) {
+function advanceDelegatedIterator(engine, iteratorMethod, value, resume) {
   try {
-    var e = b.call(a.j.o, c);
-    pa(e);
-    if (!e.done) return a.j.G = !1, e;
-    var f = e.value
-  } catch (g) {
-    return a.j.o = null, ra(a.j, g), wa(a)
+    var intermediate = iteratorMethod.call(engine.j.o, value);
+    assertIteratorResult(intermediate);
+    if (!intermediate.done) return ((engine.j.G = false), intermediate);
+    var value2 = intermediate.value;
+  } catch (caughtError) {
+    return (
+      (engine.j.o = null),
+      setGeneratorException(engine.j, caughtError),
+      runGenerator(engine)
+    );
   }
-  a.j.o = null;
-  d.call(a.j, f);
-  return wa(a)
+  engine.j.o = null;
+  resume.call(engine.j, value2);
+  return runGenerator(engine);
 }
-
-function wa(a) {
-  for (; a.j.j;) try {
-    var b = a.l(a.j);
-    if (b) return a.j.G = !1, {
-      value: b.value,
-      done: !1
-    }
-  } catch (c) {
-    a.j.I = void 0, ra(a.j, c)
-  }
-  a.j.G = !1;
-  if (a.j.l) {
-    b = a.j.l;
-    a.j.l = null;
-    if (b.Na) throw b.Ia;
-    return {
-      value: b.return,
-      done: !0
-    }
-  }
-  return {
-    value: void 0,
-    done: !0
-  }
-}
-
-function xa(a) {
-  this.next = function(b) {
-    qa(a.j);
-    a.j.o ? b = va(a, a.j.o.next, b, a.j.B) : (a.j.B(b), b = wa(a));
-    return b
-  };
-  this.throw = function(b) {
-    qa(a.j);
-    if (a.j.o) {
-      var c = a.j.o["throw"];
-      if (c) var d = va(a, c, b, a.j.B);
-      else {
-        b = a.j.o;
-        a.j.o = null;
-        try {
-          b["return"] && (d = b["return"](), pa(d)), ra(a.j, new TypeError(
-            "The iterator does not provide a 'throw' method."))
-        } catch (e) {
-          ra(a.j, e)
-        }
-        d = wa(a)
+function runGenerator(engine) {
+  for (; engine.j.j; )
+    try {
+      var iterator = engine.l(engine.j);
+      if (iterator) return ((engine.j.G = false), { value: iterator.value, done: false });
+    } catch (caughtError) {
+      {
+        engine.j.I = void 0;
+        setGeneratorException(engine.j, caughtError);
       }
-    } else ra(a.j, b), d = wa(a);
-    return d
-  };
-  this.return = function(b) {
-    return ua(a, b)
-  };
-  this[Symbol.iterator] = function() {
-    return this
-  }
-}
-
-function ya(a) {
-  function b(d) {
-    return a.next(d)
-  }
-
-  function c(d) {
-    return a.throw(d)
-  }
-  return new Promise(function(d, e) {
-    function f(g) {
-      g.done ? d(g.value) : Promise.resolve(g.value).then(b, c).then(f, e)
     }
-    f(a.next())
-  })
+  engine.j.G = false;
+  if (engine.j.l) {
+    iterator = engine.j.l;
+    engine.j.l = null;
+    if (iterator.Na) throw iterator.Ia;
+    return { value: iterator.return, done: true };
+  }
+  return { value: void 0, done: true };
 }
-v("globalThis", function(a) {
-  return a || fa
-});
-v("Symbol", function(a) {
-  function b(f) {
-    if (this instanceof b) throw new TypeError("Symbol is not a constructor");
-    return new c(d + (f || "") + "_" + e++, f)
-  }
-
-  function c(f, g) {
-    this.j = f;
-    da(this, "description", {
-      configurable: !0,
-      writable: !0,
-      value: g
-    })
-  }
-  if (a) return a;
-  c.prototype.toString = p("j");
-  var d = "jscomp_symbol_" + (Math.random() * 1E9 >>> 0) + "_",
-    e = 0;
-  return b
-});
-v("Symbol.iterator", function(a) {
-  if (a) return a;
-  a = Symbol("Symbol.iterator");
-  da(Array.prototype, a, {
-    configurable: !0,
-    writable: !0,
-    value: function() {
-      return za(na(this))
+function GeneratorIterator(engine) {
+  this.next = function (value) {
+    enterGenerator(engine.j);
+    engine.j.o
+      ? (value = advanceDelegatedIterator(engine, engine.j.o.next, value, engine.j.B))
+      : (engine.j.B(value), (value = runGenerator(engine)));
+    return value;
+  };
+  this.throw = function (value) {
+    enterGenerator(engine.j);
+    if (engine.j.o) {
+      var intermediate = engine.j.o["throw"];
+      if (intermediate)
+        var intermediate2 = advanceDelegatedIterator(engine, intermediate, value, engine.j.B);
+      else {
+        value = engine.j.o;
+        engine.j.o = null;
+        try {
+          {
+            value["return"] &&
+              ((intermediate2 = value["return"]()), assertIteratorResult(intermediate2));
+            setGeneratorException(
+              engine.j,
+              new TypeError("The iterator does not provide a 'throw' method."),
+            );
+          }
+        } catch (caughtError) {
+          setGeneratorException(engine.j, caughtError);
+        }
+        intermediate2 = runGenerator(engine);
+      }
+    } else {
+      setGeneratorException(engine.j, value);
+      intermediate2 = runGenerator(engine);
     }
+    return intermediate2;
+  };
+  this.return = function (value) {
+    return returnFromGenerator(engine, value);
+  };
+  this[Symbol.iterator] = function () {
+    return this;
+  };
+}
+function runAsyncGenerator(iterator) {
+  function helper(helper3) {
+    return iterator.next(helper3);
+  }
+  function helper2(helper3) {
+    return iterator.throw(helper3);
+  }
+  return new Promise(function (callback, other) {
+    function helper3(helper4) {
+      helper4.done
+        ? callback(helper4.value)
+        : Promise.resolve(helper4.value).then(helper, helper2).then(helper3, other);
+    }
+    helper3(iterator.next());
   });
-  return a
-});
-
-function za(a) {
-  a = {
-    next: a
-  };
-  a[Symbol.iterator] = function() {
-    return this
-  };
-  return a
 }
-v("Promise", function(a) {
-  function b(g) {
+installPolyfill("globalThis", function (value) {
+  return value || polyfillGlobal;
+});
+installPolyfill("Symbol", function (value) {
+  function helper(helper3) {
+    if (this instanceof helper) throw new TypeError("Symbol is not a constructor");
+    return new helper2(intermediate + (helper3 || "") + "_" + index++, helper3);
+  }
+  function helper2(helper3, helper4) {
+    this.j = helper3;
+    definePropertyCompat(this, "description", {
+      configurable: true,
+      writable: true,
+      value: helper4,
+    });
+  }
+  if (value) return value;
+  helper2.prototype.toString = createPropertyGetter("j");
+  var intermediate = "jscomp_symbol_" + ((Math.random() * 1e9) >>> 0) + "_",
+    index = 0;
+  return helper;
+});
+installPolyfill("Symbol.iterator", function (value) {
+  if (value) return value;
+  value = Symbol("Symbol.iterator");
+  definePropertyCompat(Array.prototype, value, {
+    configurable: true,
+    writable: true,
+    value: function () {
+      return createIterableIterator(createArrayIteratorNext(this));
+    },
+  });
+  return value;
+});
+function createIterableIterator(next) {
+  next = { next: next };
+  next[Symbol.iterator] = function () {
+    return this;
+  };
+  return next;
+}
+installPolyfill("Promise", function (value) {
+  function helper(helper4) {
     this.j = 0;
     this.o = void 0;
     this.l = [];
-    this.I = !1;
-    var h = this.v();
+    this.I = false;
+    var intermediate = this.v();
     try {
-      g(h.resolve, h.reject)
-    } catch (k) {
-      h.reject(k)
+      helper4(intermediate.resolve, intermediate.reject);
+    } catch (caughtError) {
+      intermediate.reject(caughtError);
     }
   }
-
-  function c() {
-    this.j = null
+  function helper2() {
+    this.j = null;
   }
-
-  function d(g) {
-    return g instanceof b ? g : new b(function(h) {
-      h(g)
-    })
+  function helper3(helper4) {
+    return helper4 instanceof helper
+      ? helper4
+      : new helper(function (callback) {
+          callback(helper4);
+        });
   }
-  if (a) return a;
-  c.prototype.l = function(g) {
+  if (value) return value;
+  helper2.prototype.l = function (value2) {
     if (this.j == null) {
       this.j = [];
-      var h = this;
-      this.o(function() {
-        h.A()
-      })
+      var instance = this;
+      this.o(function () {
+        instance.A();
+      });
     }
-    this.j.push(g)
+    this.j.push(value2);
   };
-  var e = fa.setTimeout;
-  c.prototype.o = function(g) {
-    e(g, 0)
+  var setTimeout2 = polyfillGlobal.setTimeout;
+  helper2.prototype.o = function (value2) {
+    setTimeout2(value2, 0);
   };
-  c.prototype.A = function() {
-    for (; this.j && this.j.length;) {
-      var g = this.j;
+  helper2.prototype.A = function () {
+    for (; this.j && this.j.length; ) {
+      var intermediate = this.j;
       this.j = [];
-      for (var h = 0; h < g.length; ++h) {
-        var k =
-          g[h];
-        g[h] = null;
+      for (var index = 0; index < intermediate.length; ++index) {
+        var callback = intermediate[index];
+        intermediate[index] = null;
         try {
-          k()
-        } catch (l) {
-          this.v(l)
+          callback();
+        } catch (caughtError) {
+          this.v(caughtError);
         }
       }
     }
-    this.j = null
+    this.j = null;
   };
-  c.prototype.v = function(g) {
-    this.o(function() {
-      throw g;
-    })
+  helper2.prototype.v = function (value2) {
+    this.o(function () {
+      throw value2;
+    });
   };
-  b.prototype.v = function() {
-    function g(l) {
-      return function(m) {
-        k || (k = !0, l.call(h, m))
-      }
+  helper.prototype.v = function () {
+    function helper4(helper5) {
+      return function (value2) {
+        intermediate || ((intermediate = true), helper5.call(instance, value2));
+      };
     }
-    var h = this,
-      k = !1;
-    return {
-      resolve: g(this.M),
-      reject: g(this.A)
-    }
+    var instance = this,
+      intermediate = false;
+    return { resolve: helper4(this.M), reject: helper4(this.A) };
   };
-  b.prototype.M = function(g) {
-    if (g === this) this.A(new TypeError("A Promise cannot resolve to itself"));
-    else if (g instanceof b) this.O(g);
+  helper.prototype.M = function (value2) {
+    if (value2 === this) this.A(new TypeError("A Promise cannot resolve to itself"));
+    else if (value2 instanceof helper) this.O(value2);
     else {
-      a: switch (typeof g) {
+      a: switch (typeof value2) {
         case "object":
-          var h = g != null;
+          var intermediate = value2 != null;
           break a;
         case "function":
-          h = !0;
+          intermediate = true;
           break a;
         default:
-          h = !1
+          intermediate = false;
       }
-      h ? this.L(g) : this.G(g)
+      intermediate ? this.L(value2) : this.G(value2);
     }
   };
-  b.prototype.L = function(g) {
-    var h = void 0;
+  helper.prototype.L = function (value2) {
+    var intermediate = void 0;
     try {
-      h = g.then
-    } catch (k) {
-      this.A(k);
-      return
+      intermediate = value2.then;
+    } catch (caughtError) {
+      this.A(caughtError);
+      return;
     }
-    typeof h == "function" ? this.P(h, g) : this.G(g)
+    typeof intermediate == "function" ? this.P(intermediate, value2) : this.G(value2);
   };
-  b.prototype.A = function(g) {
-    this.B(2, g)
+  helper.prototype.A = function (value2) {
+    this.B(2, value2);
   };
-  b.prototype.G = function(g) {
-    this.B(1, g)
+  helper.prototype.G = function (value2) {
+    this.B(1, value2);
   };
-  b.prototype.B = function(g, h) {
-    if (this.j != 0) throw Error("Cannot settle(" + g + ", " + h +
-      "): Promise already settled in state" + this.j);
-    this.j = g;
-    this.o = h;
+  helper.prototype.B = function (value2, other) {
+    if (this.j != 0)
+      throw Error(
+        "Cannot settle(" + value2 + ", " + other + "): Promise already settled in state" + this.j,
+      );
+    this.j = value2;
+    this.o = other;
     this.j === 2 && this.R();
-    this.F()
+    this.F();
   };
-  b.prototype.R = function() {
-    var g = this;
-    e(function() {
-      if (g.J()) {
-        var h = fa.console;
-        typeof h !== "undefined" && h.error(g.o)
+  helper.prototype.R = function () {
+    var instance = this;
+    setTimeout2(function () {
+      if (instance.J()) {
+        var console = polyfillGlobal.console;
+        typeof console !== "undefined" && console.error(instance.o);
       }
-    }, 1)
+    }, 1);
   };
-  b.prototype.J =
-    function() {
-      if (this.I) return !1;
-      var g = fa.CustomEvent,
-        h = fa.Event,
-        k = fa.dispatchEvent;
-      if (typeof k === "undefined") return !0;
-      typeof g === "function" ? g = new g("unhandledrejection", {
-        cancelable: !0
-      }) : typeof h === "function" ? g = new h("unhandledrejection", {
-        cancelable: !0
-      }) : (g = fa.document.createEvent("CustomEvent"), g.initCustomEvent("unhandledrejection", !1, !0,
-        g));
-      g.promise = this;
-      g.reason = this.o;
-      return k(g)
-    };
-  b.prototype.F = function() {
+  helper.prototype.J = function () {
+    if (this.I) return false;
+    var CustomEvent = polyfillGlobal.CustomEvent,
+      Event = polyfillGlobal.Event,
+      dispatchEvent = polyfillGlobal.dispatchEvent;
+    if (typeof dispatchEvent === "undefined") return true;
+    typeof CustomEvent === "function"
+      ? (CustomEvent = new CustomEvent("unhandledrejection", { cancelable: true }))
+      : typeof Event === "function"
+        ? (CustomEvent = new Event("unhandledrejection", { cancelable: true }))
+        : ((CustomEvent = polyfillGlobal.document.createEvent("CustomEvent")),
+          CustomEvent.initCustomEvent("unhandledrejection", false, true, CustomEvent));
+    CustomEvent.promise = this;
+    CustomEvent.reason = this.o;
+    return dispatchEvent(CustomEvent);
+  };
+  helper.prototype.F = function () {
     if (this.l != null) {
-      for (var g = 0; g < this.l.length; ++g) f.l(this.l[g]);
-      this.l = null
+      for (var index = 0; index < this.l.length; ++index) helper22.l(this.l[index]);
+      this.l = null;
     }
   };
-  var f = new c;
-  b.prototype.O = function(g) {
-    var h = this.v();
-    g.ja(h.resolve, h.reject)
+  var helper22 = new helper2();
+  helper.prototype.O = function (value2) {
+    var intermediate = this.v();
+    value2.ja(intermediate.resolve, intermediate.reject);
   };
-  b.prototype.P = function(g, h) {
-    var k = this.v();
+  helper.prototype.P = function (value2, other) {
+    var intermediate = this.v();
     try {
-      g.call(h, k.resolve, k.reject)
-    } catch (l) {
-      k.reject(l)
+      value2.call(other, intermediate.resolve, intermediate.reject);
+    } catch (caughtError) {
+      intermediate.reject(caughtError);
     }
   };
-  b.prototype.then = function(g, h) {
-    function k(t, w) {
-      return typeof t == "function" ? function(u) {
-        try {
-          l(t(u))
-        } catch (L) {
-          m(L)
-        }
-      } : w
+  helper.prototype.then = function (value2, other) {
+    function helper4(helper6, helper7) {
+      return typeof helper6 == "function"
+        ? function (value3) {
+            try {
+              callback(helper6(value3));
+            } catch (caughtError) {
+              callback2(caughtError);
+            }
+          }
+        : helper7;
     }
-    var l, m, r = new b(function(t, w) {
-      l = t;
-      m = w
-    });
-    this.ja(k(g, l), k(h, m));
-    return r
+    var callback,
+      callback2,
+      helper5 = new helper(function (value3, other2) {
+        callback = value3;
+        callback2 = other2;
+      });
+    this.ja(helper4(value2, callback), helper4(other, callback2));
+    return helper5;
   };
-  b.prototype.catch = function(g) {
-    return this.then(void 0, g)
+  helper.prototype.catch = function (value2) {
+    return this.then(void 0, value2);
   };
-  b.prototype.ja = function(g, h) {
-    function k() {
-      switch (l.j) {
+  helper.prototype.ja = function (callback, callback2) {
+    function helper4() {
+      switch (instance.j) {
         case 1:
-          g(l.o);
+          callback(instance.o);
           break;
         case 2:
-          h(l.o);
+          callback2(instance.o);
           break;
         default:
-          throw Error("Unexpected state: " + l.j);
+          throw Error("Unexpected state: " + instance.j);
       }
     }
-    var l = this;
-    this.l == null ? f.l(k) : this.l.push(k);
-    this.I = !0
+    var instance = this;
+    this.l == null ? helper22.l(helper4) : this.l.push(helper4);
+    this.I = true;
   };
-  b.resolve = d;
-  b.reject = function(g) {
-    return new b(function(h, k) {
-      k(g)
-    })
+  helper.resolve = helper3;
+  helper.reject = function (value2) {
+    return new helper(function (value3, callback) {
+      callback(value2);
+    });
   };
-  b.race = function(g) {
-    return new b(function(h, k) {
-      for (var l = y(g), m = l.next(); !m.done; m = l.next()) d(m.value).ja(h, k)
-    })
+  helper.race = function (value2) {
+    return new helper(function (value3, other) {
+      for (
+        var iterator = getIterator(value2), iteration = iterator.next();
+        !iteration.done;
+        iteration = iterator.next()
+      )
+        helper3(iteration.value).ja(value3, other);
+    });
   };
-  b.all = function(g) {
-    var h = y(g),
-      k = h.next();
-    return k.done ? d([]) : new b(function(l, m) {
-      function r(u) {
-        return function(L) {
-          t[u] = L;
-          w--;
-          w == 0 && l(t)
-        }
-      }
-      var t = [],
-        w = 0;
-      do t.push(void 0), w++, d(k.value).ja(r(t.length - 1), m), k = h.next();
-      while (!k.done)
-    })
-  };
-  return b
-});
-
-function Aa(a, b) {
-  return Object.prototype.hasOwnProperty.call(a, b)
-}
-var Ba = typeof Object.assign == "function" ? Object.assign : function(a, b) {
-  if (a == null) throw new TypeError("No nullish arg");
-  a = Object(a);
-  for (var c = 1; c < arguments.length; c++) {
-    var d = arguments[c];
-    if (d)
-      for (var e in d) Aa(d, e) && (a[e] = d[e])
-  }
-  return a
-};
-v("Object.assign", function(a) {
-  return a || Ba
-});
-v("Symbol.dispose", function(a) {
-  return a ? a : Symbol("Symbol.dispose")
-});
-v("Array.prototype.find", function(a) {
-  return a ? a : function(b, c) {
-    a: {
-      var d = this;d instanceof String && (d = String(d));
-      for (var e = d.length, f = 0; f < e; f++) {
-        var g = d[f];
-        if (b.call(c, g, f, d)) {
-          b = g;
-          break a
-        }
-      }
-      b = void 0
-    }
-    return b
-  }
-});
-v("WeakMap", function(a) {
-  function b(k) {
-    this.j = (h += Math.random() + 1).toString();
-    if (k) {
-      k = y(k);
-      for (var l; !(l = k.next()).done;) l = l.value, this.set(l[0], l[1])
-    }
-  }
-
-  function c() {}
-
-  function d(k) {
-    var l = typeof k;
-    return l === "object" && k !== null || l === "function"
-  }
-
-  function e(k) {
-    if (!Aa(k, g)) {
-      var l = new c;
-      da(k, g, {
-        value: l
-      })
-    }
-  }
-
-  function f(k) {
-    var l = Object[k];
-    l && (Object[k] = function(m) {
-      if (m instanceof c) return m;
-      Object.isExtensible(m) && e(m);
-      return l(m)
-    })
-  }
-  if (function() {
-      if (!a || !Object.seal) return !1;
-      try {
-        var k = Object.seal({}),
-          l = Object.seal({}),
-          m = new a([
-            [k, 2],
-            [l, 3]
-          ]);
-        if (m.get(k) != 2 || m.get(l) != 3) return !1;
-        m.delete(k);
-        m.set(l, 4);
-        return !m.has(k) && m.get(l) == 4
-      } catch (r) {
-        return !1
-      }
-    }()) return a;
-  var g = "$jscomp_hidden_" + Math.random();
-  f("freeze");
-  f("preventExtensions");
-  f("seal");
-  var h = 0;
-  b.prototype.set = function(k, l) {
-    if (!d(k)) throw Error("Invalid WeakMap key");
-    e(k);
-    if (!Aa(k, g)) throw Error("WeakMap key fail: " + k);
-    k[g][this.j] = l;
-    return this
-  };
-  b.prototype.get = function(k) {
-    return d(k) && Aa(k, g) ? k[g][this.j] : void 0
-  };
-  b.prototype.has = function(k) {
-    return d(k) && Aa(k,
-      g) && Aa(k[g], this.j)
-  };
-  b.prototype.delete = function(k) {
-    return d(k) && Aa(k, g) && Aa(k[g], this.j) ? delete k[g][this.j] : !1
-  };
-  return b
-});
-v("Map", function(a) {
-  function b() {
-    var h = {};
-    return h.previous = h.next = h.head = h
-  }
-
-  function c(h, k) {
-    var l = h[1];
-    return za(function() {
-      if (l) {
-        for (; l.head != h[1];) l = l.previous;
-        for (; l.next != l.head;) return l = l.next, {
-          done: !1,
-          value: k(l)
-        };
-        l = null
-      }
-      return {
-        done: !0,
-        value: void 0
-      }
-    })
-  }
-
-  function d(h, k) {
-    var l = k && typeof k;
-    l == "object" || l == "function" ? f.has(k) ? l = f.get(k) : (l = "" + ++g, f.set(k, l)) : l = "p_" +
-      k;
-    var m = h[0][l];
-    if (m && Aa(h[0], l))
-      for (h = 0; h < m.length; h++) {
-        var r = m[h];
-        if (k !== k && r.key !== r.key || k === r.key) return {
-          id: l,
-          list: m,
-          index: h,
-          entry: r
-        }
-      }
-    return {
-      id: l,
-      list: m,
-      index: -1,
-      entry: void 0
-    }
-  }
-
-  function e(h) {
-    this[0] = {};
-    this[1] = b();
-    this.size = 0;
-    if (h) {
-      h = y(h);
-      for (var k; !(k = h.next()).done;) k = k.value, this.set(k[0], k[1])
-    }
-  }
-  if (function() {
-      if (!a || typeof a != "function" || !a.prototype.entries || typeof Object.seal != "function")
-      return !1;
-      try {
-        var h = Object.seal({
-            x: 4
-          }),
-          k = new a(y([
-            [h, "s"]
-          ]));
-        if (k.get(h) != "s" || k.size != 1 || k.get({
-            x: 4
-          }) || k.set({
-            x: 4
-          }, "t") != k || k.size != 2) return !1;
-        var l = k.entries(),
-          m = l.next();
-        if (m.done || m.value[0] != h || m.value[1] != "s") return !1;
-        m = l.next();
-        return m.done || m.value[0].x !=
-          4 || m.value[1] != "t" || !l.next().done ? !1 : !0
-      } catch (r) {
-        return !1
-      }
-    }()) return a;
-  var f = new WeakMap;
-  e.prototype.set = function(h, k) {
-    h = h === 0 ? 0 : h;
-    var l = d(this, h);
-    l.list || (l.list = this[0][l.id] = []);
-    l.entry ? l.entry.value = k : (l.entry = {
-        next: this[1],
-        previous: this[1].previous,
-        head: this[1],
-        key: h,
-        value: k
-      }, l.list.push(l.entry), this[1].previous.next = l.entry, this[1].previous = l.entry, this
-      .size++);
-    return this
-  };
-  e.prototype.delete = function(h) {
-    h = d(this, h);
-    return h.entry && h.list ? (h.list.splice(h.index, 1), h.list.length || delete this[0][h.id],
-      h.entry.previous.next = h.entry.next, h.entry.next.previous = h.entry.previous, h.entry.head =
-      null, this.size--, !0) : !1
-  };
-  e.prototype.clear = function() {
-    this[0] = {};
-    this[1] = this[1].previous = b();
-    this.size = 0
-  };
-  e.prototype.has = function(h) {
-    return !!d(this, h).entry
-  };
-  e.prototype.get = function(h) {
-    return (h = d(this, h).entry) && h.value
-  };
-  e.prototype.entries = function() {
-    return c(this, function(h) {
-      return [h.key, h.value]
-    })
-  };
-  e.prototype.keys = function() {
-    return c(this, function(h) {
-      return h.key
-    })
-  };
-  e.prototype.values = function() {
-    return c(this,
-      function(h) {
-        return h.value
-      })
-  };
-  e.prototype.forEach = function(h, k) {
-    for (var l = this.entries(), m; !(m = l.next()).done;) m = m.value, h.call(k, m[1], m[0], this)
-  };
-  e.prototype[Symbol.iterator] = e.prototype.entries;
-  var g = 0;
-  return e
-});
-v("Set", function(a) {
-  function b(c) {
-    this.j = new Map;
-    if (c) {
-      c = y(c);
-      for (var d; !(d = c.next()).done;) this.add(d.value)
-    }
-    this.size = this.j.size
-  }
-  if (function() {
-      if (!a || typeof a != "function" || !a.prototype.entries || typeof Object.seal != "function")
-      return !1;
-      try {
-        var c = Object.seal({
-            x: 4
-          }),
-          d = new a(y([c]));
-        if (!d.has(c) || d.size != 1 || d.add(c) != d || d.size != 1 || d.add({
-            x: 4
-          }) != d || d.size != 2) return !1;
-        var e = d.entries(),
-          f = e.next();
-        if (f.done || f.value[0] != c || f.value[1] != c) return !1;
-        f = e.next();
-        return f.done || f.value[0] == c || f.value[0].x != 4 ||
-          f.value[1] != f.value[0] ? !1 : e.next().done
-      } catch (g) {
-        return !1
-      }
-    }()) return a;
-  b.prototype.add = function(c) {
-    c = c === 0 ? 0 : c;
-    this.j.set(c, c);
-    this.size = this.j.size;
-    return this
-  };
-  b.prototype.delete = function(c) {
-    c = this.j.delete(c);
-    this.size = this.j.size;
-    return c
-  };
-  b.prototype.clear = function() {
-    this.j.clear();
-    this.size = 0
-  };
-  b.prototype.has = function(c) {
-    return this.j.has(c)
-  };
-  b.prototype.entries = function() {
-    return this.j.entries()
-  };
-  b.prototype.values = function() {
-    return this.j.values()
-  };
-  b.prototype.keys = b.prototype.values;
-  b.prototype[Symbol.iterator] =
-    b.prototype.values;
-  b.prototype.forEach = function(c, d) {
-    var e = this;
-    this.j.forEach(function(f) {
-      return c.call(d, f, f, e)
-    })
-  };
-  return b
-});
-v("Object.values", function(a) {
-  return a ? a : function(b) {
-    var c = [],
-      d;
-    for (d in b) Aa(b, d) && c.push(b[d]);
-    return c
-  }
-});
-v("Object.is", function(a) {
-  return a ? a : function(b, c) {
-    return b === c ? b !== 0 || 1 / b === 1 / c : b !== b && c !== c
-  }
-});
-v("Array.prototype.includes", function(a) {
-  return a ? a : function(b, c) {
-    var d = this;
-    d instanceof String && (d = String(d));
-    var e = d.length;
-    c = c || 0;
-    for (c < 0 && (c = Math.max(c + e, 0)); c < e; c++) {
-      var f = d[c];
-      if (f === b || Object.is(f, b)) return !0
-    }
-    return !1
-  }
-});
-
-function Ca(a, b, c) {
-  if (a == null) throw new TypeError("The 'this' value for String.prototype." + c +
-    " must not be null or undefined");
-  if (b instanceof RegExp) throw new TypeError("First argument to String.prototype." + c +
-    " must not be a regular expression");
-  return a + ""
-}
-v("String.prototype.includes", function(a) {
-  return a ? a : function(b, c) {
-    return Ca(this, b, "includes").indexOf(b, c || 0) !== -1
-  }
-});
-v("Array.from", function(a) {
-  return a ? a : function(b, c, d) {
-    c = c != null ? c : aa();
-    var e = [],
-      f = typeof Symbol != "undefined" && Symbol.iterator && b[Symbol.iterator];
-    if (typeof f == "function") {
-      b = f.call(b);
-      for (var g = 0; !(f = b.next()).done;) e.push(c.call(d, f.value, g++))
-    } else
-      for (f = b.length, g = 0; g < f; g++) e.push(c.call(d, b[g], g));
-    return e
-  }
-});
-v("Object.entries", function(a) {
-  return a ? a : function(b) {
-    var c = [],
-      d;
-    for (d in b) Aa(b, d) && c.push([d, b[d]]);
-    return c
-  }
-});
-v("Number.isFinite", function(a) {
-  return a ? a : function(b) {
-    return typeof b !== "number" ? !1 : !isNaN(b) && b !== Infinity && b !== -Infinity
-  }
-});
-v("Number.MAX_SAFE_INTEGER", ba(9007199254740991));
-v("Number.MIN_SAFE_INTEGER", ba(-9007199254740991));
-v("Number.isInteger", function(a) {
-  return a ? a : function(b) {
-    return Number.isFinite(b) ? b === Math.floor(b) : !1
-  }
-});
-v("Number.isSafeInteger", function(a) {
-  return a ? a : function(b) {
-    return Number.isInteger(b) && Math.abs(b) <= Number.MAX_SAFE_INTEGER
-  }
-});
-v("String.prototype.startsWith", function(a) {
-  return a ? a : function(b, c) {
-    var d = Ca(this, b, "startsWith");
-    b += "";
-    var e = d.length,
-      f = b.length;
-    c = Math.max(0, Math.min(c | 0, d.length));
-    for (var g = 0; g < f && c < e;)
-      if (d[c++] != b[g++]) return !1;
-    return g >= f
-  }
-});
-
-function Da(a, b) {
-  a instanceof String && (a += "");
-  var c = 0,
-    d = !1,
-    e = {
-      next: function() {
-        if (!d && c < a.length) {
-          var f = c++;
-          return {
-            value: b(f, a[f]),
-            done: !1
+  helper.all = function (value2) {
+    var iterator = getIterator(value2),
+      iteration = iterator.next();
+    return iteration.done
+      ? helper3([])
+      : new helper(function (callback, other) {
+          function helper4(helper5) {
+            return function (value3) {
+              values[helper5] = value3;
+              index--;
+              index == 0 && callback(values);
+            };
           }
-        }
-        d = !0;
-        return {
-          done: !0,
-          value: void 0
-        }
-      }
-    };
-  e[Symbol.iterator] = function() {
-    return e
+          var values = [],
+            index = 0;
+          do {
+            values.push(void 0);
+            index++;
+            helper3(iteration.value).ja(helper4(values.length - 1), other);
+            iteration = iterator.next();
+          } while (!iteration.done);
+        });
   };
-  return e
+  return helper;
+});
+/**
+ * function hasOwnProperty() { [native code] }
+ * function hasOwnProperty() { [native code] }
+ * 保留字段 ABI：function hasOwnProperty() { [native code] }
+ */
+function hasOwnProperty(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
 }
-v("Array.prototype.entries", function(a) {
-  return a ? a : function() {
-    return Da(this, function(b, c) {
-      return [b, c]
-    })
-  }
-});
-v("Math.trunc", function(a) {
-  return a ? a : function(b) {
-    b = Number(b);
-    if (isNaN(b) || b === Infinity || b === -Infinity || b === 0) return b;
-    var c = Math.floor(Math.abs(b));
-    return b < 0 ? -c : c
-  }
-});
-v("Number.isNaN", function(a) {
-  return a ? a : function(b) {
-    return typeof b === "number" && isNaN(b)
-  }
-});
-v("Array.prototype.keys", function(a) {
-  return a ? a : function() {
-    return Da(this, aa())
-  }
-});
-v("Array.prototype.values", function(a) {
-  return a ? a : function() {
-    return Da(this, function(b, c) {
-      return c
-    })
-  }
-});
-v("Math.imul", function(a) {
-  return a ? a : function(b, c) {
-    b = Number(b);
-    c = Number(c);
-    var d = b & 65535,
-      e = c & 65535;
-    return d * e + ((b >>> 16 & 65535) * e + d * (c >>> 16 & 65535) << 16 >>> 0) | 0
-  }
-});
-v("String.prototype.repeat", function(a) {
-  return a ? a : function(b) {
-    var c = Ca(this, null, "repeat");
-    if (b < 0 || b > 1342177279) throw new RangeError("Invalid count value");
-    b |= 0;
-    for (var d = ""; b;)
-      if (b & 1 && (d += c), b >>>= 1) c += c;
-    return d
-  }
-});
-v("String.prototype.matchAll", function(a) {
-  return a ? a : function(b) {
-    if (b instanceof RegExp && !b.global) throw new TypeError(
-      "RegExp passed into String.prototype.matchAll() must have global tag.");
-    var c = new RegExp(b, b instanceof RegExp ? void 0 : "g");
-    b instanceof RegExp && (c.lastIndex = b.lastIndex);
-    var d = this,
-      e = !1,
-      f = {
-        next: function() {
-          if (e) return {
-            value: void 0,
-            done: !0
-          };
-          var g = c.exec(d);
-          if (!g) return e = !0, {
-            value: void 0,
-            done: !0
-          };
-          g[0] === "" && (c.lastIndex += 1);
-          return {
-            value: g,
-            done: !1
-          }
+var assignProperties =
+  typeof Object.assign == "function"
+    ? Object.assign
+    : function (value, other) {
+        if (value == null) throw new TypeError("No nullish arg");
+        value = Object(value);
+        for (var index = 1; index < arguments.length; index++) {
+          var intermediate = arguments[index];
+          if (intermediate)
+            for (var intermediate2 in intermediate)
+              hasOwnProperty(intermediate, intermediate2) &&
+                (value[intermediate2] = intermediate[intermediate2]);
         }
+        return value;
       };
-    f[Symbol.iterator] = function() {
-      return f
+installPolyfill("Object.assign", function (value) {
+  return value || assignProperties;
+});
+installPolyfill("Symbol.dispose", function (value) {
+  return value ? value : Symbol("Symbol.dispose");
+});
+installPolyfill("Array.prototype.find", function (value) {
+  return value
+    ? value
+    : function (value2, other) {
+        a: {
+          var instance = this;
+          instance instanceof String && (instance = String(instance));
+          for (var length = instance.length, index = 0; index < length; index++) {
+            var intermediate = instance[index];
+            if (value2.call(other, intermediate, index, instance)) {
+              value2 = intermediate;
+              break a;
+            }
+          }
+          value2 = void 0;
+        }
+        return value2;
+      };
+});
+installPolyfill("WeakMap", function (value) {
+  function helper(helper6) {
+    this.j = (intermediate2 += Math.random() + 1).toString();
+    if (helper6) {
+      helper6 = getIterator(helper6);
+      for (var intermediate3; !(intermediate3 = helper6.next()).done; ) {
+        intermediate3 = intermediate3.value;
+        this.set(intermediate3[0], intermediate3[1]);
+      }
+    }
+  }
+  function helper2() {}
+  function helper3(helper6) {
+    var intermediate3 = typeof helper6;
+    return (intermediate3 === "object" && helper6 !== null) || intermediate3 === "function";
+  }
+  function helper4(helper6) {
+    if (!hasOwnProperty(helper6, intermediate)) {
+      var helper22 = new helper2();
+      definePropertyCompat(helper6, intermediate, { value: helper22 });
+    }
+  }
+  function helper5(helper6) {
+    var callback = Object[helper6];
+    callback &&
+      (Object[helper6] = function (value2) {
+        if (value2 instanceof helper2) return value2;
+        Object.isExtensible(value2) && helper4(value2);
+        return callback(value2);
+      });
+  }
+  if (
+    (function () {
+      if (!value || !Object.seal) return false;
+      try {
+        var intermediate3 = Object.seal({}),
+          intermediate4 = Object.seal({}),
+          value2 = new value([
+            [intermediate3, 2],
+            [intermediate4, 3],
+          ]);
+        if (value2.get(intermediate3) != 2 || value2.get(intermediate4) != 3) return false;
+        value2.delete(intermediate3);
+        value2.set(intermediate4, 4);
+        return !value2.has(intermediate3) && value2.get(intermediate4) == 4;
+      } catch (caughtError) {
+        return false;
+      }
+    })()
+  )
+    return value;
+  var intermediate = "$jscomp_hidden_" + Math.random();
+  helper5("freeze");
+  helper5("preventExtensions");
+  helper5("seal");
+  var intermediate2 = 0;
+  helper.prototype.set = function (value2, other) {
+    if (!helper3(value2)) throw Error("Invalid WeakMap key");
+    helper4(value2);
+    if (!hasOwnProperty(value2, intermediate)) throw Error("WeakMap key fail: " + value2);
+    value2[intermediate][this.j] = other;
+    return this;
+  };
+  helper.prototype.get = function (value2) {
+    return helper3(value2) && hasOwnProperty(value2, intermediate)
+      ? value2[intermediate][this.j]
+      : void 0;
+  };
+  helper.prototype.has = function (value2) {
+    return (
+      helper3(value2) &&
+      hasOwnProperty(value2, intermediate) &&
+      hasOwnProperty(value2[intermediate], this.j)
+    );
+  };
+  helper.prototype.delete = function (value2) {
+    return helper3(value2) &&
+      hasOwnProperty(value2, intermediate) &&
+      hasOwnProperty(value2[intermediate], this.j)
+      ? delete value2[intermediate][this.j]
+      : false;
+  };
+  return helper;
+});
+installPolyfill("Map", function (value) {
+  function helper() {
+    var record = {};
+    return (record.previous = record.next = record.head = record);
+  }
+  function helper2(helper5, helper6) {
+    var iterator = helper5[1];
+    return createIterableIterator(function () {
+      if (iterator) {
+        for (; iterator.head != helper5[1]; ) iterator = iterator.previous;
+        for (; iterator.next != iterator.head; )
+          return ((iterator = iterator.next), { done: false, value: helper6(iterator) });
+        iterator = null;
+      }
+      return { done: true, value: void 0 };
+    });
+  }
+  function helper3(helper5, helper6) {
+    var intermediate = helper6 && typeof helper6;
+    intermediate == "object" || intermediate == "function"
+      ? weakMap.has(helper6)
+        ? (intermediate = weakMap.get(helper6))
+        : ((intermediate = "" + ++index), weakMap.set(helper6, intermediate))
+      : (intermediate = "p_" + helper6);
+    var intermediate2 = helper5[0][intermediate];
+    if (intermediate2 && hasOwnProperty(helper5[0], intermediate))
+      for (helper5 = 0; helper5 < intermediate2.length; helper5++) {
+        var intermediate3 = intermediate2[helper5];
+        if (
+          (helper6 !== helper6 && intermediate3.key !== intermediate3.key) ||
+          helper6 === intermediate3.key
+        )
+          return { id: intermediate, list: intermediate2, index: helper5, entry: intermediate3 };
+      }
+    return { id: intermediate, list: intermediate2, index: -1, entry: void 0 };
+  }
+  function helper4(helper5) {
+    this[0] = {};
+    this[1] = helper();
+    this.size = 0;
+    if (helper5) {
+      helper5 = getIterator(helper5);
+      for (var intermediate; !(intermediate = helper5.next()).done; ) {
+        intermediate = intermediate.value;
+        this.set(intermediate[0], intermediate[1]);
+      }
+    }
+  }
+  if (
+    (function () {
+      if (
+        !value ||
+        typeof value != "function" ||
+        !value.prototype.entries ||
+        typeof Object.seal != "function"
+      )
+        return false;
+      try {
+        var intermediate = Object.seal({ x: 4 }),
+          value2 = new value(getIterator([[intermediate, "s"]]));
+        if (
+          value2.get(intermediate) != "s" ||
+          value2.size != 1 ||
+          value2.get({ x: 4 }) ||
+          value2.set({ x: 4 }, "t") != value2 ||
+          value2.size != 2
+        )
+          return false;
+        var iterator = value2.entries(),
+          iteration = iterator.next();
+        if (iteration.done || iteration.value[0] != intermediate || iteration.value[1] != "s")
+          return false;
+        iteration = iterator.next();
+        return iteration.done ||
+          iteration.value[0].x != 4 ||
+          iteration.value[1] != "t" ||
+          !iterator.next().done
+          ? false
+          : true;
+      } catch (caughtError) {
+        return false;
+      }
+    })()
+  )
+    return value;
+  var weakMap = new WeakMap();
+  helper4.prototype.set = function (value2, other) {
+    value2 = value2 === 0 ? 0 : value2;
+    var intermediate = helper3(this, value2);
+    intermediate.list || (intermediate.list = this[0][intermediate.id] = []);
+    intermediate.entry
+      ? (intermediate.entry.value = other)
+      : ((intermediate.entry = {
+          next: this[1],
+          previous: this[1].previous,
+          head: this[1],
+          key: value2,
+          value: other,
+        }),
+        intermediate.list.push(intermediate.entry),
+        (this[1].previous.next = intermediate.entry),
+        (this[1].previous = intermediate.entry),
+        this.size++);
+    return this;
+  };
+  helper4.prototype.delete = function (value2) {
+    value2 = helper3(this, value2);
+    return value2.entry && value2.list
+      ? (value2.list.splice(value2.index, 1),
+        value2.list.length || delete this[0][value2.id],
+        (value2.entry.previous.next = value2.entry.next),
+        (value2.entry.next.previous = value2.entry.previous),
+        (value2.entry.head = null),
+        this.size--,
+        true)
+      : false;
+  };
+  helper4.prototype.clear = function () {
+    this[0] = {};
+    this[1] = this[1].previous = helper();
+    this.size = 0;
+  };
+  helper4.prototype.has = function (value2) {
+    return !!helper3(this, value2).entry;
+  };
+  helper4.prototype.get = function (value2) {
+    return (value2 = helper3(this, value2).entry) && value2.value;
+  };
+  helper4.prototype.entries = function () {
+    return helper2(this, function (value2) {
+      return [value2.key, value2.value];
+    });
+  };
+  helper4.prototype.keys = function () {
+    return helper2(this, function (value2) {
+      return value2.key;
+    });
+  };
+  helper4.prototype.values = function () {
+    return helper2(this, function (value2) {
+      return value2.value;
+    });
+  };
+  helper4.prototype.forEach = function (value2, other) {
+    for (var iterator = this.entries(), intermediate; !(intermediate = iterator.next()).done; ) {
+      intermediate = intermediate.value;
+      value2.call(other, intermediate[1], intermediate[0], this);
+    }
+  };
+  helper4.prototype[Symbol.iterator] = helper4.prototype.entries;
+  var index = 0;
+  return helper4;
+});
+installPolyfill("Set", function (value) {
+  function helper(helper2) {
+    this.j = new Map();
+    if (helper2) {
+      helper2 = getIterator(helper2);
+      for (var intermediate; !(intermediate = helper2.next()).done; ) this.add(intermediate.value);
+    }
+    this.size = this.j.size;
+  }
+  if (
+    (function () {
+      if (
+        !value ||
+        typeof value != "function" ||
+        !value.prototype.entries ||
+        typeof Object.seal != "function"
+      )
+        return false;
+      try {
+        var intermediate = Object.seal({ x: 4 }),
+          value2 = new value(getIterator([intermediate]));
+        if (
+          !value2.has(intermediate) ||
+          value2.size != 1 ||
+          value2.add(intermediate) != value2 ||
+          value2.size != 1 ||
+          value2.add({ x: 4 }) != value2 ||
+          value2.size != 2
+        )
+          return false;
+        var iterator = value2.entries(),
+          iteration = iterator.next();
+        if (
+          iteration.done ||
+          iteration.value[0] != intermediate ||
+          iteration.value[1] != intermediate
+        )
+          return false;
+        iteration = iterator.next();
+        return iteration.done ||
+          iteration.value[0] == intermediate ||
+          iteration.value[0].x != 4 ||
+          iteration.value[1] != iteration.value[0]
+          ? false
+          : iterator.next().done;
+      } catch (caughtError) {
+        return false;
+      }
+    })()
+  )
+    return value;
+  helper.prototype.add = function (value2) {
+    value2 = value2 === 0 ? 0 : value2;
+    this.j.set(value2, value2);
+    this.size = this.j.size;
+    return this;
+  };
+  helper.prototype.delete = function (value2) {
+    value2 = this.j.delete(value2);
+    this.size = this.j.size;
+    return value2;
+  };
+  helper.prototype.clear = function () {
+    this.j.clear();
+    this.size = 0;
+  };
+  helper.prototype.has = function (value2) {
+    return this.j.has(value2);
+  };
+  helper.prototype.entries = function () {
+    return this.j.entries();
+  };
+  helper.prototype.values = function () {
+    return this.j.values();
+  };
+  helper.prototype.keys = helper.prototype.values;
+  helper.prototype[Symbol.iterator] = helper.prototype.values;
+  helper.prototype.forEach = function (value2, other) {
+    var instance = this;
+    this.j.forEach(function (value3) {
+      return value2.call(other, value3, value3, instance);
+    });
+  };
+  return helper;
+});
+installPolyfill("Object.values", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        var values = [],
+          intermediate;
+        for (intermediate in value2)
+          hasOwnProperty(value2, intermediate) && values.push(value2[intermediate]);
+        return values;
+      };
+});
+installPolyfill("Object.is", function (value) {
+  return value
+    ? value
+    : function (value2, other) {
+        return value2 === other
+          ? value2 !== 0 || 1 / value2 === 1 / other
+          : value2 !== value2 && other !== other;
+      };
+});
+installPolyfill("Array.prototype.includes", function (value) {
+  return value
+    ? value
+    : function (value2, index) {
+        var instance = this;
+        instance instanceof String && (instance = String(instance));
+        var length = instance.length;
+        index = index || 0;
+        for (index < 0 && (index = Math.max(index + length, 0)); index < length; index++) {
+          var intermediate = instance[index];
+          if (intermediate === value2 || Object.is(intermediate, value2)) return true;
+        }
+        return false;
+      };
+});
+function checkStringSearchArguments(receiver, searchValue, methodName) {
+  if (receiver == null)
+    throw new TypeError(
+      "The 'this' value for String.prototype." + methodName + " must not be null or undefined",
+    );
+  if (searchValue instanceof RegExp)
+    throw new TypeError(
+      "First argument to String.prototype." + methodName + " must not be a regular expression",
+    );
+  return receiver + "";
+}
+installPolyfill("String.prototype.includes", function (value) {
+  return value
+    ? value
+    : function (value2, other) {
+        return (
+          checkStringSearchArguments(this, value2, "includes").indexOf(value2, other || 0) !== -1
+        );
+      };
+});
+installPolyfill("Array.from", function (value) {
+  return value
+    ? value
+    : function (iterator, other, options) {
+        other = other != null ? other : createIdentityFunction();
+        var values = [],
+          intermediate =
+            typeof Symbol != "undefined" && Symbol.iterator && iterator[Symbol.iterator];
+        if (typeof intermediate == "function") {
+          iterator = intermediate.call(iterator);
+          for (var index = 0; !(intermediate = iterator.next()).done; )
+            values.push(other.call(options, intermediate.value, index++));
+        } else
+          for (intermediate = iterator.length, index = 0; index < intermediate; index++)
+            values.push(other.call(options, iterator[index], index));
+        return values;
+      };
+});
+installPolyfill("Object.entries", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        var values = [],
+          intermediate;
+        for (intermediate in value2)
+          hasOwnProperty(value2, intermediate) && values.push([intermediate, value2[intermediate]]);
+        return values;
+      };
+});
+installPolyfill("Number.isFinite", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        return typeof value2 !== "number"
+          ? false
+          : !isNaN(value2) && value2 !== Infinity && value2 !== -Infinity;
+      };
+});
+installPolyfill("Number.MAX_SAFE_INTEGER", createConstantFunction(9007199254740991));
+installPolyfill("Number.MIN_SAFE_INTEGER", createConstantFunction(-9007199254740991));
+installPolyfill("Number.isInteger", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        return Number.isFinite(value2) ? value2 === Math.floor(value2) : false;
+      };
+});
+installPolyfill("Number.isSafeInteger", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        return Number.isInteger(value2) && Math.abs(value2) <= Number.MAX_SAFE_INTEGER;
+      };
+});
+installPolyfill("String.prototype.startsWith", function (value) {
+  return value
+    ? value
+    : function (value2, index) {
+        var intermediate = checkStringSearchArguments(this, value2, "startsWith");
+        value2 += "";
+        var length = intermediate.length,
+          length2 = value2.length;
+        index = Math.max(0, Math.min(index | 0, intermediate.length));
+        for (var index2 = 0; index2 < length2 && index < length; )
+          if (intermediate[index++] != value2[index2++]) return false;
+        return index2 >= length2;
+      };
+});
+function createArrayEntryIterator(arrayLike, mapEntry) {
+  arrayLike instanceof String && (arrayLike += "");
+  var index = 0,
+    intermediate = false,
+    record = {
+      next: function () {
+        if (!intermediate && index < arrayLike.length) {
+          var intermediate2 = index++;
+          return { value: mapEntry(intermediate2, arrayLike[intermediate2]), done: false };
+        }
+        intermediate = true;
+        return { done: true, value: void 0 };
+      },
     };
-    return f
-  }
+  record[Symbol.iterator] = function () {
+    return record;
+  };
+  return record;
+}
+installPolyfill("Array.prototype.entries", function (value) {
+  return value
+    ? value
+    : function () {
+        return createArrayEntryIterator(this, function (value2, other) {
+          return [value2, other];
+        });
+      };
 });
-v("Promise.prototype.finally", function(a) {
-  return a ? a : function(b) {
-    return this.then(function(c) {
-      return Promise.resolve(b()).then(function() {
-        return c
-      })
-    }, function(c) {
-      return Promise.resolve(b()).then(function() {
-        throw c;
-      })
-    })
-  }
+installPolyfill("Math.trunc", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        value2 = Number(value2);
+        if (isNaN(value2) || value2 === Infinity || value2 === -Infinity || value2 === 0)
+          return value2;
+        var intermediate = Math.floor(Math.abs(value2));
+        return value2 < 0 ? -intermediate : intermediate;
+      };
 });
-/*
+installPolyfill("Number.isNaN", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        return typeof value2 === "number" && isNaN(value2);
+      };
+});
+installPolyfill("Array.prototype.keys", function (value) {
+  return value
+    ? value
+    : function () {
+        return createArrayEntryIterator(this, createIdentityFunction());
+      };
+});
+installPolyfill("Array.prototype.values", function (value) {
+  return value
+    ? value
+    : function () {
+        return createArrayEntryIterator(this, function (value2, other) {
+          return other;
+        });
+      };
+});
+installPolyfill("Math.imul", function (value) {
+  return value
+    ? value
+    : function (value2, other) {
+        value2 = Number(value2);
+        other = Number(other);
+        var intermediate = value2 & 65535,
+          intermediate2 = other & 65535;
+        return (
+          (intermediate * intermediate2 +
+            (((((value2 >>> 16) & 65535) * intermediate2 +
+              intermediate * ((other >>> 16) & 65535)) <<
+              16) >>>
+              0)) |
+          0
+        );
+      };
+});
+installPolyfill("String.prototype.repeat", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        var intermediate = checkStringSearchArguments(this, null, "repeat");
+        if (value2 < 0 || value2 > 1342177279) throw new RangeError("Invalid count value");
+        value2 |= 0;
+        for (var intermediate2 = ""; value2; )
+          if ((value2 & 1 && (intermediate2 += intermediate), (value2 >>>= 1)))
+            intermediate += intermediate;
+        return intermediate2;
+      };
+});
+installPolyfill("String.prototype.matchAll", function (value) {
+  return value
+    ? value
+    : function (value2) {
+        if (value2 instanceof RegExp && !value2.global)
+          throw new TypeError(
+            "RegExp passed into String.prototype.matchAll() must have global tag.",
+          );
+        var regExp = new RegExp(value2, value2 instanceof RegExp ? void 0 : "g");
+        value2 instanceof RegExp && (regExp.lastIndex = value2.lastIndex);
+        var instance = this,
+          intermediate = false,
+          record = {
+            next: function () {
+              if (intermediate) return { value: void 0, done: true };
+              var intermediate2 = regExp.exec(instance);
+              if (!intermediate2) return ((intermediate = true), { value: void 0, done: true });
+              intermediate2[0] === "" && (regExp.lastIndex += 1);
+              return { value: intermediate2, done: false };
+            },
+          };
+        record[Symbol.iterator] = function () {
+          return record;
+        };
+        return record;
+      };
+});
+installPolyfill("Promise.prototype.finally", function (value) {
+  return value
+    ? value
+    : function (callback) {
+        return this.then(
+          function (value2) {
+            return Promise.resolve(callback()).then(function () {
+              return value2;
+            });
+          },
+          function (value2) {
+            return Promise.resolve(callback()).then(function () {
+              throw value2;
+            });
+          },
+        );
+      };
+}); /*
 
  Copyright The Closure Library Authors.
  SPDX-License-Identifier: Apache-2.0
 */
-var Ea = Ea || {},
-  A = this || self;
-
-function Fa(a, b) {
-  var c = Ga("CLOSURE_FLAGS");
-  a = c && c[a];
-  return a != null ? a : b
+var closureNamespace = closureNamespace || {},
+  runtimeGlobal = this || self;
+/**
+ * 基础工具与环境能力：Closure flags、类型判断、绑定、浏览器识别。
+ */
+function readClosureFlag(flagId, fallback) {
+  var intermediate = lookupGlobalPath("CLOSURE_FLAGS");
+  flagId = intermediate && intermediate[flagId];
+  return flagId != null ? flagId : fallback;
 }
-
-function Ga(a) {
-  a = a.split(".");
-  for (var b = A, c = 0; c < a.length; c++)
-    if (b = b[a[c]], b == null) return null;
-  return b
+function lookupGlobalPath(path) {
+  path = path.split(".");
+  for (var runtimeGlobal2 = runtimeGlobal, index = 0; index < path.length; index++)
+    if (((runtimeGlobal2 = runtimeGlobal2[path[index]]), runtimeGlobal2 == null)) return null;
+  return runtimeGlobal2;
 }
-
-function Ha(a) {
-  var b = typeof a;
-  return b != "object" ? b : a ? Array.isArray(a) ? "array" : b : "null"
+function getValueType(value) {
+  var intermediate = typeof value;
+  return intermediate != "object"
+    ? intermediate
+    : value
+      ? Array.isArray(value)
+        ? "array"
+        : intermediate
+      : "null";
 }
-
-function Ia(a) {
-  var b = Ha(a);
-  return b == "array" || b == "object" && typeof a.length == "number"
+function isArrayLike(value) {
+  var valueType = getValueType(value);
+  return valueType == "array" || (valueType == "object" && typeof value.length == "number");
 }
-
-function Ka(a) {
-  var b = typeof a;
-  return b == "object" && a != null || b == "function"
+function isObjectLike(value) {
+  var intermediate = typeof value;
+  return (intermediate == "object" && value != null) || intermediate == "function";
 }
-var La = "closure_uid_" + (Math.random() * 1E9 >>> 0),
-  Ma = 0;
-
-function Na(a, b, c) {
-  return a.call.apply(a.bind, arguments)
+var objectUidKey = "closure_uid_" + ((Math.random() * 1e9) >>> 0),
+  nextObjectUid = 0;
+function nativeBind(callback, receiver, boundArguments) {
+  return callback.call.apply(callback.bind, arguments);
 }
-
-function Oa(a, b, c) {
-  if (!a) throw Error();
+function fallbackBind(callback, receiver, boundArguments) {
+  if (!callback) throw Error();
   if (arguments.length > 2) {
-    var d = Array.prototype.slice.call(arguments, 2);
-    return function() {
-      var e = Array.prototype.slice.call(arguments);
-      Array.prototype.unshift.apply(e, d);
-      return a.apply(b, e)
-    }
+    var intermediate = Array.prototype.slice.call(arguments, 2);
+    return function () {
+      var intermediate2 = Array.prototype.slice.call(arguments);
+      Array.prototype.unshift.apply(intermediate2, intermediate);
+      return callback.apply(receiver, intermediate2);
+    };
   }
-  return function() {
-    return a.apply(b, arguments)
-  }
+  return function () {
+    return callback.apply(receiver, arguments);
+  };
 }
-
-function B(a, b, c) {
-  B = Function.prototype.bind && Function.prototype.bind.toString().indexOf("native code") != -1 ? Na : Oa;
-  return B.apply(null, arguments)
+function bindFunction(callback, receiver, boundArguments) {
+  bindFunction =
+    Function.prototype.bind && Function.prototype.bind.toString().indexOf("native code") != -1
+      ? nativeBind
+      : fallbackBind;
+  return bindFunction.apply(null, arguments);
 }
-
-function Pa(a, b) {
-  var c = Array.prototype.slice.call(arguments, 1);
-  return function() {
-    var d = c.slice();
-    d.push.apply(d, arguments);
-    return a.apply(this, d)
-  }
+function partialApply(callback, boundArguments) {
+  var intermediate = Array.prototype.slice.call(arguments, 1);
+  return function () {
+    var values = intermediate.slice();
+    values.push.apply(values, arguments);
+    return callback.apply(this, values);
+  };
 }
-
-function Qa(a) {
-  (0, eval)(a)
+function evaluateGlobally(source) {
+  (0, eval)(source);
 }
-
-function Ra(a) {
-  return a
+function identity(value) {
+  return value;
 }
-
-function C(a, b) {
-  function c() {}
-  c.prototype = b.prototype;
-  a.W = b.prototype;
-  a.prototype = new c;
-  a.prototype.constructor = a;
-  a.zc = function(d, e, f) {
-    for (var g = Array(arguments.length - 2), h = 2; h < arguments.length; h++) g[h - 2] = arguments[h];
-    return b.prototype[e].apply(d, g)
-  }
-};
-
-function D(a, b) {
-  if (Error.captureStackTrace) Error.captureStackTrace(this, D);
+function inheritClosureClass(subclass, superclass) {
+  function helper() {}
+  helper.prototype = superclass.prototype;
+  subclass.W = superclass.prototype;
+  subclass.prototype = new helper();
+  subclass.prototype.constructor = subclass;
+  subclass.zc = function (value, other, options) {
+    for (
+      var intermediate = Array(arguments.length - 2), index = 2;
+      index < arguments.length;
+      index++
+    )
+      intermediate[index - 2] = arguments[index];
+    return superclass.prototype[other].apply(value, intermediate);
+  };
+}
+function ClosureError(message, cause) {
+  if (Error.captureStackTrace) Error.captureStackTrace(this, ClosureError);
   else {
-    var c = Error().stack;
-    c && (this.stack = c)
+    var stack = Error().stack;
+    stack && (this.stack = stack);
   }
-  a && (this.message = String(a));
-  b !== void 0 && (this.cause = b);
-  this.j = !0
+  message && (this.message = String(message));
+  cause !== void 0 && (this.cause = cause);
+  this.j = true;
 }
-C(D, Error);
-D.prototype.name = "CustomError";
-
-function Sa(a) {
-  A.setTimeout(function() {
-    throw a;
-  }, 0)
-};
-var Ta = String.prototype.trim ? function(a) {
-  return a.trim()
-} : function(a) {
-  return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(a)[1]
-};
-var Ua = Fa(610401301, !1),
-  Va = Fa(748402147, !0);
-var Wa, Xa = A.navigator;
-Wa = Xa ? Xa.userAgentData || null : null;
-
-function Ya(a) {
-  if (!Ua || !Wa) return !1;
-  for (var b = 0; b < Wa.brands.length; b++) {
-    var c = Wa.brands[b].brand;
-    if (c && c.indexOf(a) != -1) return !0
+inheritClosureClass(ClosureError, Error);
+ClosureError.prototype.name = "CustomError";
+function throwAsynchronously(error) {
+  runtimeGlobal.setTimeout(function () {
+    throw error;
+  }, 0);
+}
+var trimString = String.prototype.trim
+  ? function (value) {
+      return value.trim();
+    }
+  : function (value) {
+      return /^[\s\xa0]*([\s\S]*?)[\s\xa0]*$/.exec(value)[1];
+    };
+var useUserAgentClientHints = readClosureFlag(610401301, false),
+  strictArrayValidation = readClosureFlag(748402147, true);
+var userAgentData,
+  runtimeNavigator = runtimeGlobal.navigator;
+userAgentData = runtimeNavigator ? runtimeNavigator.userAgentData || null : null;
+function hasUserAgentBrand(brand) {
+  if (!useUserAgentClientHints || !userAgentData) return false;
+  for (var index = 0; index < userAgentData.brands.length; index++) {
+    var brand2 = userAgentData.brands[index].brand;
+    if (brand2 && brand2.indexOf(brand) != -1) return true;
   }
-  return !1
+  return false;
 }
-
-function F(a) {
-  var b;
+function userAgentContains(token) {
+  var intermediate;
   a: {
-    if (b = A.navigator)
-      if (b = b.userAgent) break a;b = ""
+    if ((intermediate = runtimeGlobal.navigator))
+      if ((intermediate = intermediate.userAgent)) break a;
+    intermediate = "";
   }
-  return b.indexOf(a) != -1
-};
-
-function Za() {
-  return Ua ? !!Wa && Wa.brands.length > 0 : !1
-};
-
-function $a(a, b) {
-  return Array.prototype.some.call(a, b, void 0)
+  return intermediate.indexOf(token) != -1;
 }
-
-function ab(a, b) {
-  b = Array.prototype.indexOf.call(a, b, void 0);
-  var c;
-  (c = b >= 0) && Array.prototype.splice.call(a, b, 1);
-  return c
+function hasUserAgentBrands() {
+  return useUserAgentClientHints ? !!userAgentData && userAgentData.brands.length > 0 : false;
 }
-
-function bb(a, b) {
-  for (var c = 1; c < arguments.length; c++) {
-    var d = arguments[c];
-    if (Ia(d)) {
-      var e = a.length || 0,
-        f = d.length || 0;
-      a.length = e + f;
-      for (var g = 0; g < f; g++) a[e + g] = d[g]
-    } else a.push(d)
+function arraySome(values, predicate) {
+  return Array.prototype.some.call(values, predicate, void 0);
+}
+function removeArrayValue(values, value) {
+  value = Array.prototype.indexOf.call(values, value, void 0);
+  var intermediate;
+  (intermediate = value >= 0) && Array.prototype.splice.call(values, value, 1);
+  return intermediate;
+}
+function extendArray(target, values) {
+  for (var index = 1; index < arguments.length; index++) {
+    var intermediate = arguments[index];
+    if (isArrayLike(intermediate)) {
+      var intermediate2 = target.length || 0,
+        intermediate3 = intermediate.length || 0;
+      target.length = intermediate2 + intermediate3;
+      for (var index2 = 0; index2 < intermediate3; index2++)
+        target[intermediate2 + index2] = intermediate[index2];
+    } else target.push(intermediate);
   }
-};
-var cb = F("Firefox") || F("FxiOS"),
-  db = F("Safari") && !((Za() ? Ya("Chromium") : (F("Chrome") || F("CriOS")) && (Za() || !F("Edge")) || F(
-    "Silk")) || (Za() ? 0 : F("Coast")) || (Za() ? 0 : F("Opera")) || (Za() ? 0 : F("Edge")) || (Za() ? Ya(
-    "Microsoft Edge") : F("Edg/")) || (Za() ? Ya("Opera") : F("OPR")) || F("Firefox") || F("FxiOS") || F(
-    "Silk") || F("Android")) && !(F("iPhone") && !F("iPod") && !F("iPad") || F("iPad") || F("iPod"));
-var eb = {},
-  fb = null;
-var gb = typeof Uint8Array !== "undefined",
-  hb = typeof btoa === "function",
-  ib = {},
-  jb = typeof structuredClone != "undefined";
-
-function kb(a, b) {
-  if (b !== ib) throw Error("illegal external caller");
-  this.j = a;
-  if (a != null && a.length === 0) throw Error("ByteString should be constructed with non-empty values");
 }
-
-function lb() {
-  return mb || (mb = new kb(null, ib))
+var isFirefox = userAgentContains("Firefox") || userAgentContains("FxiOS"),
+  isSafariLike =
+    userAgentContains("Safari") &&
+    !(
+      (hasUserAgentBrands()
+        ? hasUserAgentBrand("Chromium")
+        : ((userAgentContains("Chrome") || userAgentContains("CriOS")) &&
+            (hasUserAgentBrands() || !userAgentContains("Edge"))) ||
+          userAgentContains("Silk")) ||
+      (hasUserAgentBrands() ? 0 : userAgentContains("Coast")) ||
+      (hasUserAgentBrands() ? 0 : userAgentContains("Opera")) ||
+      (hasUserAgentBrands() ? 0 : userAgentContains("Edge")) ||
+      (hasUserAgentBrands() ? hasUserAgentBrand("Microsoft Edge") : userAgentContains("Edg/")) ||
+      (hasUserAgentBrands() ? hasUserAgentBrand("Opera") : userAgentContains("OPR")) ||
+      userAgentContains("Firefox") ||
+      userAgentContains("FxiOS") ||
+      userAgentContains("Silk") ||
+      userAgentContains("Android")
+    ) &&
+    !(
+      (userAgentContains("iPhone") && !userAgentContains("iPod") && !userAgentContains("iPad")) ||
+      userAgentContains("iPad") ||
+      userAgentContains("iPod")
+    );
+var base64DecodeTable = {},
+  base64EncodeTables = null;
+var supportsUint8Array = typeof Uint8Array !== "undefined",
+  supportsBtoa = typeof btoa === "function",
+  byteStringConstructionToken = {},
+  supportsStructuredClone = typeof structuredClone != "undefined";
+/**
+ * 数组消息运行时：字节串、64 位整数转换、内部 flags、copy-on-write、oneof 与 JSON。数值位掩码不是业务枚举。
+ */
+function ByteString(value, constructionToken) {
+  if (constructionToken !== byteStringConstructionToken) throw Error("illegal external caller");
+  this.j = value;
+  if (value != null && value.length === 0)
+    throw Error("ByteString should be constructed with non-empty values");
 }
-var mb;
-
-function nb(a, b, c) {
-  a.__closure__error__context__984382 || (a.__closure__error__context__984382 = {});
-  a.__closure__error__context__984382[b] = c
+function emptyByteString() {
+  return (
+    emptyByteStringInstance ||
+    (emptyByteStringInstance = new ByteString(null, byteStringConstructionToken))
+  );
 }
-
-function ob(a) {
-  return a.__closure__error__context__984382 || {}
-};
-var pb = void 0;
-
-function qb(a, b) {
-  if (a != null) {
-    var c;
-    var d = (c = pb) != null ? c : pb = {};
-    c = d[a] || 0;
-    c >= b || (d[a] = c + 1, a = Error(), nb(a, "severity", "incident"), Sa(a))
+var emptyByteStringInstance;
+function attachErrorContext(error, key, value) {
+  error.__closure__error__context__984382 || (error.__closure__error__context__984382 = {});
+  error.__closure__error__context__984382[key] = value;
+}
+function readErrorContext(error) {
+  return error.__closure__error__context__984382 || {};
+}
+var incidentCounts = void 0;
+function reportLimitedIncident(incidentKey, maximum) {
+  if (incidentKey != null) {
+    var intermediate;
+    var intermediate2 =
+      (intermediate = incidentCounts) != null ? intermediate : (incidentCounts = {});
+    intermediate = intermediate2[incidentKey] || 0;
+    intermediate >= maximum ||
+      ((intermediate2[incidentKey] = intermediate + 1),
+      (incidentKey = Error()),
+      attachErrorContext(incidentKey, "severity", "incident"),
+      throwAsynchronously(incidentKey));
   }
-};
-
-function rb() {
-  return typeof BigInt === "function"
-};
-var sb = typeof Symbol === "function" && typeof Symbol() === "symbol";
-
-function tb(a, b, c) {
-  return typeof Symbol === "function" && typeof Symbol() === "symbol" ? (c === void 0 ? 0 : c) && Symbol
-    .for && a ? Symbol.for(a) : a != null ? Symbol(a) : Symbol() : b
 }
-var ub = tb("jas", void 0, !0),
-  vb = tb(void 0, "0di"),
-  wb = tb(void 0, "1oa"),
-  xb = tb(void 0, Symbol()),
-  yb = tb(void 0, "0ubs"),
-  zb = tb(void 0, "0actk"),
-  Ab = tb("m_m", "Cc", !0);
-Math.max.apply(Math, oa(Object.values({
-  Zb: 1,
-  Wb: 2,
-  Tb: 4,
-  kc: 8,
-  vc: 16,
-  ec: 32,
-  Fb: 64,
-  Rb: 128,
-  Pb: 256,
-  sc: 512,
-  Qb: 1024,
-  Sb: 2048,
-  fc: 4096,
-  ac: 8192
-})));
-var Bb = {
-    qb: {
-      value: 0,
-      configurable: !0,
-      writable: !0,
-      enumerable: !1
-    }
+function supportsBigInt() {
+  return typeof BigInt === "function";
+}
+var supportsNativeSymbols = typeof Symbol === "function" && typeof Symbol() === "symbol";
+function createInternalSymbol(description, fallback, useRegistry) {
+  return typeof Symbol === "function" && typeof Symbol() === "symbol"
+    ? (useRegistry === void 0 ? 0 : useRegistry) && Symbol.for && description
+      ? Symbol.for(description)
+      : description != null
+        ? Symbol(description)
+        : Symbol()
+    : fallback;
+}
+var arrayFlagsSymbol = createInternalSymbol("jas", void 0, true),
+  defaultMessageSymbol = createInternalSymbol(void 0, "0di"),
+  oneofCasesSymbol = createInternalSymbol(void 0, "1oa"),
+  unknownFieldsSymbol = createInternalSymbol(void 0, Symbol()),
+  unknownFieldIncidentSymbol = createInternalSymbol(void 0, "0ubs"),
+  arrayConstructorIncidentSymbol = createInternalSymbol(void 0, "0actk"),
+  messageMarkerSymbol = createInternalSymbol("m_m", "Cc", true);
+Math.max.apply(
+  Math,
+  iterableToArray(
+    Object.values({
+      Zb: 1,
+      Wb: 2,
+      Tb: 4,
+      kc: 8,
+      vc: 16,
+      ec: 32,
+      Fb: 64,
+      Rb: 128,
+      Pb: 256,
+      sc: 512,
+      Qb: 1024,
+      Sb: 2048,
+      fc: 4096,
+      ac: 8192,
+    }),
+  ),
+);
+var arrayFlagsDescriptor = {
+    qb: { value: 0, configurable: true, writable: true, enumerable: false },
   },
-  Cb = Object.defineProperties,
-  G = sb ? ub : "qb",
-  Db, Eb = [];
-H(Eb, 7);
-Db = Object.freeze(Eb);
-
-function Fb(a, b) {
-  sb || G in a || Cb(a, Bb);
-  a[G] |= b
+  defineProperties = Object.defineProperties,
+  arrayFlagsKey = supportsNativeSymbols ? arrayFlagsSymbol : "qb",
+  emptyRepeatedField,
+  emptyRepeatedFieldStorage = [];
+setArrayFlags(emptyRepeatedFieldStorage, 7);
+emptyRepeatedField = Object.freeze(emptyRepeatedFieldStorage);
+function addArrayFlags(array, flags) {
+  supportsNativeSymbols || arrayFlagsKey in array || defineProperties(array, arrayFlagsDescriptor);
+  array[arrayFlagsKey] |= flags;
 }
-
-function H(a, b) {
-  sb || G in a || Cb(a, Bb);
-  a[G] = b
+function setArrayFlags(array, flags) {
+  supportsNativeSymbols || arrayFlagsKey in array || defineProperties(array, arrayFlagsDescriptor);
+  array[arrayFlagsKey] = flags;
 }
-
-function Gb(a) {
-  Fb(a, 34);
-  return a
-};
-var Hb = {};
-
-function Ib(a, b) {
-  return b === void 0 ? a.j !== Jb && !!(2 & (a.C[G] | 0)) : !!(2 & b) && a.j !== Jb
+function markImmutableMessageArray(array) {
+  addArrayFlags(array, 34);
+  return array;
 }
-var Jb = {},
-  Kb = Object.freeze({}),
-  Lb = Object.freeze({});
-
-function Mb(a) {
-  a.Bc = !0;
-  return a
-};
-var Nb = Mb(function(a) {
-    return typeof a === "number"
+var messageMarkerToken = {};
+function isImmutableMessage(message, flags) {
+  return flags === void 0
+    ? message.j !== copyOnWriteToken && !!(2 & (message.C[arrayFlagsKey] | 0))
+    : !!(2 & flags) && message.j !== copyOnWriteToken;
+}
+var copyOnWriteToken = {},
+  repeatedFieldModeToken = Object.freeze({}),
+  nestedFieldModeToken = Object.freeze({});
+function markTypePredicate(predicate) {
+  predicate.Bc = true;
+  return predicate;
+}
+var isNumberValue = markTypePredicate(function (value) {
+    return typeof value === "number";
   }),
-  Ob = Mb(function(a) {
-    return typeof a === "string"
+  isStringValue = markTypePredicate(function (value) {
+    return typeof value === "string";
   }),
-  Pb = Mb(function(a) {
-    return typeof a === "boolean"
+  isBooleanValue = markTypePredicate(function (value) {
+    return typeof value === "boolean";
   }),
-  Qb = Mb(function(a) {
-    return typeof a === "bigint"
+  isBigIntValue = markTypePredicate(function (value) {
+    return typeof value === "bigint";
   });
-var Rb = typeof A.BigInt === "function" && typeof A.BigInt(0) === "bigint";
-
-function Sb(a) {
-  var b = a;
-  if (Ob(b)) {
-    if (!/^\s*(?:-?[1-9]\d*|0)?\s*$/.test(b)) throw Error(String(b));
-  } else if (Nb(b) && !Number.isSafeInteger(b)) throw Error(String(b));
-  return Rb ? BigInt(a) : a = Pb(a) ? a ? "1" : "0" : Ob(a) ? a.trim() || "0" : String(a)
+var supportsNativeBigIntValue =
+  typeof runtimeGlobal.BigInt === "function" && typeof runtimeGlobal.BigInt(0) === "bigint";
+function normalizeBigInt(value) {
+  var value2 = value;
+  if (isStringValue(value2)) {
+    if (!/^\s*(?:-?[1-9]\d*|0)?\s*$/.test(value2)) throw Error(String(value2));
+  } else if (isNumberValue(value2) && !Number.isSafeInteger(value2)) throw Error(String(value2));
+  return supportsNativeBigIntValue
+    ? BigInt(value)
+    : (value = isBooleanValue(value)
+        ? value
+          ? "1"
+          : "0"
+        : isStringValue(value)
+          ? value.trim() || "0"
+          : String(value));
 }
-var Tb = Mb(function(a) {
-    return Rb ? Qb(a) : Ob(a) && /^(?:-?[1-9]\d*|0)$/.test(a)
+var isInt64Representation = markTypePredicate(function (value) {
+    return supportsNativeBigIntValue
+      ? isBigIntValue(value)
+      : isStringValue(value) && /^(?:-?[1-9]\d*|0)$/.test(value);
   }),
-  Zb = Mb(function(a) {
-    return Rb ? a >= Ub && a <= Vb : a[0] === "-" ? Wb(a, Xb) : Wb(a, Yb)
+  isSafeInt64Representation = markTypePredicate(function (value) {
+    return supportsNativeBigIntValue
+      ? value >= minimumSafeIntegerBigInt && value <= maximumSafeIntegerBigInt
+      : value[0] === "-"
+        ? decimalMagnitudeWithin(value, minimumSafeIntegerText)
+        : decimalMagnitudeWithin(value, maximumSafeIntegerText);
   }),
-  Xb = Number.MIN_SAFE_INTEGER.toString(),
-  Ub = Rb ? BigInt(Number.MIN_SAFE_INTEGER) : void 0,
-  Yb = Number.MAX_SAFE_INTEGER.toString(),
-  Vb = Rb ? BigInt(Number.MAX_SAFE_INTEGER) : void 0;
-
-function Wb(a, b) {
-  if (a.length > b.length) return !1;
-  if (a.length < b.length || a === b) return !0;
-  for (var c = 0; c < a.length; c++) {
-    var d = a[c],
-      e = b[c];
-    if (d > e) return !1;
-    if (d < e) return !0
+  minimumSafeIntegerText = Number.MIN_SAFE_INTEGER.toString(),
+  minimumSafeIntegerBigInt = supportsNativeBigIntValue ? BigInt(Number.MIN_SAFE_INTEGER) : void 0,
+  maximumSafeIntegerText = Number.MAX_SAFE_INTEGER.toString(),
+  maximumSafeIntegerBigInt = supportsNativeBigIntValue ? BigInt(Number.MAX_SAFE_INTEGER) : void 0;
+function decimalMagnitudeWithin(value, limit) {
+  if (value.length > limit.length) return false;
+  if (value.length < limit.length || value === limit) return true;
+  for (var index = 0; index < value.length; index++) {
+    var intermediate = value[index],
+      intermediate2 = limit[index];
+    if (intermediate > intermediate2) return false;
+    if (intermediate < intermediate2) return true;
   }
-};
-var I = 0,
-  $b = 0;
-
-function ac(a) {
-  var b = a >>> 0;
-  I = b;
-  $b = (a - b) / 4294967296 >>> 0
 }
-
-function bc(a) {
-  if (a < 0) {
-    ac(0 - a);
-    var b = y(cc(I, $b));
-    a = b.next().value;
-    b = b.next().value;
-    I = a >>> 0;
-    $b = b >>> 0
-  } else ac(a)
+var int64LowWord = 0,
+  int64HighWord = 0;
+function splitUnsigned64(value) {
+  var intermediate = value >>> 0;
+  int64LowWord = intermediate;
+  int64HighWord = ((value - intermediate) / 4294967296) >>> 0;
 }
-
-function dc(a, b) {
-  b >>>= 0;
-  a >>>= 0;
-  if (b <= 2097151) var c = "" + (4294967296 * b + a);
-  else rb() ? c = "" + (BigInt(b) << BigInt(32) | BigInt(a)) : (c = (a >>> 24 | b << 8) & 16777215, b = b >>
-    16 & 65535, a = (a & 16777215) + c * 6777216 + b * 6710656, c += b * 8147497, b *= 2, a >= 1E7 && (c +=
-      a / 1E7 >>> 0, a %= 1E7), c >= 1E7 && (b += c / 1E7 >>> 0, c %= 1E7), c = b + ec(c) + ec(a));
-  return c
+function splitSigned64(value) {
+  if (value < 0) {
+    splitUnsigned64(0 - value);
+    var iterator = getIterator(negate64Words(int64LowWord, int64HighWord));
+    value = iterator.next().value;
+    iterator = iterator.next().value;
+    int64LowWord = value >>> 0;
+    int64HighWord = iterator >>> 0;
+  } else splitUnsigned64(value);
 }
-
-function ec(a) {
-  a = String(a);
-  return "0000000".slice(a.length) + a
+function unsigned64ToDecimal(low, high) {
+  high >>>= 0;
+  low >>>= 0;
+  if (high <= 2097151) var intermediate = "" + (4294967296 * high + low);
+  else
+    supportsBigInt()
+      ? (intermediate = "" + ((BigInt(high) << BigInt(32)) | BigInt(low)))
+      : ((intermediate = ((low >>> 24) | (high << 8)) & 16777215),
+        (high = (high >> 16) & 65535),
+        (low = (low & 16777215) + intermediate * 6777216 + high * 6710656),
+        (intermediate += high * 8147497),
+        (high *= 2),
+        low >= 1e7 && ((intermediate += (low / 1e7) >>> 0), (low %= 1e7)),
+        intermediate >= 1e7 && ((high += (intermediate / 1e7) >>> 0), (intermediate %= 1e7)),
+        (intermediate = high + padDecimalChunk(intermediate) + padDecimalChunk(low)));
+  return intermediate;
 }
-
-function fc() {
-  var a = I,
-    b = $b;
-  b & 2147483648 ? rb() ? a = "" + (BigInt(b | 0) << BigInt(32) | BigInt(a >>> 0)) : (b = y(cc(a, b)), a = b
-    .next().value, b = b.next().value, a = "-" + dc(a, b)) : a = dc(a, b);
-  return a
+function padDecimalChunk(value) {
+  value = String(value);
+  return "0000000".slice(value.length) + value;
 }
-
-function cc(a, b) {
-  b = ~b;
-  a ? a = ~a + 1 : b += 1;
-  return [a, b]
-};
-var hc = typeof BigInt === "function" ? BigInt.asIntN : void 0,
-  ic = Number.isSafeInteger,
-  jc = Number.isFinite,
-  kc = Math.trunc;
-
-function lc(a) {
-  if (a == null || typeof a === "number") return a;
-  if (a === "NaN" || a === "Infinity" || a === "-Infinity") return Number(a)
+function signed64WordsToDecimal() {
+  var int64LowWord2 = int64LowWord,
+    int64HighWord2 = int64HighWord;
+  int64HighWord2 & 2147483648
+    ? supportsBigInt()
+      ? (int64LowWord2 =
+          "" + ((BigInt(int64HighWord2 | 0) << BigInt(32)) | BigInt(int64LowWord2 >>> 0)))
+      : ((int64HighWord2 = getIterator(negate64Words(int64LowWord2, int64HighWord2))),
+        (int64LowWord2 = int64HighWord2.next().value),
+        (int64HighWord2 = int64HighWord2.next().value),
+        (int64LowWord2 = "-" + unsigned64ToDecimal(int64LowWord2, int64HighWord2)))
+    : (int64LowWord2 = unsigned64ToDecimal(int64LowWord2, int64HighWord2));
+  return int64LowWord2;
 }
-
-function mc(a) {
-  return a.displayName || a.name || "unknown type name"
+function negate64Words(low, high) {
+  high = ~high;
+  low ? (low = ~low + 1) : (high += 1);
+  return [low, high];
 }
-var nc = /^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;
-
-function oc(a) {
-  switch (typeof a) {
+var bigIntAsIntN = typeof BigInt === "function" ? BigInt.asIntN : void 0,
+  isSafeInteger = Number.isSafeInteger,
+  isFiniteNumber = Number.isFinite,
+  truncateNumber = Math.trunc;
+function coerceSpecialNumber(value) {
+  if (value == null || typeof value === "number") return value;
+  if (value === "NaN" || value === "Infinity" || value === "-Infinity") return Number(value);
+}
+function getTypeDisplayName(constructor) {
+  return constructor.displayName || constructor.name || "unknown type name";
+}
+var decimalNumberPattern = /^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;
+function isNumericRepresentation(value) {
+  switch (typeof value) {
     case "bigint":
-      return !0;
+      return true;
     case "number":
-      return jc(a);
+      return isFiniteNumber(value);
     case "string":
-      return nc.test(a);
+      return decimalNumberPattern.test(value);
     default:
-      return !1
+      return false;
   }
 }
-
-function pc(a) {
-  return a == null ? a : jc(a) ? a | 0 : void 0
+function coerceInt32(value) {
+  return value == null ? value : isFiniteNumber(value) ? value | 0 : void 0;
 }
-
-function qc(a) {
-  if (a == null) return a;
-  if (typeof a === "string" && a) a = +a;
-  else if (typeof a !== "number") return;
-  return jc(a) ? a | 0 : void 0
+function coerceNumericInt32(value) {
+  if (value == null) return value;
+  if (typeof value === "string" && value) value = +value;
+  else if (typeof value !== "number") return;
+  return isFiniteNumber(value) ? value | 0 : void 0;
 }
-
-function rc(a) {
-  var b = a.length;
-  if (a[0] === "-" ? b < 20 || b === 20 && a <= "-9223372036854775808" : b < 19 || b === 19 && a <=
-    "9223372036854775807") return a;
-  if (a.length < 16) bc(Number(a));
-  else if (rb()) a = BigInt(a), I = Number(a & BigInt(4294967295)) >>> 0, $b = Number(a >> BigInt(32) &
-    BigInt(4294967295));
-  else {
-    b = +(a[0] === "-");
-    $b = I = 0;
-    for (var c = a.length, d = 0 + b, e = (c - b) % 6 + b; e <= c; d = e, e += 6) d = Number(a.slice(d, e)),
-      $b *= 1E6, I = I * 1E6 + d, I >= 4294967296 && ($b += Math.trunc(I / 4294967296), $b >>>= 0, I >>>= 0);
-    b && (b = y(cc(I, $b)), a = b.next().value, b = b.next().value, I = a,
-      $b = b)
+function normalizeInt64String(value) {
+  var length = value.length;
+  if (
+    value[0] === "-"
+      ? length < 20 || (length === 20 && value <= "-9223372036854775808")
+      : length < 19 || (length === 19 && value <= "9223372036854775807")
+  )
+    return value;
+  if (value.length < 16) splitSigned64(Number(value));
+  else if (supportsBigInt()) {
+    value = BigInt(value);
+    int64LowWord = Number(value & BigInt(4294967295)) >>> 0;
+    int64HighWord = Number((value >> BigInt(32)) & BigInt(4294967295));
+  } else {
+    length = +(value[0] === "-");
+    int64HighWord = int64LowWord = 0;
+    for (
+      var length2 = value.length,
+        intermediate = 0 + length,
+        intermediate2 = ((length2 - length) % 6) + length;
+      intermediate2 <= length2;
+      intermediate = intermediate2, intermediate2 += 6
+    ) {
+      intermediate = Number(value.slice(intermediate, intermediate2));
+      int64HighWord *= 1e6;
+      int64LowWord = int64LowWord * 1e6 + intermediate;
+      int64LowWord >= 4294967296 &&
+        ((int64HighWord += Math.trunc(int64LowWord / 4294967296)),
+        (int64HighWord >>>= 0),
+        (int64LowWord >>>= 0));
+    }
+    length &&
+      ((length = getIterator(negate64Words(int64LowWord, int64HighWord))),
+      (value = length.next().value),
+      (length = length.next().value),
+      (int64LowWord = value),
+      (int64HighWord = length));
   }
-  return fc()
+  return signed64WordsToDecimal();
 }
-
-function sc(a) {
-  oc(a);
-  a = kc(a);
-  if (!ic(a)) {
-    bc(a);
-    var b = I,
-      c = $b;
-    if (a = c & 2147483648) b = ~b + 1 >>> 0, c = ~c >>> 0, b == 0 && (c = c + 1 >>> 0);
-    var d = c * 4294967296 + (b >>> 0);
-    b = Number.isSafeInteger(d) ? d : dc(b, c);
-    a = typeof b === "number" ? a ? -b : b : a ? "-" + b : b
+function numberToInt64Representation(value) {
+  isNumericRepresentation(value);
+  value = truncateNumber(value);
+  if (!isSafeInteger(value)) {
+    splitSigned64(value);
+    var int64LowWord2 = int64LowWord,
+      int64HighWord2 = int64HighWord;
+    if ((value = int64HighWord2 & 2147483648)) {
+      int64LowWord2 = (~int64LowWord2 + 1) >>> 0;
+      int64HighWord2 = ~int64HighWord2 >>> 0;
+      int64LowWord2 == 0 && (int64HighWord2 = (int64HighWord2 + 1) >>> 0);
+    }
+    var intermediate = int64HighWord2 * 4294967296 + (int64LowWord2 >>> 0);
+    int64LowWord2 = Number.isSafeInteger(intermediate)
+      ? intermediate
+      : unsigned64ToDecimal(int64LowWord2, int64HighWord2);
+    value =
+      typeof int64LowWord2 === "number"
+        ? value
+          ? -int64LowWord2
+          : int64LowWord2
+        : value
+          ? "-" + int64LowWord2
+          : int64LowWord2;
   }
-  return a
+  return value;
 }
-
-function tc(a) {
-  oc(a);
-  a = kc(a);
-  ic(a) ? a = String(a) : (bc(a), a = fc());
-  return a
+function numberToInt64String(value) {
+  isNumericRepresentation(value);
+  value = truncateNumber(value);
+  isSafeInteger(value)
+    ? (value = String(value))
+    : (splitSigned64(value), (value = signed64WordsToDecimal()));
+  return value;
 }
-
-function uc(a) {
-  var b = typeof a;
-  if (a == null) return a;
-  if (b === "bigint") return Sb(hc(64, a));
-  if (oc(a)) return b === "string" ? (b = kc(Number(a)), ic(b) ? a = Sb(b) : (b = a.indexOf("."), b !== -1 &&
-    (a = a.substring(0, b)), a = rb() ? Sb(hc(64, BigInt(a))) : Sb(rc(a)))) : a = ic(a) ? Sb(sc(a)) : Sb(
-    tc(a)), a
+function coerceInt64(value) {
+  var intermediate = typeof value;
+  if (value == null) return value;
+  if (intermediate === "bigint") return normalizeBigInt(bigIntAsIntN(64, value));
+  if (isNumericRepresentation(value))
+    return (
+      intermediate === "string"
+        ? ((intermediate = truncateNumber(Number(value))),
+          isSafeInteger(intermediate)
+            ? (value = normalizeBigInt(intermediate))
+            : ((intermediate = value.indexOf(".")),
+              intermediate !== -1 && (value = value.substring(0, intermediate)),
+              (value = supportsBigInt()
+                ? normalizeBigInt(bigIntAsIntN(64, BigInt(value)))
+                : normalizeBigInt(normalizeInt64String(value)))))
+        : (value = isSafeInteger(value)
+            ? normalizeBigInt(numberToInt64Representation(value))
+            : normalizeBigInt(numberToInt64String(value))),
+      value
+    );
 }
-
-function vc(a) {
-  return a == null || typeof a === "string" ? a : void 0
+function coerceString(value) {
+  return value == null || typeof value === "string" ? value : void 0;
 }
-
-function wc(a, b, c, d) {
-  if (a != null && a[Ab] === Hb) return a;
-  if (!Array.isArray(a)) return c ? d & 2 ? b[vb] || (b[vb] = xc(b)) : new b : void 0;
-  c = a[G] | 0;
-  d = c | d & 32 | d & 2;
-  d !== c && H(a, d);
-  return new b(a)
+function coerceMessage(value, MessageType, createDefault, parentFlags) {
+  if (value != null && value[messageMarkerSymbol] === messageMarkerToken) return value;
+  if (!Array.isArray(value))
+    return createDefault
+      ? parentFlags & 2
+        ? MessageType[defaultMessageSymbol] ||
+          (MessageType[defaultMessageSymbol] = createFrozenDefaultMessage(MessageType))
+        : new MessageType()
+      : void 0;
+  createDefault = value[arrayFlagsKey] | 0;
+  parentFlags = createDefault | (parentFlags & 32) | (parentFlags & 2);
+  parentFlags !== createDefault && setArrayFlags(value, parentFlags);
+  return new MessageType(value);
 }
-
-function xc(a) {
-  a = new a;
-  Gb(a.C);
-  return a
-};
-
-function yc(a) {
-  return a
-};
-
-function zc() {}
-
-function Ac(a, b) {
-  for (var c in a) !isNaN(c) && b(a, +c, a[c])
+function createFrozenDefaultMessage(MessageType) {
+  MessageType = new MessageType();
+  markImmutableMessageArray(MessageType.C);
+  return MessageType;
 }
-
-function Bc(a) {
-  var b = new zc;
-  Ac(a, function(c, d, e) {
-    b[d] = Array.prototype.slice.call(e)
+function identityMessageValue(value) {
+  return value;
+}
+function UnknownFieldSet() {}
+function forEachUnknownField(fields, callback) {
+  for (var intermediate in fields)
+    !isNaN(intermediate) && callback(fields, +intermediate, fields[intermediate]);
+}
+function cloneUnknownFields(fields) {
+  var unknownFieldSet = new UnknownFieldSet();
+  forEachUnknownField(fields, function (value, other, options) {
+    unknownFieldSet[other] = Array.prototype.slice.call(options);
   });
-  b.j = a.j;
-  return b
+  unknownFieldSet.j = fields.j;
+  return unknownFieldSet;
 }
-
-function Cc(a, b) {
-  b < 100 || qb(yb, 1)
-};
-
-function Dc(a, b, c, d) {
-  var e = d !== void 0;
-  d = !!d;
-  var f = Ra(xb),
-    g;
-  !e && sb && f && (g = a[f]) && Ac(g, Cc);
-  f = [];
-  var h = a.length;
-  g = 4294967295;
-  var k = !1,
-    l = !!(b & 64),
-    m = l ? b & 128 ? 0 : -1 : void 0;
-  if (!(b & 1)) {
-    var r = h && a[h - 1];
-    r != null && typeof r === "object" && r.constructor === Object ? (h--, g = h) : r = void 0;
-    if (l && !(b & 128) && !e) {
-      k = !0;
-      var t;
-      g = ((t = Ec) != null ? t : yc)(g - m, m, a, r, void 0) + m
+function checkUnknownFieldBudget(fields, fieldNumber) {
+  fieldNumber < 100 || reportLimitedIncident(unknownFieldIncidentSymbol, 1);
+}
+function transformMessageArray(array, flags, transformValue, forceCopy) {
+  var intermediate = forceCopy !== void 0;
+  forceCopy = !!forceCopy;
+  var intermediate2 = identity(unknownFieldsSymbol),
+    intermediate3;
+  !intermediate &&
+    supportsNativeSymbols &&
+    intermediate2 &&
+    (intermediate3 = array[intermediate2]) &&
+    forEachUnknownField(intermediate3, checkUnknownFieldBudget);
+  intermediate2 = [];
+  var length = array.length;
+  intermediate3 = 4294967295;
+  var intermediate4 = false,
+    intermediate5 = !!(flags & 64),
+    intermediate6 = intermediate5 ? (flags & 128 ? 0 : -1) : void 0;
+  if (!(flags & 1)) {
+    var intermediate7 = length && array[length - 1];
+    intermediate7 != null &&
+    typeof intermediate7 === "object" &&
+    intermediate7.constructor === Object
+      ? (length--, (intermediate3 = length))
+      : (intermediate7 = void 0);
+    if (intermediate5 && !(flags & 128) && !intermediate) {
+      intermediate4 = true;
+      var index;
+      intermediate3 =
+        ((index = jsonConversionState) != null ? index : identityMessageValue)(
+          intermediate3 - intermediate6,
+          intermediate6,
+          array,
+          intermediate7,
+          void 0,
+        ) + intermediate6;
     }
   }
-  b = void 0;
-  for (t = 0; t < h; t++) {
-    var w = a[t];
-    if (w != null && (w = c(w, d)) != null)
-      if (l && t >= g) {
-        var u = t - m,
-          L = void 0;
-        ((L = b) != null ? L : b = {})[u] = w
-      } else f[t] = w
+  flags = void 0;
+  for (index = 0; index < length; index++) {
+    var intermediate8 = array[index];
+    if (intermediate8 != null && (intermediate8 = transformValue(intermediate8, forceCopy)) != null)
+      if (intermediate5 && index >= intermediate3) {
+        var intermediate9 = index - intermediate6,
+          intermediate10 = void 0;
+        ((intermediate10 = flags) != null ? intermediate10 : (flags = {}))[intermediate9] =
+          intermediate8;
+      } else intermediate2[index] = intermediate8;
   }
-  if (r)
-    for (var E in r) h = r[E], h !=
-      null && (h = c(h, d)) != null && (t = +E, w = void 0, l && !Number.isNaN(t) && (w = t + m) < g ? f[w] =
-        h : (t = void 0, ((t = b) != null ? t : b = {})[E] = h));
-  b && (k ? f.push(b) : f[g] = b);
-  e && Ra(xb) && (a = (c = Ra(xb)) ? a[c] : void 0) && a instanceof zc && (f[xb] = Bc(a));
-  return f
+  if (intermediate7)
+    for (var intermediate11 in intermediate7) {
+      length = intermediate7[intermediate11];
+      length != null &&
+        (length = transformValue(length, forceCopy)) != null &&
+        ((index = +intermediate11),
+        (intermediate8 = void 0),
+        intermediate5 &&
+        !Number.isNaN(index) &&
+        (intermediate8 = index + intermediate6) < intermediate3
+          ? (intermediate2[intermediate8] = length)
+          : ((index = void 0),
+            (((index = flags) != null ? index : (flags = {}))[intermediate11] = length)));
+    }
+  flags && (intermediate4 ? intermediate2.push(flags) : (intermediate2[intermediate3] = flags));
+  intermediate &&
+    identity(unknownFieldsSymbol) &&
+    (array = (transformValue = identity(unknownFieldsSymbol)) ? array[transformValue] : void 0) &&
+    array instanceof UnknownFieldSet &&
+    (intermediate2[unknownFieldsSymbol] = cloneUnknownFields(array));
+  return intermediate2;
 }
-
-function Fc(a) {
-  switch (typeof a) {
+function toJsonFieldValue(value) {
+  switch (typeof value) {
     case "number":
-      return Number.isFinite(a) ? a : "" + a;
+      return Number.isFinite(value) ? value : "" + value;
     case "bigint":
-      return Zb(a) ? Number(a) : "" + a;
+      return isSafeInt64Representation(value) ? Number(value) : "" + value;
     case "boolean":
-      return a ? 1 : 0;
+      return value ? 1 : 0;
     case "object":
-      if (Array.isArray(a)) {
-        var b = a[G] | 0;
-        return a.length === 0 && b & 1 ? void 0 : Dc(a, b, Fc)
+      if (Array.isArray(value)) {
+        var intermediate = value[arrayFlagsKey] | 0;
+        return value.length === 0 && intermediate & 1
+          ? void 0
+          : transformMessageArray(value, intermediate, toJsonFieldValue);
       }
-      if (a != null && a[Ab] === Hb) return Gc(a);
-      if (a instanceof kb) {
-        b = a.j;
-        if (b == null) a = "";
-        else if (typeof b === "string") a = b;
+      if (value != null && value[messageMarkerSymbol] === messageMarkerToken)
+        return serializeMessage(value);
+      if (value instanceof ByteString) {
+        intermediate = value.j;
+        if (intermediate == null) value = "";
+        else if (typeof intermediate === "string") value = intermediate;
         else {
-          if (hb) {
-            for (var c = "", d = 0, e = b.length - 10240; d < e;) c += String.fromCharCode.apply(null, b
-              .subarray(d, d += 10240));
-            c += String.fromCharCode.apply(null, d ? b.subarray(d) :
-              b);
-            b = btoa(c)
+          if (supportsBtoa) {
+            for (
+              var intermediate2 = "",
+                intermediate3 = 0,
+                intermediate4 = intermediate.length - 10240;
+              intermediate3 < intermediate4;
+
+            )
+              intermediate2 += String.fromCharCode.apply(
+                null,
+                intermediate.subarray(intermediate3, (intermediate3 += 10240)),
+              );
+            intermediate2 += String.fromCharCode.apply(
+              null,
+              intermediate3 ? intermediate.subarray(intermediate3) : intermediate,
+            );
+            intermediate = btoa(intermediate2);
           } else {
-            c === void 0 && (c = 0);
-            if (!fb) {
-              fb = {};
-              d = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");
-              e = ["+/=", "+/", "-_=", "-_.", "-_"];
-              for (var f = 0; f < 5; f++) {
-                var g = d.concat(e[f].split(""));
-                eb[f] = g;
-                for (var h = 0; h < g.length; h++) {
-                  var k = g[h];
-                  fb[k] === void 0 && (fb[k] = h)
+            intermediate2 === void 0 && (intermediate2 = 0);
+            if (!base64EncodeTables) {
+              base64EncodeTables = {};
+              intermediate3 =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");
+              intermediate4 = ["+/=", "+/", "-_=", "-_.", "-_"];
+              for (var index = 0; index < 5; index++) {
+                var values = intermediate3.concat(intermediate4[index].split(""));
+                base64DecodeTable[index] = values;
+                for (var index2 = 0; index2 < values.length; index2++) {
+                  var intermediate5 = values[index2];
+                  base64EncodeTables[intermediate5] === void 0 &&
+                    (base64EncodeTables[intermediate5] = index2);
                 }
               }
             }
-            c = eb[c];
-            d = Array(Math.floor(b.length / 3));
-            e = c[64] || "";
-            for (f = g = 0; g < b.length - 2; g += 3) {
-              var l = b[g],
-                m = b[g + 1];
-              k = b[g + 2];
-              h = c[l >> 2];
-              l = c[(l & 3) << 4 | m >> 4];
-              m = c[(m & 15) << 2 | k >> 6];
-              k = c[k & 63];
-              d[f++] = "" + h + l + m + k
+            intermediate2 = base64DecodeTable[intermediate2];
+            intermediate3 = Array(Math.floor(intermediate.length / 3));
+            intermediate4 = intermediate2[64] || "";
+            for (index = values = 0; values < intermediate.length - 2; values += 3) {
+              var intermediate6 = intermediate[values],
+                intermediate7 = intermediate[values + 1];
+              intermediate5 = intermediate[values + 2];
+              index2 = intermediate2[intermediate6 >> 2];
+              intermediate6 = intermediate2[((intermediate6 & 3) << 4) | (intermediate7 >> 4)];
+              intermediate7 = intermediate2[((intermediate7 & 15) << 2) | (intermediate5 >> 6)];
+              intermediate5 = intermediate2[intermediate5 & 63];
+              intermediate3[index++] = "" + index2 + intermediate6 + intermediate7 + intermediate5;
             }
-            h = 0;
-            k = e;
-            switch (b.length - g) {
-              case 2:
-                h =
-                  b[g + 1], k = c[(h & 15) << 2] || e;
-              case 1:
-                b = b[g], d[f] = "" + c[b >> 2] + c[(b & 3) << 4 | h >> 4] + k + e
+            index2 = 0;
+            intermediate5 = intermediate4;
+            switch (intermediate.length - values) {
+              case 2: {
+                index2 = intermediate[values + 1];
+                intermediate5 = intermediate2[(index2 & 15) << 2] || intermediate4;
+              }
+              case 1: {
+                intermediate = intermediate[values];
+                intermediate3[index] =
+                  "" +
+                  intermediate2[intermediate >> 2] +
+                  intermediate2[((intermediate & 3) << 4) | (index2 >> 4)] +
+                  intermediate5 +
+                  intermediate4;
+              }
             }
-            b = d.join("")
+            intermediate = intermediate3.join("");
           }
-          a = a.j = b
+          value = value.j = intermediate;
         }
-        return a
+        return value;
       }
-      return
+      return;
   }
-  return a
+  return value;
 }
-var Hc = jb ? structuredClone : function(a) {
-    return Dc(a, 0, Fc)
-  },
-  Ec;
-
-function Gc(a) {
-  a = a.C;
-  return Dc(a, a[G] | 0, Fc)
-};
-
-function J(a, b, c) {
-  return Ic(a, b, c, 2048)
+var cloneJsonValue = supportsStructuredClone
+    ? structuredClone
+    : function (value) {
+        return transformMessageArray(value, 0, toJsonFieldValue);
+      },
+  jsonConversionState;
+/**
+ * 导出 wire 数组副本；非有限数、BigInt、字节串与嵌套消息按原规则转换。
+ */
+function serializeMessage(message) {
+  message = message.C;
+  return transformMessageArray(message, message[arrayFlagsKey] | 0, toJsonFieldValue);
 }
-
-function Ic(a, b, c, d) {
-  d = d === void 0 ? 0 : d;
-  if (a == null) {
-    var e = 32;
-    c ? (a = [c], e |= 128) : a = [];
-    b && (e = e & -16760833 | (b & 1023) << 14)
+function initializeMessageArray(array, pivot, messageId) {
+  return initializeMessageArrayWithFlags(array, pivot, messageId, 2048);
+}
+function initializeMessageArrayWithFlags(array, pivot, messageId, extraFlags) {
+  extraFlags = extraFlags === void 0 ? 0 : extraFlags;
+  if (array == null) {
+    var intermediate = 32;
+    messageId ? ((array = [messageId]), (intermediate |= 128)) : (array = []);
+    pivot && (intermediate = (intermediate & -16760833) | ((pivot & 1023) << 14));
   } else {
-    if (!Array.isArray(a)) throw Error("narr");
-    e = a[G] | 0;
-    if (Va && 1 & e) throw Error("rfarr");
-    2048 & e && !(2 & e) && Jc();
-    if (e & 256) throw Error("farr");
-    if (e & 64) return (e | d) !== e && H(a, e | d), a;
-    if (c && (e |= 128, c !== a[0])) throw Error("mid");
+    if (!Array.isArray(array)) throw Error("narr");
+    intermediate = array[arrayFlagsKey] | 0;
+    if (strictArrayValidation && 1 & intermediate) throw Error("rfarr");
+    2048 & intermediate && !(2 & intermediate) && reportInvalidMessageArray();
+    if (intermediate & 256) throw Error("farr");
+    if (intermediate & 64)
+      return (
+        (intermediate | extraFlags) !== intermediate &&
+          setArrayFlags(array, intermediate | extraFlags),
+        array
+      );
+    if (messageId && ((intermediate |= 128), messageId !== array[0])) throw Error("mid");
     a: {
-      c = a;e |= 64;
-      var f = c.length;
-      if (f) {
-        var g = f - 1,
-          h = c[g];
-        if (h != null && typeof h === "object" && h.constructor === Object) {
-          b = e & 128 ? 0 : -1;
-          g -= b;
-          if (g >= 1024) throw Error("pvtlmt");
-          for (var k in h) f = +k, f < g && (c[f + b] = h[k], delete h[k]);
-          e = e & -16760833 | (g & 1023) << 14;
-          break a
+      messageId = array;
+      intermediate |= 64;
+      var length = messageId.length;
+      if (length) {
+        var intermediate2 = length - 1,
+          intermediate3 = messageId[intermediate2];
+        if (
+          intermediate3 != null &&
+          typeof intermediate3 === "object" &&
+          intermediate3.constructor === Object
+        ) {
+          pivot = intermediate & 128 ? 0 : -1;
+          intermediate2 -= pivot;
+          if (intermediate2 >= 1024) throw Error("pvtlmt");
+          for (var intermediate4 in intermediate3) {
+            length = +intermediate4;
+            length < intermediate2 &&
+              ((messageId[length + pivot] = intermediate3[intermediate4]),
+              delete intermediate3[intermediate4]);
+          }
+          intermediate = (intermediate & -16760833) | ((intermediate2 & 1023) << 14);
+          break a;
         }
       }
-      if (b) {
-        k = Math.max(b, f - (e & 128 ? 0 : -1));
-        if (k > 1024) throw Error("spvt");
-        e = e & -16760833 | (k & 1023) << 14
+      if (pivot) {
+        intermediate4 = Math.max(pivot, length - (intermediate & 128 ? 0 : -1));
+        if (intermediate4 > 1024) throw Error("spvt");
+        intermediate = (intermediate & -16760833) | ((intermediate4 & 1023) << 14);
       }
     }
   }
-  H(a, e | 64 | d);
-  return a
+  setArrayFlags(array, intermediate | 64 | extraFlags);
+  return array;
 }
-
-function Jc() {
-  if (Va) throw Error("carr");
-  qb(zb, 5)
-};
-
-function Kc(a, b) {
-  if (typeof a !== "object") return a;
-  if (Array.isArray(a)) {
-    var c = a[G] | 0;
-    a.length === 0 && c & 1 ? a = void 0 : c & 2 || (!b || 4096 & c || 16 & c ? a = Lc(a, c, !1, b && !(c &
-      16)) : (Fb(a, 34), c & 4 && Object.freeze(a)));
-    return a
+function reportInvalidMessageArray() {
+  if (strictArrayValidation) throw Error("carr");
+  reportLimitedIncident(arrayConstructorIncidentSymbol, 5);
+}
+function cloneFieldValue(value, forceCopy) {
+  if (typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    var intermediate = value[arrayFlagsKey] | 0;
+    value.length === 0 && intermediate & 1
+      ? (value = void 0)
+      : intermediate & 2 ||
+        (!forceCopy || 4096 & intermediate || 16 & intermediate
+          ? (value = cloneMessageArray(
+              value,
+              intermediate,
+              false,
+              forceCopy && !(intermediate & 16),
+            ))
+          : (addArrayFlags(value, 34), intermediate & 4 && Object.freeze(value)));
+    return value;
   }
-  if (a != null && a[Ab] === Hb) return b = a.C, c = b[G] | 0, Ib(a, c) ? a : Mc(a, b, c) ? Nc(a, b) : Lc(b,
-    c);
-  if (a instanceof kb) return a
+  if (value != null && value[messageMarkerSymbol] === messageMarkerToken)
+    return (
+      (forceCopy = value.C),
+      (intermediate = forceCopy[arrayFlagsKey] | 0),
+      isImmutableMessage(value, intermediate)
+        ? value
+        : freezeMessageArrayIfShareable(value, forceCopy, intermediate)
+          ? cloneMessageWrapper(value, forceCopy)
+          : cloneMessageArray(forceCopy, intermediate)
+    );
+  if (value instanceof ByteString) return value;
 }
-
-function Nc(a, b, c) {
-  a = new a.constructor(b);
-  c && (a.j = Jb);
-  a.l = Jb;
-  return a
+function cloneMessageWrapper(message, array, copyOnWrite) {
+  message = new message.constructor(array);
+  copyOnWrite && (message.j = copyOnWriteToken);
+  message.l = copyOnWriteToken;
+  return message;
 }
-
-function Lc(a, b, c, d) {
-  d != null || (d = !!(34 & b));
-  a = Dc(a, b, Kc, d);
-  d = 32;
-  c && (d |= 2);
-  b = b & 16769217 | d;
-  H(a, b);
-  return a
+function cloneMessageArray(array, flags, immutable, forceCopy) {
+  forceCopy != null || (forceCopy = !!(34 & flags));
+  array = transformMessageArray(array, flags, cloneFieldValue, forceCopy);
+  forceCopy = 32;
+  immutable && (forceCopy |= 2);
+  flags = (flags & 16769217) | forceCopy;
+  setArrayFlags(array, flags);
+  return array;
 }
-
-function Oc(a) {
-  var b = a.C,
-    c = b[G] | 0;
-  return Ib(a, c) ? Mc(a, b, c) ? Nc(a, b, !0) : new a.constructor(Lc(b, c, !1)) : a
+function mutableMessageCopy(message) {
+  var backingArray = message.C,
+    flags = backingArray[arrayFlagsKey] | 0;
+  return isImmutableMessage(message, flags)
+    ? freezeMessageArrayIfShareable(message, backingArray, flags)
+      ? cloneMessageWrapper(message, backingArray, true)
+      : new message.constructor(cloneMessageArray(backingArray, flags, false))
+    : message;
 }
-
-function Pc(a) {
-  if (a.j !== Jb) return !1;
-  var b = a.C;
-  b = Lc(b, b[G] | 0);
-  Fb(b, 2048);
-  a.C = b;
-  a.j = void 0;
-  a.l = void 0;
-  return !0
+function detachCopyOnWriteArray(message) {
+  if (message.j !== copyOnWriteToken) return false;
+  var backingOrStateValue = message.C;
+  backingOrStateValue = cloneMessageArray(
+    backingOrStateValue,
+    backingOrStateValue[arrayFlagsKey] | 0,
+  );
+  addArrayFlags(backingOrStateValue, 2048);
+  message.C = backingOrStateValue;
+  message.j = void 0;
+  message.l = void 0;
+  return true;
 }
-
-function Qc(a) {
-  if (!Pc(a) && Ib(a, a.C[G] | 0)) throw Error();
+function assertMessageMutable(message) {
+  if (!detachCopyOnWriteArray(message) && isImmutableMessage(message, message.C[arrayFlagsKey] | 0))
+    throw Error();
 }
-
-function Rc(a, b) {
-  b === void 0 && (b = a[G] | 0);
-  b & 32 && !(b & 4096) && H(a, b | 4096)
+function markArrayContainsMutableValues(array, flags) {
+  flags === void 0 && (flags = array[arrayFlagsKey] | 0);
+  flags & 32 && !(flags & 4096) && setArrayFlags(array, flags | 4096);
 }
-
-function Mc(a, b, c) {
-  return c & 2 ? !0 : c & 32 && !(c & 4096) ? (H(b, c | 2), a.j = Jb, !0) : !1
-};
-var Sc = Sb(0),
-  Tc = {};
-
-function K(a, b, c, d, e) {
-  Object.isExtensible(a);
-  b = Uc(a.C, b, c, e);
-  if (b !== null || d && a.l !== Jb) return b
+function freezeMessageArrayIfShareable(message, array, flags) {
+  return flags & 2
+    ? true
+    : flags & 32 && !(flags & 4096)
+      ? (setArrayFlags(array, flags | 2), (message.j = copyOnWriteToken), true)
+      : false;
 }
-
-function Uc(a, b, c, d) {
-  if (b === -1) return null;
-  var e = b + (c ? 0 : -1),
-    f = a.length - 1;
-  if (!(f < 1 + (c ? 0 : -1))) {
-    if (e >= f) {
-      var g = a[f];
-      if (g != null && typeof g === "object" && g.constructor === Object) {
-        c = g[b];
-        var h = !0
-      } else if (e === f) c = g;
-      else return
-    } else c = a[e];
-    if (d && c != null) {
-      d = d(c);
-      if (d == null) return d;
-      if (!Object.is(d, c)) return h ? g[b] = d : a[e] = d, d
+var zeroInt64 = normalizeBigInt(0),
+  preserveNullFieldToken = {};
+/**
+ * 字段号从 1 开始；尾部普通对象可承载稀疏字段。保留 null/undefined 与读取时转换的差异。
+ */
+function getMessageField(message, fieldNumber, hasMessageId, preserveNull, transform) {
+  Object.isExtensible(message);
+  fieldNumber = getArrayField(message.C, fieldNumber, hasMessageId, transform);
+  if (fieldNumber !== null || (preserveNull && message.l !== copyOnWriteToken)) return fieldNumber;
+}
+function getArrayField(array, fieldNumber, hasMessageId, transform) {
+  if (fieldNumber === -1) return null;
+  var intermediate = fieldNumber + (hasMessageId ? 0 : -1),
+    intermediate2 = array.length - 1;
+  if (!(intermediate2 < 1 + (hasMessageId ? 0 : -1))) {
+    if (intermediate >= intermediate2) {
+      var intermediate3 = array[intermediate2];
+      if (
+        intermediate3 != null &&
+        typeof intermediate3 === "object" &&
+        intermediate3.constructor === Object
+      ) {
+        hasMessageId = intermediate3[fieldNumber];
+        var intermediate4 = true;
+      } else if (intermediate === intermediate2) hasMessageId = intermediate3;
+      else return;
+    } else hasMessageId = array[intermediate];
+    if (transform && hasMessageId != null) {
+      transform = transform(hasMessageId);
+      if (transform == null) return transform;
+      if (!Object.is(transform, hasMessageId))
+        return (
+          intermediate4
+            ? (intermediate3[fieldNumber] = transform)
+            : (array[intermediate] = transform),
+          transform
+        );
     }
-    return c
+    return hasMessageId;
   }
 }
-
-function Vc(a, b, c) {
-  Qc(a);
-  var d = a.C;
-  Wc(d, d[G] | 0, b, c);
-  return a
+/**
+ * 先检查可变性/分离共享数组，再写字段；不能绕过 copy-on-write 直接给 backing array 赋值。
+ */
+function setMessageField(message, fieldNumber, value) {
+  assertMessageMutable(message);
+  var backingArray = message.C;
+  setArrayField(backingArray, backingArray[arrayFlagsKey] | 0, fieldNumber, value);
+  return message;
 }
-
-function Wc(a, b, c, d) {
-  var e = c + -1,
-    f = a.length - 1;
-  if (f >= 0 && e >= f) {
-    var g = a[f];
-    if (g != null && typeof g === "object" && g.constructor === Object) return g[c] = d, b
+function setArrayField(array, flags, fieldNumber, value) {
+  var intermediate = fieldNumber + -1,
+    intermediate2 = array.length - 1;
+  if (intermediate2 >= 0 && intermediate >= intermediate2) {
+    var intermediate3 = array[intermediate2];
+    if (
+      intermediate3 != null &&
+      typeof intermediate3 === "object" &&
+      intermediate3.constructor === Object
+    )
+      return ((intermediate3[fieldNumber] = value), flags);
   }
-  if (e <= f) return a[e] = d, b;
-  if (d !== void 0) {
-    var h;
-    f = ((h = b) != null ? h : b = a[G] | 0) >> 14 & 1023 || 536870912;
-    c >= f ? d != null && (e = {}, a[f + -1] = (e[c] = d, e)) : a[e] = d
+  if (intermediate <= intermediate2) return ((array[intermediate] = value), flags);
+  if (value !== void 0) {
+    var intermediate4;
+    intermediate2 =
+      (((intermediate4 = flags) != null ? intermediate4 : (flags = array[arrayFlagsKey] | 0)) >>
+        14) &
+        1023 || 536870912;
+    fieldNumber >= intermediate2
+      ? value != null &&
+        ((intermediate = {}),
+        (array[intermediate2 + -1] = ((intermediate[fieldNumber] = value), intermediate)))
+      : (array[intermediate] = value);
   }
-  return b
+  return flags;
 }
-
-function Xc(a, b, c, d, e, f, g, h) {
-  var k = b;
-  f === 1 || (f !== 4 ? 0 : 2 & b || !(16 & b) && 32 & d) ? Yc(b) || (b |= !a.length || g && !(4096 & b) ||
-    32 & d && !(4096 & b || 16 & b) ? 2 : 256, b !== k && H(a, b), Object.freeze(a)) : (f === 2 && Yc(b) &&
-    (a = Array.prototype.slice.call(a), k = 0, b = Zc(b, d), d = Wc(c, d, e, a)), Yc(b) || (h || (b |= 16),
-      b !== k && H(a, b)));
-  2 & b || !(4096 & b || 16 & b) || Rc(c, d);
-  return a
+function prepareRepeatedArray(
+  array,
+  flags,
+  parentArray,
+  parentFlags,
+  fieldNumber,
+  mode,
+  converted,
+  forceCopy,
+) {
+  var flags2 = flags;
+  mode === 1 || (mode !== 4 ? 0 : 2 & flags || (!(16 & flags) && 32 & parentFlags))
+    ? isFrozenRepeatedArray(flags) ||
+      ((flags |=
+        !array.length ||
+        (converted && !(4096 & flags)) ||
+        (32 & parentFlags && !(4096 & flags || 16 & flags))
+          ? 2
+          : 256),
+      flags !== flags2 && setArrayFlags(array, flags),
+      Object.freeze(array))
+    : (mode === 2 &&
+        isFrozenRepeatedArray(flags) &&
+        ((array = Array.prototype.slice.call(array)),
+        (flags2 = 0),
+        (flags = copyRepeatedArrayFlags(flags, parentFlags)),
+        (parentFlags = setArrayField(parentArray, parentFlags, fieldNumber, array))),
+      isFrozenRepeatedArray(flags) ||
+        (forceCopy || (flags |= 16), flags !== flags2 && setArrayFlags(array, flags)));
+  2 & flags ||
+    !(4096 & flags || 16 & flags) ||
+    markArrayContainsMutableValues(parentArray, parentFlags);
+  return array;
 }
-
-function $c(a, b) {
-  a = Uc(a, b);
-  return Array.isArray(a) ? a : Db
+function getRepeatedArray(array, fieldNumber) {
+  array = getArrayField(array, fieldNumber);
+  return Array.isArray(array) ? array : emptyRepeatedField;
 }
-
-function ad(a, b) {
-  2 & b && (a |= 2);
-  return a | 1
+function inheritRepeatedArrayFlags(flags, parentFlags) {
+  2 & parentFlags && (flags |= 2);
+  return flags | 1;
 }
-
-function Yc(a) {
-  return !!(2 & a) && !!(4 & a) || !!(256 & a)
+function isFrozenRepeatedArray(flags) {
+  return (!!(2 & flags) && !!(4 & flags)) || !!(256 & flags);
 }
-
-function bd(a) {
-  return a == null ? a : typeof a === "string" ? a ? new kb(a, ib) : lb() : a.constructor === kb ? a : gb &&
-    a != null && a instanceof Uint8Array ? a.length ? new kb(new Uint8Array(a), ib) : lb() : void 0
+function coerceByteString(value) {
+  return value == null
+    ? value
+    : typeof value === "string"
+      ? value
+        ? new ByteString(value, byteStringConstructionToken)
+        : emptyByteString()
+      : value.constructor === ByteString
+        ? value
+        : supportsUint8Array && value != null && value instanceof Uint8Array
+          ? value.length
+            ? new ByteString(new Uint8Array(value), byteStringConstructionToken)
+            : emptyByteString()
+          : void 0;
 }
-
-function cd(a, b) {
-  Qc(a);
-  var c = a.C;
-  dd(c, c[G] | 0, b, 0);
-  return a
+function clearOneof(message, fieldNumbers) {
+  assertMessageMutable(message);
+  var backingOrStateValue = message.C;
+  setOneofCase(backingOrStateValue, backingOrStateValue[arrayFlagsKey] | 0, fieldNumbers, 0);
+  return message;
 }
-
-function ed(a, b, c) {
-  return fd(a, b) === c ? c : -1
+function getActiveOneofField(message, fieldNumbers, fieldNumber) {
+  return computeOneofCase(message, fieldNumbers) === fieldNumber ? fieldNumber : -1;
 }
-
-function fd(a, b) {
-  a = a.C;
-  return gd(hd(a), a, void 0, b)
+function computeOneofCase(message, fieldNumbers) {
+  message = message.C;
+  return computeArrayOneofCase(getOneofCaseCache(message), message, void 0, fieldNumbers);
 }
-
-function hd(a) {
-  if (sb) {
-    var b;
-    return (b = a[wb]) != null ? b : a[wb] = new Map
+function getOneofCaseCache(array) {
+  if (supportsNativeSymbols) {
+    var intermediate;
+    return (intermediate = array[oneofCasesSymbol]) != null
+      ? intermediate
+      : (array[oneofCasesSymbol] = new Map());
   }
-  if (wb in a) return a[wb];
-  b = new Map;
-  Object.defineProperty(a, wb, {
-    value: b
+  if (oneofCasesSymbol in array) return array[oneofCasesSymbol];
+  intermediate = new Map();
+  Object.defineProperty(array, oneofCasesSymbol, { value: intermediate });
+  return intermediate;
+}
+function setOneofCase(array, flags, fieldNumbers, fieldNumber) {
+  fieldNumber === 0 || fieldNumbers.includes(fieldNumber);
+  var oneofCaseCache = getOneofCaseCache(array),
+    arrayOneofCase = computeArrayOneofCase(oneofCaseCache, array, flags, fieldNumbers);
+  arrayOneofCase !== fieldNumber &&
+    (arrayOneofCase && setArrayField(array, flags, arrayOneofCase),
+    oneofCaseCache.set(fieldNumbers, fieldNumber));
+}
+function computeArrayOneofCase(cases, array, flags, fieldNumbers) {
+  var value = cases.get(fieldNumbers);
+  if (value != null) return value;
+  for (var index = (value = 0); index < fieldNumbers.length; index++) {
+    var intermediate = fieldNumbers[index];
+    getArrayField(array, intermediate) != null &&
+      (value !== 0 && (flags = setArrayField(array, flags, value)), (value = intermediate));
+  }
+  cases.set(fieldNumbers, value);
+  return value;
+}
+function getMutableNestedMessage(message, MessageType, fieldNumber) {
+  assertMessageMutable(message);
+  message = message.C;
+  var intermediate = message[arrayFlagsKey] | 0,
+    arrayField = getArrayField(message, fieldNumber),
+    intermediate2 = void 0 === nestedFieldModeToken;
+  MessageType = coerceMessage(arrayField, MessageType, !intermediate2, intermediate);
+  if (!intermediate2 || MessageType)
+    return (
+      (MessageType = mutableMessageCopy(MessageType)),
+      arrayField !== MessageType &&
+        ((intermediate = setArrayField(message, intermediate, fieldNumber, MessageType)),
+        markArrayContainsMutableValues(message, intermediate)),
+      MessageType
+    );
+}
+function getNestedArrayMessage(array, flags, MessageType, fieldNumber) {
+  var intermediate = false;
+  fieldNumber = getArrayField(array, fieldNumber, void 0, function (value) {
+    var message = coerceMessage(value, MessageType, false, flags);
+    intermediate = message !== value && message != null;
+    return message;
   });
-  return b
+  if (fieldNumber != null)
+    return (
+      intermediate &&
+        !isImmutableMessage(fieldNumber) &&
+        markArrayContainsMutableValues(array, flags),
+      fieldNumber
+    );
 }
-
-function dd(a, b, c, d) {
-  d === 0 || c.includes(d);
-  var e = hd(a),
-    f = gd(e, a, b, c);
-  f !== d && (f && Wc(a, b, f), e.set(c, d))
+function getNestedMessageOrDefault(message, MessageType, fieldNumber) {
+  message = message.C;
+  return (
+    getNestedArrayMessage(message, message[arrayFlagsKey] | 0, MessageType, fieldNumber) ||
+    MessageType[defaultMessageSymbol] ||
+    (MessageType[defaultMessageSymbol] = createFrozenDefaultMessage(MessageType))
+  );
 }
-
-function gd(a, b, c, d) {
-  var e = a.get(d);
-  if (e != null) return e;
-  for (var f = e = 0; f < d.length; f++) {
-    var g = d[f];
-    Uc(b, g) != null && (e !== 0 && (c = Wc(b, c, e)), e = g)
+function readNestedMessage(message, MessageType, fieldNumber) {
+  var backingOrStateValue = message.C,
+    intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+  MessageType = getNestedArrayMessage(backingOrStateValue, intermediate, MessageType, fieldNumber);
+  if (MessageType == null) return MessageType;
+  intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+  if (!isImmutableMessage(message, intermediate)) {
+    var intermediate2 = mutableMessageCopy(MessageType);
+    intermediate2 !== MessageType &&
+      (detachCopyOnWriteArray(message) &&
+        ((backingOrStateValue = message.C),
+        (intermediate = backingOrStateValue[arrayFlagsKey] | 0)),
+      (MessageType = intermediate2),
+      (intermediate = setArrayField(backingOrStateValue, intermediate, fieldNumber, MessageType)),
+      markArrayContainsMutableValues(backingOrStateValue, intermediate));
   }
-  a.set(d, e);
-  return e
+  return MessageType;
 }
 
-function id(a, b, c) {
-  Qc(a);
-  a = a.C;
-  var d = a[G] | 0,
-    e = Uc(a, c),
-    f = void 0 === Lb;
-  b = wc(e, b, !f, d);
-  if (!f || b) return b = Oc(b), e !== b && (d = Wc(a, d, c, b), Rc(a, d)), b
-}
-
-function jd(a, b, c, d) {
-  var e = !1;
-  d = Uc(a, d, void 0, function(f) {
-    var g = wc(f, c, !1, b);
-    e = g !== f && g != null;
-    return g
-  });
-  if (d != null) return e && !Ib(d) && Rc(a, b), d
-}
-
-function kd(a, b, c) {
-  a = a.C;
-  return jd(a, a[G] | 0, b, c) || b[vb] || (b[vb] = xc(b))
-}
-
-function ld(a, b, c) {
-  var d = a.C,
-    e = d[G] | 0;
-  b = jd(d, e, b, c);
-  if (b == null) return b;
-  e = d[G] | 0;
-  if (!Ib(a, e)) {
-    var f = Oc(b);
-    f !== b && (Pc(a) && (d = a.C, e = d[G] | 0), b = f, e = Wc(d, e, c, b), Rc(d, e))
-  }
-  return b
-}
-
-function md(a, b, c) {
-  var d = void 0 === Kb ? 2 : 4,
-    e = a.C,
-    f = e;
-  e = e[G] | 0;
-  var g = Ib(a, e),
-    h = g ? 1 : d;
-  d = h === 3;
-  var k = !g;
-  (h === 2 || k) && Pc(a) && (f = a.C, e = f[G] | 0);
-  a = $c(f, c);
-  var l = a === Db ? 7 : a[G] | 0,
-    m = ad(l, e);
-  if (g = !(4 & m)) {
-    var r = a,
-      t = e,
-      w = !!(2 & m);
-    w && (t |= 2);
-    for (var u = !w, L = !0, E = 0, ka = 0; E < r.length; E++) {
-      var R = wc(r[E], b, !1, t);
-      if (R instanceof b) {
-        if (!w) {
-          var Ja = Ib(R);
-          u && (u = !Ja);
-          L && (L = Ja)
+/**
+ * 遍历并转换子消息，同时维护数组 flags；不能用 map() 替换而丢掉冻结/共享状态。
+ */
+function readRepeatedMessages(message, MessageType, fieldNumber) {
+  var modeOrForceCopy = void 0 === repeatedFieldModeToken ? 2 : 4,
+    parentFlags = message.C,
+    parentArray = parentFlags;
+  parentFlags = parentFlags[arrayFlagsKey] | 0;
+  var immutableOrConverted = isImmutableMessage(message, parentFlags),
+    mode = immutableOrConverted ? 1 : modeOrForceCopy;
+  modeOrForceCopy = mode === 3;
+  var mutableOrFlags = !immutableOrConverted;
+  (mode === 2 || mutableOrFlags) &&
+    detachCopyOnWriteArray(message) &&
+    ((parentArray = message.C), (parentFlags = parentArray[arrayFlagsKey] | 0));
+  message = getRepeatedArray(parentArray, fieldNumber);
+  var originalFlagsOrIndex = message === emptyRepeatedField ? 7 : message[arrayFlagsKey] | 0,
+    flagsOrMessage = inheritRepeatedArrayFlags(originalFlagsOrIndex, parentFlags);
+  if ((immutableOrConverted = !(4 & flagsOrMessage))) {
+    var entryOrArray = message,
+      conversionFlags = parentFlags,
+      freezeChildren = !!(2 & flagsOrMessage);
+    freezeChildren && (conversionFlags |= 2);
+    for (
+      var allMutable = !freezeChildren, allImmutable = true, readIndex = 0, writeIndex = 0;
+      readIndex < entryOrArray.length;
+      readIndex++
+    ) {
+      var childMessage = coerceMessage(
+        entryOrArray[readIndex],
+        MessageType,
+        false,
+        conversionFlags,
+      );
+      if (childMessage instanceof MessageType) {
+        if (!freezeChildren) {
+          var childImmutable = isImmutableMessage(childMessage);
+          allMutable && (allMutable = !childImmutable);
+          allImmutable && (allImmutable = childImmutable);
         }
-        r[ka++] = R
+        entryOrArray[writeIndex++] = childMessage;
       }
     }
-    ka < E && (r.length = ka);
-    m |= 4;
-    m = L ? m & -4097 : m | 4096;
-    m = u ? m | 8 : m & -9
+    writeIndex < readIndex && (entryOrArray.length = writeIndex);
+    flagsOrMessage |= 4;
+    flagsOrMessage = allImmutable ? flagsOrMessage & -4097 : flagsOrMessage | 4096;
+    flagsOrMessage = allMutable ? flagsOrMessage | 8 : flagsOrMessage & -9;
   }
-  m !== l && (H(a, m), 2 & m && Object.freeze(a));
-  if (k && !(8 & m || !a.length && (h === 1 || (h !== 4 ? 0 : 2 & m || !(16 &
-      m) && 32 & e)))) {
-    Yc(m) && (a = Array.prototype.slice.call(a), m = Zc(m, e), e = Wc(f, e, c, a));
-    b = a;
-    k = m;
-    for (l = 0; l < b.length; l++) r = b[l], m = Oc(r), r !== m && (b[l] = m);
-    k |= 8;
-    m = k = b.length ? k | 4096 : k & -4097;
-    H(a, m)
+  flagsOrMessage !== originalFlagsOrIndex &&
+    (setArrayFlags(message, flagsOrMessage), 2 & flagsOrMessage && Object.freeze(message));
+  if (
+    mutableOrFlags &&
+    !(
+      8 & flagsOrMessage ||
+      (!message.length &&
+        (mode === 1 ||
+          (mode !== 4 ? 0 : 2 & flagsOrMessage || (!(16 & flagsOrMessage) && 32 & parentFlags))))
+    )
+  ) {
+    isFrozenRepeatedArray(flagsOrMessage) &&
+      ((message = Array.prototype.slice.call(message)),
+      (flagsOrMessage = copyRepeatedArrayFlags(flagsOrMessage, parentFlags)),
+      (parentFlags = setArrayField(parentArray, parentFlags, fieldNumber, message)));
+    MessageType = message;
+    mutableOrFlags = flagsOrMessage;
+    for (
+      originalFlagsOrIndex = 0;
+      originalFlagsOrIndex < MessageType.length;
+      originalFlagsOrIndex++
+    ) {
+      entryOrArray = MessageType[originalFlagsOrIndex];
+      flagsOrMessage = mutableMessageCopy(entryOrArray);
+      entryOrArray !== flagsOrMessage && (MessageType[originalFlagsOrIndex] = flagsOrMessage);
+    }
+    mutableOrFlags |= 8;
+    flagsOrMessage = mutableOrFlags = MessageType.length
+      ? mutableOrFlags | 4096
+      : mutableOrFlags & -4097;
+    setArrayFlags(message, flagsOrMessage);
   }
-  return a = Xc(a, m, f, e, c, h, g, d)
+  return (message = prepareRepeatedArray(
+    message,
+    flagsOrMessage,
+    parentArray,
+    parentFlags,
+    fieldNumber,
+    mode,
+    immutableOrConverted,
+    modeOrForceCopy,
+  ));
 }
-
-function nd(a, b, c, d) {
-  if (d != null) {
-    if (!(d instanceof b)) throw Error("Expected instanceof " + mc(b) + " but got " + (d && mc(d
-      .constructor)));
-  } else d = void 0;
-  Vc(a, c, d);
-  d && !Ib(d) && Rc(a.C);
-  return a
+function setNestedMessage(message, MessageType, fieldNumber, value) {
+  if (value != null) {
+    if (!(value instanceof MessageType))
+      throw Error(
+        "Expected instanceof " +
+          getTypeDisplayName(MessageType) +
+          " but got " +
+          (value && getTypeDisplayName(value.constructor)),
+      );
+  } else value = void 0;
+  setMessageField(message, fieldNumber, value);
+  value && !isImmutableMessage(value) && markArrayContainsMutableValues(message.C);
+  return message;
 }
-
-function Zc(a, b) {
-  return a = (2 & b ? a | 2 : a & -3) & -273
+function copyRepeatedArrayFlags(flags, parentFlags) {
+  return (flags = (2 & parentFlags ? flags | 2 : flags & -3) & -273);
 }
-
-function od(a, b) {
-  var c = c === void 0 ? !1 : c;
-  a = K(a, b);
-  a = a == null || typeof a === "boolean" ? a : typeof a === "number" ? !!a : void 0;
-  return a != null ? a : c
+function readBooleanField(message, fieldNumber) {
+  var intermediate = intermediate === void 0 ? false : intermediate;
+  message = getMessageField(message, fieldNumber);
+  message =
+    message == null || typeof message === "boolean"
+      ? message
+      : typeof message === "number"
+        ? !!message
+        : void 0;
+  return message != null ? message : intermediate;
 }
-
-function pd(a, b, c) {
-  c = c === void 0 ? 0 : c;
-  var d;
-  return (d = qc(K(a, b))) != null ? d : c
+function readCoercedNumberField(message, fieldNumber, fallback) {
+  fallback = fallback === void 0 ? 0 : fallback;
+  var intermediate;
+  return (intermediate = coerceNumericInt32(getMessageField(message, fieldNumber))) != null
+    ? intermediate
+    : fallback;
 }
-
-function qd(a, b) {
-  var c = c === void 0 ? Sc : c;
-  a = K(a, b, void 0, void 0, uc);
-  return a != null ? a : c
+function readInt64Field(message, fieldNumber) {
+  var intermediate = intermediate === void 0 ? zeroInt64 : intermediate;
+  message = getMessageField(message, fieldNumber, void 0, void 0, coerceInt64);
+  return message != null ? message : intermediate;
 }
-
-function rd(a, b) {
-  var c = c === void 0 ? "" : c;
-  var d;
-  return (d = vc(K(a, b))) != null ? d : c
+function readStringOrDefault(message, fieldNumber) {
+  var intermediate = intermediate === void 0 ? "" : intermediate;
+  var intermediate2;
+  return (intermediate2 = coerceString(getMessageField(message, fieldNumber))) != null
+    ? intermediate2
+    : intermediate;
 }
-
-function sd(a, b) {
-  var c = c === void 0 ? 0 : c;
-  var d;
-  return (d = pc(K(a, b))) != null ? d : c
+function readNumberField(message, fieldNumber) {
+  var intermediate = intermediate === void 0 ? 0 : intermediate;
+  var intermediate2;
+  return (intermediate2 = coerceInt32(getMessageField(message, fieldNumber))) != null
+    ? intermediate2
+    : intermediate;
 }
-
-function td(a, b) {
-  return vc(K(a, b, void 0, Tc))
+function readStringField(message, fieldNumber) {
+  return coerceString(getMessageField(message, fieldNumber, void 0, preserveNullFieldToken));
 }
-
-function ud(a, b, c) {
-  if (c != null && typeof c !== "string") throw Error();
-  return Vc(a, b, c)
+function setStringField(message, fieldNumber, value) {
+  if (value != null && typeof value !== "string") throw Error();
+  return setMessageField(message, fieldNumber, value);
 }
-
-function vd(a, b, c) {
-  if (c != null) {
-    if (!jc(c)) throw a = Error("enum"), nb(a, "severity", "warning"), a;
-    c |= 0
+function setNumberField(message, fieldNumber, value) {
+  if (value != null) {
+    if (!isFiniteNumber(value))
+      throw (
+        (message = Error("enum")),
+        attachErrorContext(message, "severity", "warning"),
+        message
+      );
+    value |= 0;
   }
-  return Vc(a, b, c)
-};
-
-function M(a, b, c) {
-  this.C = J(a, b, c)
+  return setMessageField(message, fieldNumber, value);
 }
-M.prototype.toJSON = function() {
-  return Gc(this)
-};
-
-function wd(a, b) {
-  if (b == null || b == "") return new a;
-  b = JSON.parse(b);
-  if (!Array.isArray(b)) throw Error("dnarr");
-  Fb(b, 32);
-  return new a(b)
+/**
+ * 消息基类与配置消息：数组索引和字段类型是 wire 契约，不能改为普通对象覆盖。
+ * 保留字段 ABI：后台 B / offscreen C 是 backing array；j/l 是共享和可变性标记，不是用户数据字段名。
+ */
+function ArrayMessage(array, pivot, messageId) {
+  this.C = initializeMessageArray(array, pivot, messageId);
 }
-M.prototype.clone = function() {
-  var a = this.C,
-    b = a[G] | 0;
-  return Mc(this, a, b) ? Nc(this, a, !0) : new this.constructor(Lc(a, b, !1))
+ArrayMessage.prototype.toJSON = function () {
+  return serializeMessage(this);
 };
-
-function xd() {
-  var a = A;
-  a = a === void 0 ? window : a;
-  var b = new yd(zd("K1cgmc", a));
-  a = Ad;
-  var c = new Ad;
-  b = Bd(b);
-  a = b === null ? c : wd(a, "[" + b.substring(4));
-  c = a.C;
-  b = c[G] | 0;
-  return Ib(a, b) ? a : Mc(a, c, b) ? Nc(a, c) : new a.constructor(Lc(c, b, !0))
+function parseMessageJson(MessageType, json) {
+  if (json == null || json == "") return new MessageType();
+  json = JSON.parse(json);
+  if (!Array.isArray(json)) throw Error("dnarr");
+  addArrayFlags(json, 32);
+  return new MessageType(json);
 }
-M.prototype[Ab] = Hb;
-M.prototype.toString = function() {
-  return this.C.toString()
+ArrayMessage.prototype.clone = function () {
+  var backingOrStateValue = this.C,
+    intermediate = backingOrStateValue[arrayFlagsKey] | 0;
+  return freezeMessageArrayIfShareable(this, backingOrStateValue, intermediate)
+    ? cloneMessageWrapper(this, backingOrStateValue, true)
+    : new this.constructor(cloneMessageArray(backingOrStateValue, intermediate, false));
 };
-
-function Cd(a, b) {
-  if (b == null) b = a.constructor, b = b[vb] || (b[vb] = xc(b));
-  else {
-    a = a.constructor;
-    if (!Array.isArray(b)) throw Error();
-    if (Object.isFrozen(b) || Object.isSealed(b) || !Object.isExtensible(b)) throw Error();
-    b = new a(Gb(b))
+function readTelemetryBootstrapMessage() {
+  var runtimeGlobal2 = runtimeGlobal;
+  runtimeGlobal2 = runtimeGlobal2 === void 0 ? window : runtimeGlobal2;
+  var bootstrapString = new BootstrapString(readWizGlobalData("K1cgmc", runtimeGlobal2));
+  runtimeGlobal2 = TelemetryBootstrapMessage;
+  var telemetryBootstrapMessage = new TelemetryBootstrapMessage();
+  bootstrapString = unwrapBootstrapString(bootstrapString);
+  runtimeGlobal2 =
+    bootstrapString === null
+      ? telemetryBootstrapMessage
+      : parseMessageJson(runtimeGlobal2, "[" + bootstrapString.substring(4));
+  telemetryBootstrapMessage = runtimeGlobal2.C;
+  bootstrapString = telemetryBootstrapMessage[arrayFlagsKey] | 0;
+  return isImmutableMessage(runtimeGlobal2, bootstrapString)
+    ? runtimeGlobal2
+    : freezeMessageArrayIfShareable(runtimeGlobal2, telemetryBootstrapMessage, bootstrapString)
+      ? cloneMessageWrapper(runtimeGlobal2, telemetryBootstrapMessage)
+      : new runtimeGlobal2.constructor(
+          cloneMessageArray(telemetryBootstrapMessage, bootstrapString, true),
+        );
+}
+ArrayMessage.prototype[messageMarkerSymbol] = messageMarkerToken;
+ArrayMessage.prototype.toString = function () {
+  return this.C.toString();
+};
+function immutableMessageFromArray(message, array) {
+  if (array == null) {
+    array = message.constructor;
+    array =
+      array[defaultMessageSymbol] ||
+      (array[defaultMessageSymbol] = createFrozenDefaultMessage(array));
+  } else {
+    message = message.constructor;
+    if (!Array.isArray(array)) throw Error();
+    if (Object.isFrozen(array) || Object.isSealed(array) || !Object.isExtensible(array))
+      throw Error();
+    array = new message(markImmutableMessageArray(array));
   }
-  return b
-};
-
-function Dd(a) {
-  return function(b) {
-    return wd(a, b)
-  }
-};
-
-function Ed(a) {
-  this.C = J(a)
+  return array;
 }
-x(Ed, M);
-Ed.prototype.getTypeName = function() {
-  return rd(this, 1).split("/").pop()
-};
-var Fd = function(a) {
-  return Mb(function(b) {
-    return b instanceof a && !Ib(b)
-  })
-}(Ed);
-
-function Gd(a) {
-  var b = 2;
-  b = b === void 0 ? 2 : b;
-  this.key = a;
-  this.defaultValue = !1;
-  this.phase = b;
-  this.flagNameForDebugging = void 0
+function createMessageJsonParser(MessageType) {
+  return function (value) {
+    return parseMessageJson(MessageType, value);
+  };
 }
-Gd.prototype.ctor = function(a) {
-  return typeof a === "boolean" ? a : this.defaultValue
+function AnyMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(AnyMessage, ArrayMessage);
+AnyMessage.prototype.getTypeName = function () {
+  return readStringOrDefault(this, 1).split("/").pop();
 };
-
-function Hd() {
-  var a = Id('[["feature named `pageObserver` was not found","feature named `hover` was not found"]]'),
-    b = Jd,
-    c = 2;
-  c = c === void 0 ? 2 : c;
+var isMutableAnyMessage = (function (value) {
+  return markTypePredicate(function (value2) {
+    return value2 instanceof value && !isImmutableMessage(value2);
+  });
+})(AnyMessage);
+function BooleanFeatureFlag(key) {
+  var intermediate = 2;
+  intermediate = intermediate === void 0 ? 2 : intermediate;
+  this.key = key;
+  this.defaultValue = false;
+  this.phase = intermediate;
+  this.flagNameForDebugging = void 0;
+}
+BooleanFeatureFlag.prototype.ctor = function (value) {
+  return typeof value === "boolean" ? value : this.defaultValue;
+};
+function IgnoredErrorsFeatureFlag() {
+  var ignoredErrors = parseIgnoredErrors(
+      '[["feature named `pageObserver` was not found","feature named `hover` was not found"]]',
+    ),
+    IgnoredErrorsMessage2 = IgnoredErrorsMessage,
+    intermediate = 2;
+  intermediate = intermediate === void 0 ? 2 : intermediate;
   this.key = "45696263";
-  this.defaultValue = a;
-  this.j = b;
-  this.phase = c;
-  this.flagNameForDebugging = void 0
+  this.defaultValue = ignoredErrors;
+  this.j = IgnoredErrorsMessage2;
+  this.phase = intermediate;
+  this.flagNameForDebugging = void 0;
 }
-Hd.prototype.ctor = function(a) {
-  if (typeof a === "string" && a) return wd(this.j, a);
-  if (!Fd(a)) return this.defaultValue.clone();
-  var b;
+IgnoredErrorsFeatureFlag.prototype.ctor = function (value) {
+  if (typeof value === "string" && value) return parseMessageJson(this.j, value);
+  if (!isMutableAnyMessage(value)) return this.defaultValue.clone();
+  var intermediate;
   try {
-    var c, d = this.j,
-      e = (c = a.getTypeName()) != null ? c : "";
-    if (rd(a, 1).split("/").pop() != e) var f = null;
+    var intermediate2,
+      intermediate3 = this.j,
+      intermediate4 = (intermediate2 = value.getTypeName()) != null ? intermediate2 : "";
+    if (readStringOrDefault(value, 1).split("/").pop() != intermediate4) var intermediate5 = null;
     else {
-      var g = typeof d === "function" ? d : d.constructor,
-        h = a.C,
-        k = h[G] | 0,
-        l = Uc(h, 2);
-      Pc(a) && (h = a.C, k = h[G] | 0);
-      a = h;
-      if (l != null && !(Array.isArray(l) || l != null && l[Ab] === Hb)) throw Error(
-        "saw an invalid value of type '" + Ha(l) + "' in the Any.value field");
-      var m = wc(l, g, !0, k);
-      if (!(m instanceof g)) throw Error("incorrect type in any value: got " +
-        m.constructor.displayName + ", expected " + g.displayName);
-      (g = !!(2 & k)) || (m = Oc(m));
-      l !== m && (Wc(a, k, 2, m), g || Rc(a));
-      f = m
+      var intermediate6 =
+          typeof intermediate3 === "function" ? intermediate3 : intermediate3.constructor,
+        backingOrStateValue = value.C,
+        intermediate7 = backingOrStateValue[arrayFlagsKey] | 0,
+        arrayField = getArrayField(backingOrStateValue, 2);
+      detachCopyOnWriteArray(value) &&
+        ((backingOrStateValue = value.C), (intermediate7 = backingOrStateValue[arrayFlagsKey] | 0));
+      value = backingOrStateValue;
+      if (
+        arrayField != null &&
+        !(
+          Array.isArray(arrayField) ||
+          (arrayField != null && arrayField[messageMarkerSymbol] === messageMarkerToken)
+        )
+      )
+        throw Error(
+          "saw an invalid value of type '" + getValueType(arrayField) + "' in the Any.value field",
+        );
+      var message = coerceMessage(arrayField, intermediate6, true, intermediate7);
+      if (!(message instanceof intermediate6))
+        throw Error(
+          "incorrect type in any value: got " +
+            message.constructor.displayName +
+            ", expected " +
+            intermediate6.displayName,
+        );
+      (intermediate6 = !!(2 & intermediate7)) || (message = mutableMessageCopy(message));
+      arrayField !== message &&
+        (setArrayField(value, intermediate7, 2, message),
+        intermediate6 || markArrayContainsMutableValues(value));
+      intermediate5 = message;
     }
-  } catch (r) {
-    f = null
+  } catch (caughtError) {
+    intermediate5 = null;
   }
-  return (b = f) != null ? b : this.defaultValue.clone()
+  return (intermediate = intermediate5) != null ? intermediate : this.defaultValue.clone();
+};
+function StringFlagValueMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(StringFlagValueMessage, ArrayMessage);
+StringFlagValueMessage.prototype.clearValue = function () {
+  return clearOneof(this, stringFlagOneofFields);
+};
+var stringFlagOneofFields = [1, 2];
+function FeatureFlagValueMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FeatureFlagValueMessage, ArrayMessage);
+FeatureFlagValueMessage.prototype.clearValue = function () {
+  return clearOneof(this, featureFlagOneofFields);
+};
+var featureFlagOneofFields = [2, 3, 4, 5, 6, 8];
+function FeatureFlagSetMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FeatureFlagSetMessage, ArrayMessage);
+FeatureFlagSetMessage.prototype.La = function () {
+  var messageField = getMessageField(this, 3, void 0, void 0, coerceByteString);
+  return messageField == null ? emptyByteString() : messageField;
+};
+function FeatureFlagBootstrapMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FeatureFlagBootstrapMessage, ArrayMessage);
+var parseFeatureFlagBootstrap = createMessageJsonParser(FeatureFlagBootstrapMessage);
+function IgnoredErrorsMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(IgnoredErrorsMessage, ArrayMessage);
+var parseIgnoredErrors = createMessageJsonParser(IgnoredErrorsMessage);
+/**
+ * 64 位整数：以两个 32 位字运算，保留溢出、符号扩展和十进制转换路径。
+ */
+function Int64(low, high) {
+  this.K = low | 0;
+  this.H = high | 0;
+}
+function int64ToNumber(value) {
+  return value.H * 4294967296 + (value.K >>> 0);
+}
+prototypeAlias = Int64.prototype;
+prototypeAlias.isSafeInteger = function () {
+  var intermediate = this.H >> 21;
+  return intermediate == 0 || (intermediate == -1 && !(this.K == 0 && this.H == -2097152));
 };
 
-function Kd(a) {
-  this.C = J(a)
-}
-x(Kd, M);
-Kd.prototype.clearValue = function() {
-  return cd(this, Ld)
-};
-var Ld = [1, 2];
-
-function Md(a) {
-  this.C = J(a)
-}
-x(Md, M);
-Md.prototype.clearValue = function() {
-  return cd(this, Nd)
-};
-var Nd = [2, 3, 4, 5, 6, 8];
-
-function Od(a) {
-  this.C = J(a)
-}
-x(Od, M);
-Od.prototype.La = function() {
-  var a = K(this, 3, void 0, void 0, bd);
-  return a == null ? lb() : a
-};
-
-function Pd(a) {
-  this.C = J(a)
-}
-x(Pd, M);
-var Qd = Dd(Pd);
-
-function Jd(a) {
-  this.C = J(a)
-}
-x(Jd, M);
-var Id = Dd(Jd);
-
-function Rd(a, b) {
-  this.K = a | 0;
-  this.H = b | 0
-}
-
-function Sd(a) {
-  return a.H * 4294967296 + (a.K >>> 0)
-}
-q = Rd.prototype;
-q.isSafeInteger = function() {
-  var a = this.H >> 21;
-  return a == 0 || a == -1 && !(this.K == 0 && this.H == -2097152)
-};
-q.toString = function(a) {
-  a = a || 10;
-  if (a < 2 || 36 < a) throw Error("radix out of range: " + a);
+/** 超出安全整数范围时分块转十进制/进制，避免先转 Number 丢失精度。 */
+prototypeAlias.toString = function (radix) {
+  radix = radix || 10;
+  if (radix < 2 || 36 < radix) throw Error("radix out of range: " + radix);
   if (this.isSafeInteger()) {
-    var b = Sd(this);
-    return a == 10 ? "" + b : b.toString(a)
+    var intermediate = int64ToNumber(this);
+    return radix == 10 ? "" + intermediate : intermediate.toString(radix);
   }
-  b = 14 - (a >> 2);
-  var c = Math.pow(a, b),
-    d = N(c, c / 4294967296);
-  c = this.div(d);
-  var e = Math,
-    f = e.abs;
-  d = c.multiply(d);
-  d = this.add(Td(d));
-  e = f.call(e, Sd(d));
-  f = a == 10 ? "" + e : e.toString(a);
-  f.length < b && (f = "0000000000000".slice(f.length - b) + f);
-  e = Sd(c);
-  return (a == 10 ? e : e.toString(a)) + f
+  intermediate = 14 - (radix >> 2);
+  var intermediate2 = Math.pow(radix, intermediate),
+    intermediate3 = int64FromWords(intermediate2, intermediate2 / 4294967296);
+  intermediate2 = this.div(intermediate3);
+  var Math2 = Math,
+    abs = Math2.abs;
+  intermediate3 = intermediate2.multiply(intermediate3);
+  intermediate3 = this.add(negateInt64(intermediate3));
+  Math2 = abs.call(Math2, int64ToNumber(intermediate3));
+  abs = radix == 10 ? "" + Math2 : Math2.toString(radix);
+  abs.length < intermediate && (abs = "0000000000000".slice(abs.length - intermediate) + abs);
+  Math2 = int64ToNumber(intermediate2);
+  return (radix == 10 ? Math2 : Math2.toString(radix)) + abs;
+};
+function isZeroInt64(value) {
+  return value.K == 0 && value.H == 0;
+}
+prototypeAlias.ya = function () {
+  return this.K ^ this.H;
+};
+prototypeAlias.equals = function (other) {
+  return other == null ? false : this.K == other.K && this.H == other.H;
+};
+prototypeAlias.compare = function (other) {
+  return this.H == other.H
+    ? this.K == other.K
+      ? 0
+      : this.K >>> 0 > other.K >>> 0
+        ? 1
+        : -1
+    : this.H > other.H
+      ? 1
+      : -1;
+};
+function negateInt64(value) {
+  var negatedLow = (~value.K + 1) | 0;
+  return int64FromWords(negatedLow, (~value.H + !negatedLow) | 0);
+}
+/** 拆成 16 位片段传播进位，最后按两个 32 位字截断；other 在末段被复用为低 16 位和。 */
+prototypeAlias.add = function (other) {
+  var leftHighUpper16 = this.H >>> 16,
+    leftHighLower16 = this.H & 65535,
+    leftLowUpper16OrCarry = this.K >>> 16,
+    rightHighUpper16 = other.H >>> 16,
+    rightHighLower16 = other.H & 65535,
+    lowUpperSum = other.K >>> 16;
+  other = (this.K & 65535) + (other.K & 65535);
+  lowUpperSum = (other >>> 16) + (leftLowUpper16OrCarry + lowUpperSum);
+  leftLowUpper16OrCarry = lowUpperSum >>> 16;
+  leftLowUpper16OrCarry += leftHighLower16 + rightHighLower16;
+  return int64FromWords(
+    ((lowUpperSum & 65535) << 16) | (other & 65535),
+    ((((leftLowUpper16OrCarry >>> 16) + (leftHighUpper16 + rightHighUpper16)) & 65535) << 16) |
+      (leftLowUpper16OrCarry & 65535),
+  );
 };
 
-function Ud(a) {
-  return a.K == 0 && a.H == 0
-}
-q.ya = function() {
-  return this.K ^ this.H
-};
-q.equals = function(a) {
-  return a == null ? !1 : this.K == a.K && this.H == a.H
-};
-q.compare = function(a) {
-  return this.H == a.H ? this.K == a.K ? 0 : this.K >>> 0 > a.K >>> 0 ? 1 : -1 : this.H > a.H ? 1 : -1
+/** 16 位部分积逐级累加，只保留 64 位；不能以普通浮点乘法替换。 */
+prototypeAlias.multiply = function (other) {
+  if (isZeroInt64(this)) return this;
+  if (isZeroInt64(other)) return other;
+  var intermediate = this.H >>> 16,
+    intermediate2 = this.H & 65535,
+    intermediate3 = this.K >>> 16,
+    intermediate4 = this.K & 65535,
+    intermediate5 = other.H >>> 16,
+    intermediate6 = other.H & 65535,
+    intermediate7 = other.K >>> 16;
+  other = other.K & 65535;
+  var intermediate8 = intermediate4 * other;
+  var intermediate9 = (intermediate8 >>> 16) + intermediate3 * other;
+  var intermediate10 = intermediate9 >>> 16;
+  intermediate9 = (intermediate9 & 65535) + intermediate4 * intermediate7;
+  intermediate10 += intermediate9 >>> 16;
+  intermediate10 += intermediate2 * other;
+  var intermediate11 = intermediate10 >>> 16;
+  intermediate10 = (intermediate10 & 65535) + intermediate3 * intermediate7;
+  intermediate11 += intermediate10 >>> 16;
+  intermediate10 = (intermediate10 & 65535) + intermediate4 * intermediate6;
+  intermediate11 =
+    (intermediate11 +
+      (intermediate10 >>> 16) +
+      (intermediate * other +
+        intermediate2 * intermediate7 +
+        intermediate3 * intermediate6 +
+        intermediate4 * intermediate5)) &
+    65535;
+  return int64FromWords(
+    ((intermediate9 & 65535) << 16) | (intermediate8 & 65535),
+    (intermediate11 << 16) | (intermediate10 & 65535),
+  );
 };
 
-function Td(a) {
-  var b = ~a.K + 1 | 0;
-  return N(b, ~a.H + !b | 0)
-}
-q.add = function(a) {
-  var b = this.H >>> 16,
-    c = this.H & 65535,
-    d = this.K >>> 16,
-    e = a.H >>> 16,
-    f = a.H & 65535,
-    g = a.K >>> 16;
-  a = (this.K & 65535) + (a.K & 65535);
-  g = (a >>> 16) + (d + g);
-  d = g >>> 16;
-  d += c + f;
-  return N((g & 65535) << 16 | a & 65535, ((d >>> 16) + (b + e) & 65535) << 16 | d & 65535)
-};
-q.multiply = function(a) {
-  if (Ud(this)) return this;
-  if (Ud(a)) return a;
-  var b = this.H >>> 16,
-    c = this.H & 65535,
-    d = this.K >>> 16,
-    e = this.K & 65535,
-    f = a.H >>> 16,
-    g = a.H & 65535,
-    h = a.K >>> 16;
-  a = a.K & 65535;
-  var k = e * a;
-  var l = (k >>> 16) + d * a;
-  var m = l >>> 16;
-  l = (l & 65535) + e * h;
-  m += l >>> 16;
-  m += c * a;
-  var r = m >>> 16;
-  m = (m & 65535) + d * h;
-  r += m >>> 16;
-  m = (m & 65535) + e * g;
-  r = r + (m >>> 16) + (b * a + c * h + d * g + e * f) & 65535;
-  return N((l & 65535) << 16 | k & 65535, r << 16 | m & 65535)
-};
-q.div = function(a) {
-  if (Ud(a)) throw Error("division by zero");
+/** 先处理零、最小负数和符号，再用近似商与乘积校正；保留边界溢出行为。 */
+prototypeAlias.div = function (divisor) {
+  if (isZeroInt64(divisor)) throw Error("division by zero");
   if (this.H < 0) {
-    if (this.equals(Vd)) {
-      if (a.equals(Wd) || a.equals(Xd)) return Vd;
-      if (a.equals(Vd)) return Wd;
-      var b = this.H;
-      b = N(this.K >>> 1 | b << 31, b >> 1);
-      b = b.div(a).shiftLeft(1);
-      if (b.equals(Yd)) return a.H < 0 ? Wd : Xd;
-      var c = a.multiply(b);
-      c = this.add(Td(c));
-      return b.add(c.div(a))
+    if (this.equals(INT64_MIN)) {
+      if (divisor.equals(INT64_ONE) || divisor.equals(INT64_NEGATIVE_ONE)) return INT64_MIN;
+      if (divisor.equals(INT64_MIN)) return INT64_ONE;
+      var intermediate = this.H;
+      intermediate = int64FromWords((this.K >>> 1) | (intermediate << 31), intermediate >> 1);
+      intermediate = intermediate.div(divisor).shiftLeft(1);
+      if (intermediate.equals(INT64_ZERO)) return divisor.H < 0 ? INT64_ONE : INT64_NEGATIVE_ONE;
+      var intermediate2 = divisor.multiply(intermediate);
+      intermediate2 = this.add(negateInt64(intermediate2));
+      return intermediate.add(intermediate2.div(divisor));
     }
-    return a.H < 0 ? Td(this).div(Td(a)) : Td(Td(this).div(a))
+    return divisor.H < 0
+      ? negateInt64(this).div(negateInt64(divisor))
+      : negateInt64(negateInt64(this).div(divisor));
   }
-  if (Ud(this)) return Yd;
-  if (a.H < 0) return a.equals(Vd) ? Yd : Td(this.div(Td(a)));
-  b = Yd;
-  for (c = this; c.compare(a) >= 0;) {
-    var d = Math.max(1, Math.floor(Sd(c) /
-        Sd(a))),
-      e = Math.ceil(Math.log(d) / Math.LN2);
-    e = e <= 48 ? 1 : Math.pow(2, e - 48);
-    for (var f = Zd(d), g = f.multiply(a); g.H < 0 || g.compare(c) > 0;) d -= e, f = Zd(d), g = f.multiply(
-      a);
-    Ud(f) && (f = Wd);
-    b = b.add(f);
-    c = c.add(Td(g))
+  if (isZeroInt64(this)) return INT64_ZERO;
+  if (divisor.H < 0)
+    return divisor.equals(INT64_MIN) ? INT64_ZERO : negateInt64(this.div(negateInt64(divisor)));
+  intermediate = INT64_ZERO;
+  for (intermediate2 = this; intermediate2.compare(divisor) >= 0; ) {
+    var intermediate3 = Math.max(
+        1,
+        Math.floor(int64ToNumber(intermediate2) / int64ToNumber(divisor)),
+      ),
+      intermediate4 = Math.ceil(Math.log(intermediate3) / Math.LN2);
+    intermediate4 = intermediate4 <= 48 ? 1 : Math.pow(2, intermediate4 - 48);
+    for (
+      var intermediate5 = int64FromNumber(intermediate3),
+        intermediate6 = intermediate5.multiply(divisor);
+      intermediate6.H < 0 || intermediate6.compare(intermediate2) > 0;
+
+    ) {
+      intermediate3 -= intermediate4;
+      intermediate5 = int64FromNumber(intermediate3);
+      intermediate6 = intermediate5.multiply(divisor);
+    }
+    isZeroInt64(intermediate5) && (intermediate5 = INT64_ONE);
+    intermediate = intermediate.add(intermediate5);
+    intermediate2 = intermediate2.add(negateInt64(intermediate6));
   }
-  return b
+  return intermediate;
 };
-q.and = function(a) {
-  return N(this.K & a.K, this.H & a.H)
+prototypeAlias.and = function (other) {
+  return int64FromWords(this.K & other.K, this.H & other.H);
 };
-q.or = function(a) {
-  return N(this.K | a.K, this.H | a.H)
+prototypeAlias.or = function (other) {
+  return int64FromWords(this.K | other.K, this.H | other.H);
 };
-q.xor = function(a) {
-  return N(this.K ^ a.K, this.H ^ a.H)
+prototypeAlias.xor = function (other) {
+  return int64FromWords(this.K ^ other.K, this.H ^ other.H);
 };
-q.shiftLeft = function(a) {
-  a &= 63;
-  if (a == 0) return this;
-  var b = this.K;
-  return a < 32 ? N(b << a, this.H << a | b >>> 32 - a) : N(0, b << a - 32)
+prototypeAlias.shiftLeft = function (bits) {
+  bits &= 63;
+  if (bits == 0) return this;
+  var intermediate = this.K;
+  return bits < 32
+    ? int64FromWords(intermediate << bits, (this.H << bits) | (intermediate >>> (32 - bits)))
+    : int64FromWords(0, intermediate << (bits - 32));
 };
-
-function Zd(a) {
-  return a > 0 ? a >= 0x7fffffffffffffff ? $d : new Rd(a, a / 4294967296) : a < 0 ? a <= -0x7fffffffffffffff ?
-    Vd : Td(new Rd(-a, -a / 4294967296)) : Yd
+function int64FromNumber(value) {
+  return value > 0
+    ? value >= 0x7fffffffffffffff
+      ? INT64_MAX
+      : new Int64(value, value / 4294967296)
+    : value < 0
+      ? value <= -0x7fffffffffffffff
+        ? INT64_MIN
+        : negateInt64(new Int64(-value, -value / 4294967296))
+      : INT64_ZERO;
 }
-
-function N(a, b) {
-  return new Rd(a, b)
+function int64FromWords(low, high) {
+  return new Int64(low, high);
 }
-var Yd = N(0, 0),
-  Wd = N(1, 0),
-  Xd = N(-1, -1),
-  $d = N(4294967295, 2147483647),
-  Vd = N(0, 2147483648);
-
-function zd(a, b) {
-  b = b === void 0 ? window : b;
-  b = b === void 0 ? window : b;
-  return (b = b.WIZ_global_data) && a in b ? b[a] : null
-};
-var ae;
-
-function be() {
-  return ae = ae || new ce
+var INT64_ZERO = int64FromWords(0, 0),
+  INT64_ONE = int64FromWords(1, 0),
+  INT64_NEGATIVE_ONE = int64FromWords(-1, -1),
+  INT64_MAX = int64FromWords(4294967295, 2147483647),
+  INT64_MIN = int64FromWords(0, 2147483648);
+function readWizGlobalData(key, windowObject) {
+  windowObject = windowObject === void 0 ? window : windowObject;
+  windowObject = windowObject === void 0 ? window : windowObject;
+  return (windowObject = windowObject.WIZ_global_data) && key in windowObject
+    ? windowObject[key]
+    : null;
 }
-
-function ce() {
-  var a = null;
-  var b = zd("TSDtV", window);
-  if (b = typeof b !== "string" ? null : b) a = Qd("[" + b.substring(4)), a = md(a, Od, 1)[0];
-  if (a) {
-    b = y(md(a, Md, 2));
-    var c = b.next(),
-      d;
+var featureFlagStoreInstance;
+function getFeatureFlagStore() {
+  return (featureFlagStoreInstance = featureFlagStoreInstance || new FeatureFlagStore());
+}
+function FeatureFlagStore() {
+  var intermediate = null;
+  var wizGlobalData = readWizGlobalData("TSDtV", window);
+  if ((wizGlobalData = typeof wizGlobalData !== "string" ? null : wizGlobalData)) {
+    intermediate = parseFeatureFlagBootstrap("[" + wizGlobalData.substring(4));
+    intermediate = readRepeatedMessages(intermediate, FeatureFlagSetMessage, 1)[0];
+  }
+  if (intermediate) {
+    wizGlobalData = getIterator(readRepeatedMessages(intermediate, FeatureFlagValueMessage, 2));
+    var iteration = wizGlobalData.next(),
+      intermediate2;
     try {
-      for (; !c.done; c = b.next()) {
-        var e = c.value,
-          f = e.C;
-        if (jd(f, f[G] | 0, Ed, ed(e, Nd, 6)) !== void 0) throw Error();
+      for (; !iteration.done; iteration = wizGlobalData.next()) {
+        var value = iteration.value,
+          backingOrStateValue = value.C;
+        if (
+          getNestedArrayMessage(
+            backingOrStateValue,
+            backingOrStateValue[arrayFlagsKey] | 0,
+            AnyMessage,
+            getActiveOneofField(value, featureFlagOneofFields, 6),
+          ) !== void 0
+        )
+          throw Error();
       }
     } finally {
-      c && !c.done && (d = b.return) && d.call(b)
+      iteration &&
+        !iteration.done &&
+        (intermediate2 = wizGlobalData.return) &&
+        intermediate2.call(wizGlobalData);
     }
   }
-  var g;
-  if (a) {
-    d = {};
-    e = y(md(a, Md, 2));
-    f = e.next();
+  var intermediate3;
+  if (intermediate) {
+    intermediate2 = {};
+    value = getIterator(readRepeatedMessages(intermediate, FeatureFlagValueMessage, 2));
+    backingOrStateValue = value.next();
     try {
-      for (; !f.done; f = e.next()) {
-        var h = f.value,
-          k = qd(h, 1).toString();
-        switch (fd(h, Nd)) {
+      for (; !backingOrStateValue.done; backingOrStateValue = value.next()) {
+        var value2 = backingOrStateValue.value,
+          intermediate4 = readInt64Field(value2, 1).toString();
+        switch (computeOneofCase(value2, featureFlagOneofFields)) {
           case 3:
-            d[k] = od(h, ed(h, Nd, 3));
+            intermediate2[intermediate4] = readBooleanField(
+              value2,
+              getActiveOneofField(value2, featureFlagOneofFields, 3),
+            );
             break;
           case 2:
-            var l = qd(h, ed(h, Nd, 2));
-            Tb(l);
-            Zb(l);
-            var m = Zb(l) ? Number(l) : String(l);
-            d[k] = m;
+            var int64Field = readInt64Field(
+              value2,
+              getActiveOneofField(value2, featureFlagOneofFields, 2),
+            );
+            isInt64Representation(int64Field);
+            isSafeInt64Representation(int64Field);
+            var intermediate5 = isSafeInt64Representation(int64Field)
+              ? Number(int64Field)
+              : String(int64Field);
+            intermediate2[intermediate4] = intermediate5;
             break;
           case 4:
-            b = void 0;
-            c = h;
-            var r = ed(h, Nd, 4),
-              t = void 0;
-            t = t === void 0 ? 0 : t;
-            var w = (b = K(c, r, void 0, void 0, lc)) != null ? b : t;
-            d[k] = w;
+            wizGlobalData = void 0;
+            iteration = value2;
+            var activeOneofField = getActiveOneofField(value2, featureFlagOneofFields, 4),
+              intermediate6 = void 0;
+            intermediate6 = intermediate6 === void 0 ? 0 : intermediate6;
+            var intermediate7 =
+              (wizGlobalData = getMessageField(
+                iteration,
+                activeOneofField,
+                void 0,
+                void 0,
+                coerceSpecialNumber,
+              )) != null
+                ? wizGlobalData
+                : intermediate6;
+            intermediate2[intermediate4] = intermediate7;
             break;
           case 5:
-            d[k] = rd(h, ed(h, Nd, 5));
+            intermediate2[intermediate4] = readStringOrDefault(
+              value2,
+              getActiveOneofField(value2, featureFlagOneofFields, 5),
+            );
             break;
           case 6:
-            d[k] = ld(h, Ed, ed(h, Nd, 6));
+            intermediate2[intermediate4] = readNestedMessage(
+              value2,
+              AnyMessage,
+              getActiveOneofField(value2, featureFlagOneofFields, 6),
+            );
             break;
           case 8:
-            var u = kd(h, Kd, ed(h, Nd, 8));
-            switch (fd(u, Ld)) {
+            var nestedMessageOrDefault = getNestedMessageOrDefault(
+              value2,
+              StringFlagValueMessage,
+              getActiveOneofField(value2, featureFlagOneofFields, 8),
+            );
+            switch (computeOneofCase(nestedMessageOrDefault, stringFlagOneofFields)) {
               case 1:
-                d[k] = rd(u, ed(u, Ld, 1));
+                intermediate2[intermediate4] = readStringOrDefault(
+                  nestedMessageOrDefault,
+                  getActiveOneofField(nestedMessageOrDefault, stringFlagOneofFields, 1),
+                );
                 break;
               default:
-                throw Error("case " + fd(u, Ld));
+                throw Error(
+                  "case " + computeOneofCase(nestedMessageOrDefault, stringFlagOneofFields),
+                );
             }
             break;
           default:
-            throw Error("case " + fd(h, Nd));
+            throw Error("case " + computeOneofCase(value2, featureFlagOneofFields));
         }
       }
     } finally {
-      f && !f.done && (g = e.return) && g.call(e)
+      backingOrStateValue &&
+        !backingOrStateValue.done &&
+        (intermediate3 = value.return) &&
+        intermediate3.call(value);
     }
-    g = d
-  } else g = {};
-  this.j = g;
-  this.l = a ? a.La() :
-    null
+    intermediate3 = intermediate2;
+  } else intermediate3 = {};
+  this.j = intermediate3;
+  this.l = intermediate ? intermediate.La() : null;
 }
-
-function de(a, b) {
-  return b.phase !== 1 && b.key in a.j ? b.ctor(a.j[b.key]) : b.defaultValue
+function readFeatureFlag(store, flag) {
+  return flag.phase !== 1 && flag.key in store.j ? flag.ctor(store.j[flag.key]) : flag.defaultValue;
 }
-ce.prototype.La = p("l");
-
-function ee(a) {
-  this.C = J(a)
+FeatureFlagStore.prototype.La = createPropertyGetter("l");
+function ExperimentConfigMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(ee, M);
-var fe = new Hd;
-var ge = new Gd("45723104");
-var he = new Gd("45765314");
-
-function ie(a) {
-  this.C = J(a)
+inheritCompiledClass(ExperimentConfigMessage, ArrayMessage);
+var ignoredErrorsFlag = new IgnoredErrorsFeatureFlag();
+var crashStorageFlag = new BooleanFeatureFlag("45723104");
+var telemetryIntegrationFlag = new BooleanFeatureFlag("45765314");
+function ExperimentSamplingMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(ie, M);
-var je = function(a) {
-  return function() {
-    return a[vb] || (a[vb] = xc(a))
-  }
-}(ie);
+inheritCompiledClass(ExperimentSamplingMessage, ArrayMessage);
+var getDefaultExperimentSamplingMessage = (function (value) {
+  return function () {
+    return (
+      value[defaultMessageSymbol] ||
+      (value[defaultMessageSymbol] = createFrozenDefaultMessage(value))
+    );
+  };
+})(ExperimentSamplingMessage);
 Object.create(null);
-
-function O() {}
-O.prototype.equals = function(a) {
-  return ke(this, a)
+/**
+ * Java 转译兼容层：类型元数据、装箱整数、异常与数组类型检查。
+ */
+function JavaObject() {}
+JavaObject.prototype.equals = function (value) {
+  return javaObjectEquals(this, value);
 };
-O.prototype.ya = function() {
-  return this.A || (Object.defineProperties(this, {
-    A: {
-      value: le = le + 1 | 0,
-      enumerable: !1
-    }
-  }), this.A)
+JavaObject.prototype.ya = function () {
+  return (
+    this.A ||
+    (Object.defineProperties(this, {
+      A: { value: (nextJavaIdentityHash = (nextJavaIdentityHash + 1) | 0), enumerable: false },
+    }),
+    this.A)
+  );
 };
-O.prototype.toString = function() {
-  return P(me(Q(ne(this)))) + "@" + P((this.ya() >>> 0).toString(16))
+JavaObject.prototype.toString = function () {
+  return (
+    javaString(getJavaClassName(getJavaClassMetadata(getConstructor(this)))) +
+    "@" +
+    javaString((this.ya() >>> 0).toString(16))
+  );
 };
-O.prototype.D = ["java.lang.Object", 0];
-
-function oe() {}
-x(oe, O);
-
-function S(a, b) {
-  a.j = b;
-  pe(b, a)
+JavaObject.prototype.D = ["java.lang.Object", 0];
+function JavaThrowable() {}
+inheritCompiledClass(JavaThrowable, JavaObject);
+function associateNativeError(throwable, nativeError) {
+  throwable.j = nativeError;
+  linkNativeErrorToThrowable(nativeError, throwable);
 }
-
-function T(a) {
-  qe(a.j) && (Error.captureStackTrace ? Error.captureStackTrace(U(a.j, qe, re)) : U(a.j, qe, re).stack =
-    Error().stack)
+function captureJavaStack(throwable) {
+  isNativeError(throwable.j) &&
+    (Error.captureStackTrace
+      ? Error.captureStackTrace(checkedJavaCast(throwable.j, isNativeError, NativeErrorClass))
+      : (checkedJavaCast(throwable.j, isNativeError, NativeErrorClass).stack = Error().stack));
 }
-oe.prototype.toString = function() {
-  var a = me(Q(ne(this))),
-    b = this.l;
-  return b == null ? a : P(a) + ": " + P(b)
+JavaThrowable.prototype.toString = function () {
+  var javaClassName = getJavaClassName(getJavaClassMetadata(getConstructor(this))),
+    intermediate = this.l;
+  return intermediate == null
+    ? javaClassName
+    : javaString(javaClassName) + ": " + javaString(intermediate);
 };
-
-function se(a) {
-  if (a != null) {
-    var b = a.Za;
-    if (b != null) return b
+function wrapJavaThrowable(error) {
+  if (error != null) {
+    var intermediate = error.Za;
+    if (intermediate != null) return intermediate;
   }
-  a instanceof TypeError ? b = te() : (b = new ue, T(b), S(b, Error(b)));
-  b.l = a == null ? "null" : a.toString();
-  S(b, a);
-  return b
+  error instanceof TypeError
+    ? (intermediate = createNullPointerException())
+    : ((intermediate = new JavaJsException()),
+      captureJavaStack(intermediate),
+      associateNativeError(intermediate, Error(intermediate)));
+  intermediate.l = error == null ? "null" : error.toString();
+  associateNativeError(intermediate, error);
+  return intermediate;
 }
-
-function ve(a) {
-  return a instanceof oe
+function isJavaThrowable(value) {
+  return value instanceof JavaThrowable;
 }
-oe.prototype.D = ["java.lang.Throwable", 0];
-
-function we() {}
-x(we, oe);
-we.prototype.D = ["java.lang.Exception", 0];
-
-function xe() {}
-x(xe, we);
-xe.prototype.D = ["java.lang.RuntimeException", 0];
-
-function ye() {}
-x(ye, xe);
-ye.prototype.D = ["java.lang.IndexOutOfBoundsException", 0];
-var ze;
-
-function Ae() {
-  Ae = n();
-  for (var a = Be(), b = 0; b < 256; b = b + 1 | 0) Ce(a, b, De(b - 128 | 0));
-  ze = a
-};
-
-function Ee() {}
-x(Ee, xe);
-Ee.prototype.D = ["java.lang.ArithmeticException", 0];
-
-function Fe() {}
-x(Fe, xe);
-Fe.prototype.D = ["java.lang.ArrayStoreException", 0];
-
-function Ge() {}
-x(Ge, xe);
-Ge.prototype.D = ["java.lang.ClassCastException", 0];
-
-function He() {}
-x(He, xe);
-He.prototype.D = ["java.lang.IllegalArgumentException", 0];
-
-function Ie() {}
-x(Ie, xe);
-
-function Je(a) {
-  var b = new Ie;
-  b.l = a;
-  T(b);
-  S(b, Error(b));
-  return b
+JavaThrowable.prototype.D = ["java.lang.Throwable", 0];
+function JavaException() {}
+inheritCompiledClass(JavaException, JavaThrowable);
+JavaException.prototype.D = ["java.lang.Exception", 0];
+function JavaRuntimeException() {}
+inheritCompiledClass(JavaRuntimeException, JavaException);
+JavaRuntimeException.prototype.D = ["java.lang.RuntimeException", 0];
+function JavaIndexOutOfBoundsException() {}
+inheritCompiledClass(JavaIndexOutOfBoundsException, JavaRuntimeException);
+JavaIndexOutOfBoundsException.prototype.D = ["java.lang.IndexOutOfBoundsException", 0];
+var boxedIntegerCache;
+function initializeIntegerCache() {
+  initializeIntegerCache = createNoopFunction();
+  for (
+    var integerCacheArray = createIntegerCacheArray(), intermediate = 0;
+    intermediate < 256;
+    intermediate = (intermediate + 1) | 0
+  )
+    setJavaArrayElement(
+      integerCacheArray,
+      intermediate,
+      createBoxedInteger((intermediate - 128) | 0),
+    );
+  boxedIntegerCache = integerCacheArray;
 }
-Ie.prototype.D = ["java.lang.IllegalStateException", 0];
-
-function ue() {}
-x(ue, xe);
-ue.prototype.D = ["java.lang.JsException", 0];
-
-function Ke() {}
-x(Ke, ue);
-
-function te() {
-  var a = new Ke;
-  T(a);
-  S(a, new TypeError(a));
-  return a
+function JavaArithmeticException() {}
+inheritCompiledClass(JavaArithmeticException, JavaRuntimeException);
+JavaArithmeticException.prototype.D = ["java.lang.ArithmeticException", 0];
+function JavaArrayStoreException() {}
+inheritCompiledClass(JavaArrayStoreException, JavaRuntimeException);
+JavaArrayStoreException.prototype.D = ["java.lang.ArrayStoreException", 0];
+function JavaClassCastException() {}
+inheritCompiledClass(JavaClassCastException, JavaRuntimeException);
+JavaClassCastException.prototype.D = ["java.lang.ClassCastException", 0];
+function JavaIllegalArgumentException() {}
+inheritCompiledClass(JavaIllegalArgumentException, JavaRuntimeException);
+JavaIllegalArgumentException.prototype.D = ["java.lang.IllegalArgumentException", 0];
+function JavaIllegalStateException() {}
+inheritCompiledClass(JavaIllegalStateException, JavaRuntimeException);
+function createIllegalStateException(message) {
+  var javaIllegalStateException = new JavaIllegalStateException();
+  javaIllegalStateException.l = message;
+  captureJavaStack(javaIllegalStateException);
+  associateNativeError(javaIllegalStateException, Error(javaIllegalStateException));
+  return javaIllegalStateException;
 }
-Ke.prototype.D = ["java.lang.NullPointerException", 0];
-
-function Le() {}
-x(Le, ye);
-Le.prototype.D = ["java.lang.StringIndexOutOfBoundsException", 0];
-
-function Me() {}
-var Ne;
-x(Me, O);
-Me.prototype.D = ["java.lang.Number", 0];
-
-function Oe() {}
-x(Oe, Me);
-Oe.prototype.D = ["java.lang.Double", 0];
-
-function Pe(a) {
-  return Zd(a)
+JavaIllegalStateException.prototype.D = ["java.lang.IllegalStateException", 0];
+function JavaJsException() {}
+inheritCompiledClass(JavaJsException, JavaRuntimeException);
+JavaJsException.prototype.D = ["java.lang.JsException", 0];
+function JavaNullPointerException() {}
+inheritCompiledClass(JavaNullPointerException, JavaJsException);
+function createNullPointerException() {
+  var javaNullPointerException = new JavaNullPointerException();
+  captureJavaStack(javaNullPointerException);
+  associateNativeError(javaNullPointerException, new TypeError(javaNullPointerException));
+  return javaNullPointerException;
 }
-
-function Qe(a) {
-  if (!isFinite(a)) throw a = new Ee, T(a), S(a, Error(a)), a.j;
-  return a | 0
-};
-
-function Re() {}
-x(Re, O);
-Re.prototype.D = ["java.lang.Boolean", 0];
-
-function U(a, b, c) {
-  if (a != null && !b(a)) throw a = P(me(Se(a))) + " cannot be cast to " + P(me(Q(c))), b = new Ge, b.l = a,
-    T(b), S(b, Error(b)), b.j;
-  return a
-};
-
-function ne(a) {
-  return a.constructor
+JavaNullPointerException.prototype.D = ["java.lang.NullPointerException", 0];
+function JavaStringIndexOutOfBoundsException() {}
+inheritCompiledClass(JavaStringIndexOutOfBoundsException, JavaIndexOutOfBoundsException);
+JavaStringIndexOutOfBoundsException.prototype.D = ["java.lang.StringIndexOutOfBoundsException", 0];
+function JavaNumber() {}
+var javaDoublePattern;
+inheritCompiledClass(JavaNumber, JavaObject);
+JavaNumber.prototype.D = ["java.lang.Number", 0];
+function JavaDouble() {}
+inheritCompiledClass(JavaDouble, JavaNumber);
+JavaDouble.prototype.D = ["java.lang.Double", 0];
+function javaLongFromNumber(value) {
+  return int64FromNumber(value);
 }
-
-function Te(a, b, c) {
-  if (Object.prototype.hasOwnProperty.call(a.prototype, b)) return a.prototype[b];
-  c = c();
-  return a.prototype[b] = c
-};
-
-function ke(a, b) {
-  return Object.is(a, b) || a == null && b == null
-};
-var le = 0;
-
-function Se(a) {
-  switch (V(typeof a)) {
+function javaNumberToInt(value) {
+  if (!isFinite(value))
+    throw (
+      (value = new JavaArithmeticException()),
+      captureJavaStack(value),
+      associateNativeError(value, Error(value)),
+      value.j
+    );
+  return value | 0;
+}
+function JavaBoolean() {}
+inheritCompiledClass(JavaBoolean, JavaObject);
+JavaBoolean.prototype.D = ["java.lang.Boolean", 0];
+function checkedJavaCast(value, predicate, TargetType) {
+  if (value != null && !predicate(value))
+    throw (
+      (value =
+        javaString(getJavaClassName(getJavaClass(value))) +
+        " cannot be cast to " +
+        javaString(getJavaClassName(getJavaClassMetadata(TargetType)))),
+      (predicate = new JavaClassCastException()),
+      (predicate.l = value),
+      captureJavaStack(predicate),
+      associateNativeError(predicate, Error(predicate)),
+      predicate.j
+    );
+  return value;
+}
+function getConstructor(value) {
+  return value.constructor;
+}
+function getOrCreateClassMetadata(constructor, key, create) {
+  if (Object.prototype.hasOwnProperty.call(constructor.prototype, key))
+    return constructor.prototype[key];
+  create = create();
+  return (constructor.prototype[key] = create);
+}
+function javaObjectEquals(left, right) {
+  return Object.is(left, right) || (left == null && right == null);
+}
+var nextJavaIdentityHash = 0;
+function getJavaClass(value) {
+  switch (requireNonNull(typeof value)) {
     case "number":
-      return Q(Oe);
+      return getJavaClassMetadata(JavaDouble);
     case "boolean":
-      return Q(Re);
+      return getJavaClassMetadata(JavaBoolean);
     case "string":
-      return Q(Ue);
+      return getJavaClassMetadata(JavaString);
     case "function":
-      return Q(Ve)
+      return getJavaClassMetadata(NativenativefunctionType);
   }
-  if (a instanceof Rd) a = Q(We);
-  else if (a instanceof O) a = Q(ne(a));
-  else if (Array.isArray(a)) a = (a = a.ra) ? Q(a.ba, a.aa) : Q(O, 1);
-  else if (a != null) a = Q(Xe);
+  if (value instanceof Int64) value = getJavaClassMetadata(JavaLong);
+  else if (value instanceof JavaObject) value = getJavaClassMetadata(getConstructor(value));
+  else if (Array.isArray(value))
+    value = (value = value.ra)
+      ? getJavaClassMetadata(value.ba, value.aa)
+      : getJavaClassMetadata(JavaObject, 1);
+  else if (value != null) value = getJavaClassMetadata(NativenativeobjectType);
   else throw new TypeError("null.getClass()");
-  return a
+  return value;
+}
+function NativenativefunctionType() {}
+NativenativefunctionType.prototype.D = ["<native function>", 1];
+function NativenativeobjectType() {}
+inheritCompiledClass(NativenativeobjectType, JavaObject);
+NativenativeobjectType.prototype.D = ["<native object>", 0];
+function JavaInteger() {
+  this.X = 0;
+}
+inheritCompiledClass(JavaInteger, JavaNumber);
+function boxInteger(value) {
+  value > -129 && value < 128
+    ? (initializeIntegerCache(), (value = boxedIntegerCache[(value + 128) | 0]))
+    : (value = createBoxedInteger(value));
+  return value;
+}
+function createBoxedInteger(value) {
+  var javaInteger = new JavaInteger();
+  javaInteger.X = value;
+  return javaInteger;
+}
+JavaInteger.prototype.equals = function (value) {
+  return isBoxedInteger(value) && checkedJavaCast(value, isBoxedInteger, JavaInteger).X == this.X;
 };
-
-function Ve() {}
-Ve.prototype.D = ["<native function>", 1];
-
-function Xe() {}
-x(Xe, O);
-Xe.prototype.D = ["<native object>", 0];
-
-function Ye() {
-  this.X = 0
-}
-x(Ye, Me);
-
-function Ze(a) {
-  a > -129 && a < 128 ? (Ae(), a = ze[a + 128 | 0]) : a = De(a);
-  return a
-}
-
-function De(a) {
-  var b = new Ye;
-  b.X = a;
-  return b
-}
-Ye.prototype.equals = function(a) {
-  return $e(a) && U(a, $e, Ye).X == this.X
+JavaInteger.prototype.ya = createPropertyGetter("X");
+JavaInteger.prototype.toString = function () {
+  return "" + this.X;
 };
-Ye.prototype.ya = p("X");
-Ye.prototype.toString = function() {
-  return "" + this.X
+function isBoxedInteger(value) {
+  return value instanceof JavaInteger;
+}
+JavaInteger.prototype.D = ["java.lang.Integer", 0];
+function JavaLong() {}
+inheritCompiledClass(JavaLong, JavaNumber);
+JavaLong.prototype.D = ["java.lang.Long", 0];
+function JavaNumberFormatException() {}
+inheritCompiledClass(JavaNumberFormatException, JavaIllegalArgumentException);
+JavaNumberFormatException.prototype.D = ["java.lang.NumberFormatException", 0];
+function requireNonNull(value) {
+  if (value == null) throw createNullPointerException().j;
+  return value;
+}
+function createIntegerCacheArray() {
+  var values = [256];
+  return createJavaArray(values, { ba: JavaInteger, oa: isBoxedInteger, aa: values.length });
+}
+function createJavaArray(dimensions, metadata) {
+  var intermediate = dimensions[0];
+  if (intermediate == null) return null;
+  var array = new globalThis.Array(intermediate);
+  metadata && (array.ra = metadata);
+  if (dimensions.length > 1) {
+    dimensions = dimensions.slice(1);
+    metadata = metadata && { ba: metadata.ba, oa: metadata.oa, aa: metadata.aa - 1 };
+    for (var index = 0; index < intermediate; index++)
+      array[index] = createJavaArray(dimensions, metadata);
+  } else if (metadata && ((dimensions = metadata.ba.Cb), dimensions !== void 0))
+    for (metadata = 0; metadata < intermediate; metadata++) array[metadata] = dimensions;
+  return array;
+}
+function setJavaArrayElement(array, index, value) {
+  var intermediate;
+  if (!(intermediate = value == null))
+    a: {
+      var intermediate2 = array.ra;
+      if (intermediate2)
+        if (intermediate2.aa > 1) {
+          intermediate = intermediate2.ba;
+          var callback = intermediate2.oa;
+          intermediate2 = intermediate2.aa - 1;
+          if (value != null && Array.isArray(value)) {
+            var intermediate3 = value.ra || { ba: JavaObject, aa: 1 },
+              intermediate4 = intermediate3.aa;
+            intermediate4 == intermediate2
+              ? ((intermediate2 = intermediate3.ba),
+                (intermediate =
+                  intermediate2 === intermediate
+                    ? true
+                    : (intermediate && intermediate.prototype.Qa) ||
+                        (intermediate2 && intermediate2.prototype.Qa)
+                      ? false
+                      : callback(intermediate2.prototype)))
+              : (intermediate = intermediate4 > intermediate2 ? JavaObject == intermediate : false);
+          } else intermediate = false;
+          if (!intermediate) {
+            intermediate = false;
+            break a;
+          }
+        } else if (value != null && !intermediate2.oa(value)) {
+          intermediate = false;
+          break a;
+        }
+      intermediate = true;
+    }
+  if (!intermediate)
+    throw (
+      (array = new JavaArrayStoreException()),
+      captureJavaStack(array),
+      associateNativeError(array, Error(array)),
+      array.j
+    );
+  array[index] = value;
+}
+function JavaString() {}
+inheritCompiledClass(JavaString, JavaObject);
+function javaString(value) {
+  return value == null ? "null" : value.toString();
+}
+function zeroPadding(length) {
+  if (!(length >= 0))
+    throw (
+      (length = new JavaIllegalArgumentException()),
+      captureJavaStack(length),
+      associateNativeError(length, Error(length)),
+      length.j
+    );
+  return "0".repeat(length);
+}
+JavaString.prototype.D = ["java.lang.String", 0];
+function JavaClass(constructor, dimensions) {
+  this.j = constructor;
+  this.l = dimensions;
+}
+inheritCompiledClass(JavaClass, JavaObject);
+function getJavaClassMetadata(constructor, dimensions) {
+  var intermediate = dimensions || 0;
+  return getOrCreateClassMetadata(constructor, "$$class/" + intermediate, function () {
+    return new JavaClass(constructor, intermediate);
+  });
+}
+function getJavaClassName(javaClass) {
+  return javaClass.l != 0
+    ? javaString(repeatJavaString("[", javaClass.l)) +
+        javaString(
+          javaClass.j.prototype.D[1] == 3
+            ? javaClass.j.prototype.D[2]
+            : "L" + javaString(javaClass.j.prototype.D[0]) + ";",
+        )
+    : javaClass.j.prototype.D[0];
+}
+function substringAfterLast(text, delimiter) {
+  delimiter = (text.lastIndexOf(delimiter) + 1) | 0;
+  var intermediate = (text.length + 1) | 0;
+  if (delimiter < 0 || delimiter >= intermediate)
+    throw (
+      (text = new JavaStringIndexOutOfBoundsException()),
+      (text.l = "Index: " + delimiter + ", Size: " + intermediate),
+      captureJavaStack(text),
+      associateNativeError(text, Error(text)),
+      text.j
+    );
+  return text.substr(delimiter);
+}
+JavaClass.prototype.toString = function () {
+  return (
+    String(
+      this.l == 0 && this.j.prototype.D[1] == 1
+        ? "interface "
+        : this.l == 0 && this.j.prototype.D[1] == 3
+          ? ""
+          : "class ",
+    ) + javaString(getJavaClassName(this))
+  );
 };
-
-function $e(a) {
-  return a instanceof Ye
+function repeatJavaString(text, count) {
+  for (
+    var intermediate = "", intermediate2 = 0;
+    intermediate2 < count;
+    intermediate2 = (intermediate2 + 1) | 0
+  )
+    intermediate = javaString(intermediate) + javaString(text);
+  return intermediate;
 }
-Ye.prototype.D = ["java.lang.Integer", 0];
-
-function We() {}
-x(We, Me);
-We.prototype.D = ["java.lang.Long", 0];
-
-function af() {}
-x(af, He);
-af.prototype.D = ["java.lang.NumberFormatException", 0];
-
-function V(a) {
-  if (a == null) throw te().j;
-  return a
-};
-
-function Be() {
-  var a = [256];
-  return bf(a, {
-    ba: Ye,
-    oa: $e,
-    aa: a.length
-  })
+JavaClass.prototype.D = ["java.lang.Class", 0];
+function NativeErrorClass() {}
+function isNativeError(value) {
+  return value instanceof Error;
 }
-
-function bf(a, b) {
-  var c = a[0];
-  if (c == null) return null;
-  var d = new globalThis.Array(c);
-  b && (d.ra = b);
-  if (a.length > 1) {
-    a = a.slice(1);
-    b = b && {
-      ba: b.ba,
-      oa: b.oa,
-      aa: b.aa - 1
-    };
-    for (var e = 0; e < c; e++) d[e] = bf(a, b)
-  } else if (b && (a = b.ba.Cb, a !== void 0))
-    for (b = 0; b < c; b++) d[b] = a;
-  return d
-}
-
-function Ce(a, b, c) {
-  var d;
-  if (!(d = c == null)) a: {
-    var e = a.ra;
-    if (e)
-      if (e.aa > 1) {
-        d = e.ba;
-        var f = e.oa;
-        e = e.aa - 1;
-        if (c != null && Array.isArray(c)) {
-          var g = c.ra || {
-              ba: O,
-              aa: 1
+NativeErrorClass.prototype.D = ["Error", 0];
+function linkNativeErrorToThrowable(nativeError, throwable) {
+  if (nativeError instanceof Object)
+    try {
+      {
+        nativeError.Za = throwable;
+        Object.defineProperties(nativeError, {
+          cause: {
+            get: function () {
+              return throwable.o && throwable.o.j;
             },
-            h = g.aa;
-          h == e ? (e = g.ba, d = e === d ? !0 : d && d.prototype.Qa || e && e.prototype.Qa ? !1 : f(e
-            .prototype)) : d = h > e ? O == d : !1
-        } else d = !1;
-        if (!d) {
-          d = !1;
-          break a
-        }
-      } else if (c != null && !e.oa(c)) {
-      d = !1;
-      break a
-    }
-    d = !0
-  }
-  if (!d) throw a = new Fe, T(a), S(a, Error(a)), a.j;
-  a[b] = c
-};
-
-function Ue() {}
-x(Ue, O);
-
-function P(a) {
-  return a == null ? "null" : a.toString()
-}
-
-function cf(a) {
-  if (!(a >= 0)) throw a = new He, T(a), S(a, Error(a)), a.j;
-  return "0".repeat(a)
-}
-Ue.prototype.D = ["java.lang.String", 0];
-
-function df(a, b) {
-  this.j = a;
-  this.l = b
-}
-x(df, O);
-
-function Q(a, b) {
-  var c = b || 0;
-  return Te(a, "$$class/" + c, function() {
-    return new df(a, c)
-  })
-}
-
-function me(a) {
-  return a.l != 0 ? P(ef("[", a.l)) + P(a.j.prototype.D[1] == 3 ? a.j.prototype.D[2] : "L" + P(a.j.prototype
-    .D[0]) + ";") : a.j.prototype.D[0]
-}
-
-function ff(a, b) {
-  b = a.lastIndexOf(b) + 1 | 0;
-  var c = a.length + 1 | 0;
-  if (b < 0 || b >= c) throw a = new Le, a.l = "Index: " + b + ", Size: " + c, T(a), S(a, Error(a)), a.j;
-  return a.substr(b)
-}
-df.prototype.toString = function() {
-  return String(this.l == 0 && this.j.prototype.D[1] == 1 ? "interface " : this.l == 0 && this.j.prototype
-    .D[1] == 3 ? "" : "class ") + P(me(this))
-};
-
-function ef(a, b) {
-  for (var c = "", d = 0; d < b; d = d + 1 | 0) c = P(c) + P(a);
-  return c
-}
-df.prototype.D = ["java.lang.Class", 0];
-
-function re() {}
-
-function qe(a) {
-  return a instanceof Error
-}
-re.prototype.D = ["Error", 0];
-
-function pe(a, b) {
-  if (a instanceof Object) try {
-    a.Za = b, Object.defineProperties(a, {
-      cause: {
-        get: function() {
-          return b.o && b.o.j
-        }
+          },
+        });
       }
-    })
-  } catch (c) {}
-};
-
-function gf(a, b) {
-  this.o = b;
-  this.l = a;
-  T(this);
-  S(this, Error(this))
+    } catch (caughtError) {}
 }
-x(gf, xe);
-fa.Object.defineProperties(gf.prototype, {
+function XplatException(message, cause) {
+  this.o = cause;
+  this.l = message;
+  captureJavaStack(this);
+  associateNativeError(this, Error(this));
+}
+inheritCompiledClass(XplatException, JavaRuntimeException);
+polyfillGlobal.Object.defineProperties(XplatException.prototype, {
   error: {
-    configurable: !0,
-    enumerable: !0,
-    get: function() {
-      var a = Error(),
-        b = this.j;
-      a.fileName = b.fileName;
-      a.lineNumber = b.lineNumber;
-      a.columnNumber = b.columnNumber;
-      a.message = b.message;
-      a.name = b.name;
-      a.stack = b.stack;
-      a.toSource = b.toSource;
-      a.cause = b.cause;
-      for (var c in b) c.indexOf("__java$") != 0 && (a[c] = b[c]);
-      return a
-    }
-  }
+    configurable: true,
+    enumerable: true,
+    get: function () {
+      var intermediate = Error(),
+        intermediate2 = this.j;
+      intermediate.fileName = intermediate2.fileName;
+      intermediate.lineNumber = intermediate2.lineNumber;
+      intermediate.columnNumber = intermediate2.columnNumber;
+      intermediate.message = intermediate2.message;
+      intermediate.name = intermediate2.name;
+      intermediate.stack = intermediate2.stack;
+      intermediate.toSource = intermediate2.toSource;
+      intermediate.cause = intermediate2.cause;
+      for (var intermediate3 in intermediate2)
+        intermediate3.indexOf("__java$") != 0 &&
+          (intermediate[intermediate3] = intermediate2[intermediate3]);
+      return intermediate;
+    },
+  },
 });
-gf.prototype.getMessage = p("l");
-gf.prototype.D = ["com.google.apps.docs.xplat.base.XplatException", 0];
-
-function hf() {}
-
-function jf(a) {
-  return a instanceof Error
+XplatException.prototype.getMessage = createPropertyGetter("l");
+XplatException.prototype.D = ["com.google.apps.docs.xplat.base.XplatException", 0];
+function NativeErrorValueClass() {}
+function isNativeErrorValue(value) {
+  return value instanceof Error;
 }
-hf.prototype.D = ["Error", 0];
-
-function kf() {
-  var a = a == null ? function(c) {
-    return Math.max(Math.min(Math.floor(Math.random() * c), 2147483647), -2147483648) | 0
-  } : a;
-  var b = (a(2147483647) >>> 0).toString(16);
-  b = P(cf(Math.max(0, 8 - b.length | 0))) + P(b);
-  a = (a(2147483647) >>> 0).toString(16);
-  return P(a) + P(b)
-};
-
-function lf() {}
-
-function mf(a) {
-  return a instanceof Array
+NativeErrorValueClass.prototype.D = ["Error", 0];
+function createSessionId() {
+  var callback =
+    callback == null
+      ? function (value) {
+          return Math.max(Math.min(Math.floor(Math.random() * value), 2147483647), -2147483648) | 0;
+        }
+      : callback;
+  var intermediate = (callback(2147483647) >>> 0).toString(16);
+  intermediate =
+    javaString(zeroPadding(Math.max(0, (8 - intermediate.length) | 0))) + javaString(intermediate);
+  callback = (callback(2147483647) >>> 0).toString(16);
+  return javaString(callback) + javaString(intermediate);
 }
-lf.prototype.D = ["Array", 0];
-
-function nf() {}
-
-function of(a) {
-  return a instanceof Object
+function NativeArrayType() {}
+function isNativeArray(value) {
+  return value instanceof Array;
 }
-nf.prototype.D = ["Object", 0];
-
-function pf() {}
-
-function qf(a) {
-  return a instanceof Object
+NativeArrayType.prototype.D = ["Array", 0];
+function NativeObjectClass() {}
+function isNativeObject(value) {
+  return value instanceof Object;
 }
-pf.prototype.D = ["Object", 0];
-var rf = {
+NativeObjectClass.prototype.D = ["Object", 0];
+function NativeObjectMapClass() {}
+function isNativeObjectMap(value) {
+  return value instanceof Object;
+}
+NativeObjectMapClass.prototype.D = ["Object", 0];
+var telemetryContextKeys = {
   bc: "build-label",
   Db: "buildLabel",
   Eb: "clientLog",
@@ -3028,2395 +3624,2948 @@ var rf = {
   hc: "nonfatalReason",
   xc: "usesModuleSetsServing",
   Yb: "isNestedDrawingsEnabled",
-  Ob: "embeddedDrawingState"
+  Ob: "embeddedDrawingState",
 };
-
-function sf() {
-  this.j = !1
+function JavaDisposable() {
+  this.j = false;
 }
-var tf;
-x(sf, O);
-q = sf.prototype;
-q.dispose = function() {
-  if (this.j) var a = null;
-  else this.j = !0, a = this.v == null ? tf : this.v, this.v = null;
-  if (a != null) {
+var emptyDisposableChildren;
+inheritCompiledClass(JavaDisposable, JavaObject);
+prototypeAlias = JavaDisposable.prototype;
+prototypeAlias.dispose = function () {
+  if (this.j) var intermediate = null;
+  else {
+    this.j = true;
+    intermediate = this.v == null ? emptyDisposableChildren : this.v;
+    this.v = null;
+  }
+  if (intermediate != null) {
     this.sa();
-    if (a.length != 0)
-      for (var b = 0; b < a.length; b++) a[b].dispose();
-    a = Q(ne(this));
-    ff(ff(P(a.j.prototype.D[0]) + P(ef("[]", a.l)), "."), "$")
+    if (intermediate.length != 0)
+      for (var index = 0; index < intermediate.length; index++) intermediate[index].dispose();
+    intermediate = getJavaClassMetadata(getConstructor(this));
+    substringAfterLast(
+      substringAfterLast(
+        javaString(intermediate.j.prototype.D[0]) +
+          javaString(repeatJavaString("[]", intermediate.l)),
+        ".",
+      ),
+      "$",
+    );
   }
 };
-q.na = p("j");
-q.sa = n();
-q.toString = function() {
-  return O.prototype.toString.call(this) || ""
+prototypeAlias.na = createPropertyGetter("j");
+prototypeAlias.sa = createNoopFunction();
+prototypeAlias.toString = function () {
+  return JavaObject.prototype.toString.call(this) || "";
 };
-
-function uf() {
-  uf = n();
-  tf = U([], mf, lf)
+function initializeDisposableChildren() {
+  initializeDisposableChildren = createNoopFunction();
+  emptyDisposableChildren = checkedJavaCast([], isNativeArray, NativeArrayType);
 }
-q.D = ["com.google.apps.xplat.disposable.Disposable", 0];
-
-function vf(a) {
-  if (a == null) return a = new oe, T(a), S(a, Error(a)), a;
-  if (ve(a)) return U(a, ve, oe);
-  if (jf(a)) return a = U(a, jf, hf), se(a);
-  a = new He;
-  a.l = "Unsupported type cannot be used to create a Throwable.";
-  T(a);
-  S(a, Error(a));
-  throw a.j;
-};
-/*
+prototypeAlias.D = ["com.google.apps.xplat.disposable.Disposable", 0];
+function toJavaThrowable(value) {
+  if (value == null)
+    return (
+      (value = new JavaThrowable()),
+      captureJavaStack(value),
+      associateNativeError(value, Error(value)),
+      value
+    );
+  if (isJavaThrowable(value)) return checkedJavaCast(value, isJavaThrowable, JavaThrowable);
+  if (isNativeErrorValue(value))
+    return (
+      (value = checkedJavaCast(value, isNativeErrorValue, NativeErrorValueClass)),
+      wrapJavaThrowable(value)
+    );
+  value = new JavaIllegalArgumentException();
+  value.l = "Unsupported type cannot be used to create a Throwable.";
+  captureJavaStack(value);
+  associateNativeError(value, Error(value));
+  throw value.j;
+} /*
 
  Copyright Google LLC
  SPDX-License-Identifier: Apache-2.0
 */
-var wf = globalThis.trustedTypes,
-  xf;
-
-function zf() {
-  var a = null;
-  if (!wf) return a;
+var trustedTypesFactory = globalThis.trustedTypes,
+  trustedTypesPolicy;
+/**
+ * 保留 goog#html 策略及创建失败后的行为；不能为了可读性改成绕过 Trusted Types。
+ */
+function createTrustedTypesPolicy() {
+  var intermediate = null;
+  if (!trustedTypesFactory) return intermediate;
   try {
-    var b = aa();
-    a = wf.createPolicy("goog#html", {
-      createHTML: b,
-      createScript: b,
-      createScriptURL: b
-    })
-  } catch (c) {}
-  return a
-};
-
-function Af(a) {
-  this.j = a
-}
-Af.prototype.toString = function() {
-  return this.j + ""
-};
-
-function Bf(a, b) {
-  if (b instanceof Af) b = b.j;
-  else throw Error("");
-  a.src = b.toString()
-};
-
-function Cf(a) {
-  var b = A.onerror;
-  A.onerror = function(c, d, e, f, g) {
-    b && b(c, d, e, f, g);
-    a({
-      message: c,
-      fileName: d,
-      line: e,
-      lineNumber: e,
-      Ac: f,
-      error: g
+    var identityFunction = createIdentityFunction();
+    intermediate = trustedTypesFactory.createPolicy("goog#html", {
+      createHTML: identityFunction,
+      createScript: identityFunction,
+      createScriptURL: identityFunction,
     });
-    return !0
-  }
+  } catch (caughtError) {}
+  return intermediate;
 }
-
-function Df(a) {
-  var b = Ga("window.location.href");
-  a == null && (a = 'Unknown Error of type "null/undefined"');
-  if (typeof a === "string") return {
-    message: a,
-    name: "Unknown error",
-    lineNumber: "Not available",
-    fileName: b,
-    stack: "Not available"
+function TrustedScriptUrl(value) {
+  this.j = value;
+}
+TrustedScriptUrl.prototype.toString = function () {
+  return this.j + "";
+};
+/**
+ * 只接受原 TrustedScriptUrl 包装类型，保持原校验和 iframe.src 写入顺序。
+ */
+function setTrustedIframeSource(iframe, trustedUrl) {
+  if (trustedUrl instanceof TrustedScriptUrl) trustedUrl = trustedUrl.j;
+  else throw Error("");
+  iframe.src = trustedUrl.toString();
+}
+/**
+ * 错误与日志基础设施：错误归一化、cause 链、堆栈与日志等级。
+ */
+function installGlobalErrorListener(listener) {
+  var onerror = runtimeGlobal.onerror;
+  runtimeGlobal.onerror = function (value, other, options, context, extra) {
+    onerror && onerror(value, other, options, context, extra);
+    listener({
+      message: value,
+      fileName: other,
+      line: options,
+      lineNumber: options,
+      Ac: context,
+      error: extra,
+    });
+    return true;
   };
-  var c = !1;
+}
+function normalizeErrorDetails(error) {
+  var locationOrStack = lookupGlobalPath("window.location.href");
+  error == null && (error = 'Unknown Error of type "null/undefined"');
+  if (typeof error === "string")
+    return {
+      message: error,
+      name: "Unknown error",
+      lineNumber: "Not available",
+      fileName: locationOrStack,
+      stack: "Not available",
+    };
+  var inaccessibleFieldOrMessage = false;
   try {
-    var d = a.lineNumber || a.line || "Not available"
-  } catch (f) {
-    d = "Not available", c = !0
-  }
-  try {
-    var e = a.fileName || a.filename || a.sourceURL || A.$googDebugFname || b
-  } catch (f) {
-    e = "Not available", c = !0
-  }
-  b = Ef(a);
-  return !c && a.lineNumber && a.fileName && a.stack && a.message && a.name ? {
-    message: a.message,
-    name: a.name,
-    lineNumber: a.lineNumber,
-    fileName: a.fileName,
-    stack: b
-  } : (c = a.message, c == null && (c = a.constructor && a.constructor instanceof Function ?
-    'Unknown Error of type "' + (a.constructor.name ? a.constructor.name : Ff(a.constructor)) + '"' :
-    "Unknown Error of unknown type", typeof a.toString === "function" && Object.prototype.toString !== a
-    .toString && (c += ": " + a.toString())), {
-    message: c,
-    name: a.name || "UnknownError",
-    lineNumber: d,
-    fileName: e,
-    stack: b || "Not available"
-  })
-}
-
-function Ef(a, b) {
-  b || (b = {});
-  b[Gf(a)] = !0;
-  var c = a.stack || "",
-    d = a.cause;
-  d && !b[Gf(d)] && (c += "\nCaused by: ", d.stack && d.stack.indexOf(d.toString()) == 0 || (c += typeof d ===
-    "string" ? d : d.message + "\n"), c += Ef(d, b));
-  a = a.errors;
-  if (Array.isArray(a)) {
-    d = 1;
-    var e;
-    for (e = 0; e < a.length && !(d > 4); e++) b[Gf(a[e])] || (c += "\nInner error " + d++ + ": ", a[e]
-      .stack && a[e].stack.indexOf(a[e].toString()) == 0 || (c += typeof a[e] === "string" ? a[e] : a[e]
-        .message + "\n"), c += Ef(a[e], b));
-    e < a.length && (c += "\n... " + (a.length - e) + " more inner errors")
-  }
-  return c
-}
-
-function Gf(a) {
-  var b = "";
-  typeof a.toString === "function" && (b = "" + a);
-  return b + a.stack
-}
-
-function Hf(a, b) {
-  a instanceof Error || (a = Error(a), Error.captureStackTrace && Error.captureStackTrace(a, Hf));
-  a.stack || (a.stack = If(Hf));
-  if (b) {
-    for (var c = 0; a["message" + c];) ++c;
-    a["message" + c] = String(b)
-  }
-  return a
-}
-
-function Jf(a, b) {
-  a = Hf(a);
-  if (b)
-    for (var c in b) nb(a, c, b[c]);
-  return a
-}
-
-function If(a) {
-  var b = Error();
-  if (Error.captureStackTrace) Error.captureStackTrace(b, a || If), b = String(b.stack);
-  else {
-    try {
-      throw b;
-    } catch (c) {
-      b = c
+    var lineNumber = error.lineNumber || error.line || "Not available";
+  } catch (caughtError) {
+    {
+      lineNumber = "Not available";
+      inaccessibleFieldOrMessage = true;
     }
-    b = (b = b.stack) ? String(b) : null
   }
-  b || (b = Kf(a || arguments.callee.caller, []));
-  return b
+  try {
+    var fileName =
+      error.fileName ||
+      error.filename ||
+      error.sourceURL ||
+      runtimeGlobal.$googDebugFname ||
+      locationOrStack;
+  } catch (caughtError) {
+    {
+      fileName = "Not available";
+      inaccessibleFieldOrMessage = true;
+    }
+  }
+  locationOrStack = formatErrorStack(error);
+  return !inaccessibleFieldOrMessage &&
+    error.lineNumber &&
+    error.fileName &&
+    error.stack &&
+    error.message &&
+    error.name
+    ? {
+        message: error.message,
+        name: error.name,
+        lineNumber: error.lineNumber,
+        fileName: error.fileName,
+        stack: locationOrStack,
+      }
+    : ((inaccessibleFieldOrMessage = error.message),
+      inaccessibleFieldOrMessage == null &&
+        ((inaccessibleFieldOrMessage =
+          error.constructor && error.constructor instanceof Function
+            ? 'Unknown Error of type "' +
+              (error.constructor.name
+                ? error.constructor.name
+                : getFunctionName(error.constructor)) +
+              '"'
+            : "Unknown Error of unknown type"),
+        typeof error.toString === "function" &&
+          Object.prototype.toString !== error.toString &&
+          (inaccessibleFieldOrMessage += ": " + error.toString())),
+      {
+        message: inaccessibleFieldOrMessage,
+        name: error.name || "UnknownError",
+        lineNumber: lineNumber,
+        fileName: fileName,
+        stack: locationOrStack || "Not available",
+      });
 }
-
-function Kf(a, b) {
-  var c = [];
-  if (Array.prototype.indexOf.call(b, a, void 0) >= 0) c.push("[...circular reference...]");
-  else if (a && b.length < 50) {
-    c.push(Ff(a) + "(");
-    for (var d = a.arguments, e = 0; d && e < d.length; e++) {
-      e > 0 && c.push(", ");
-      var f = d[e];
-      switch (typeof f) {
+function formatErrorStack(error, seen) {
+  seen || (seen = {});
+  seen[getErrorFingerprint(error)] = true;
+  var stackText = error.stack || "",
+    causeOrInnerCount = error.cause;
+  causeOrInnerCount &&
+    !seen[getErrorFingerprint(causeOrInnerCount)] &&
+    ((stackText += "\nCaused by: "),
+    (causeOrInnerCount.stack &&
+      causeOrInnerCount.stack.indexOf(causeOrInnerCount.toString()) == 0) ||
+      (stackText +=
+        typeof causeOrInnerCount === "string"
+          ? causeOrInnerCount
+          : causeOrInnerCount.message + "\n"),
+    (stackText += formatErrorStack(causeOrInnerCount, seen)));
+  error = error.errors;
+  if (Array.isArray(error)) {
+    causeOrInnerCount = 1;
+    var index;
+    for (index = 0; index < error.length && !(causeOrInnerCount > 4); index++)
+      seen[getErrorFingerprint(error[index])] ||
+        ((stackText += "\nInner error " + causeOrInnerCount++ + ": "),
+        (error[index].stack && error[index].stack.indexOf(error[index].toString()) == 0) ||
+          (stackText +=
+            typeof error[index] === "string" ? error[index] : error[index].message + "\n"),
+        (stackText += formatErrorStack(error[index], seen)));
+    index < error.length && (stackText += "\n... " + (error.length - index) + " more inner errors");
+  }
+  return stackText;
+}
+function getErrorFingerprint(error) {
+  var intermediate = "";
+  typeof error.toString === "function" && (intermediate = "" + error);
+  return intermediate + error.stack;
+}
+function normalizeError(error, context) {
+  error instanceof Error ||
+    ((error = Error(error)),
+    Error.captureStackTrace && Error.captureStackTrace(error, normalizeError));
+  error.stack || (error.stack = captureStackTrace(normalizeError));
+  if (context) {
+    for (var contextIndex = 0; error["message" + contextIndex]; ) ++contextIndex;
+    error["message" + contextIndex] = String(context);
+  }
+  return error;
+}
+function normalizeErrorWithContext(error, context) {
+  error = normalizeError(error);
+  if (context)
+    for (var intermediate in context)
+      attachErrorContext(error, intermediate, context[intermediate]);
+  return error;
+}
+function captureStackTrace(excludeFunction) {
+  var intermediate = Error();
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(intermediate, excludeFunction || captureStackTrace);
+    intermediate = String(intermediate.stack);
+  } else {
+    try {
+      throw intermediate;
+    } catch (caughtError) {
+      intermediate = caughtError;
+    }
+    intermediate = (intermediate = intermediate.stack) ? String(intermediate) : null;
+  }
+  intermediate ||
+    (intermediate = formatCallerChain(excludeFunction || arguments.callee.caller, []));
+  return intermediate;
+}
+function formatCallerChain(callback, seen) {
+  var values = [];
+  if (Array.prototype.indexOf.call(seen, callback, void 0) >= 0)
+    values.push("[...circular reference...]");
+  else if (callback && seen.length < 50) {
+    values.push(getFunctionName(callback) + "(");
+    for (
+      var arguments2 = callback.arguments, index = 0;
+      arguments2 && index < arguments2.length;
+      index++
+    ) {
+      index > 0 && values.push(", ");
+      var intermediate = arguments2[index];
+      switch (typeof intermediate) {
         case "object":
-          f = f ? "object" : "null";
+          intermediate = intermediate ? "object" : "null";
           break;
         case "string":
           break;
         case "number":
-          f = String(f);
+          intermediate = String(intermediate);
           break;
         case "boolean":
-          f = f ? "true" : "false";
+          intermediate = intermediate ? "true" : "false";
           break;
         case "function":
-          f = (f = Ff(f)) ? f : "[fn]";
+          intermediate = (intermediate = getFunctionName(intermediate)) ? intermediate : "[fn]";
           break;
         default:
-          f = typeof f
+          intermediate = typeof intermediate;
       }
-      f.length > 40 && (f = f.slice(0, 40) + "...");
-      c.push(f)
+      intermediate.length > 40 && (intermediate = intermediate.slice(0, 40) + "...");
+      values.push(intermediate);
     }
-    b.push(a);
-    c.push(")\n");
+    seen.push(callback);
+    values.push(")\n");
     try {
-      c.push(Kf(a.caller, b))
-    } catch (g) {
-      c.push("[exception trying to get caller]\n")
+      values.push(formatCallerChain(callback.caller, seen));
+    } catch (caughtError) {
+      values.push("[exception trying to get caller]\n");
     }
-  } else a ? c.push("[...long stack...]") : c.push("[end]");
-  return c.join("")
+  } else callback ? values.push("[...long stack...]") : values.push("[end]");
+  return values.join("");
 }
-
-function Ff(a) {
-  if (Lf[a]) return Lf[a];
-  a = String(a);
-  if (!Lf[a]) {
-    var b = /function\s+([^\(]+)/m.exec(a);
-    Lf[a] = b ? b[1] : "[Anonymous]"
+function getFunctionName(callback) {
+  if (functionNameCache[callback]) return functionNameCache[callback];
+  callback = String(callback);
+  if (!functionNameCache[callback]) {
+    var intermediate = /function\s+([^\(]+)/m.exec(callback);
+    functionNameCache[callback] = intermediate ? intermediate[1] : "[Anonymous]";
   }
-  return Lf[a]
+  return functionNameCache[callback];
 }
-var Lf = {};
-
-function Mf(a, b) {
-  this.name = a;
-  this.value = b
+var functionNameCache = {};
+function LogLevel(name, value) {
+  this.name = name;
+  this.value = value;
 }
-Mf.prototype.toString = p("name");
-var Nf = new Mf("SEVERE", 1E3),
-  Of = new Mf("WARNING", 900),
-  Pf = new Mf("CONFIG", 700);
-
-function Qf() {
-  this.clear()
+LogLevel.prototype.toString = createPropertyGetter("name");
+var SEVERE_LOG_LEVEL = new LogLevel("SEVERE", 1e3),
+  WARNING_LOG_LEVEL = new LogLevel("WARNING", 900),
+  CONFIG_LOG_LEVEL = new LogLevel("CONFIG", 700);
+function LogBuffer() {
+  this.clear();
 }
-var Rf;
-
-function Sf(a) {
-  var b = Tf(),
-    c = b.j;
-  if (c[0]) {
-    var d = b.l;
-    b = b.o ? d : -1;
-    do b = (b + 1) % 0, a(c[b]); while (b !== d)
+var logBufferInstance;
+function forEachBufferedLog(callback) {
+  var logBuffer = getLogBuffer(),
+    intermediate = logBuffer.j;
+  if (intermediate[0]) {
+    var intermediate2 = logBuffer.l;
+    logBuffer = logBuffer.o ? intermediate2 : -1;
+    do {
+      logBuffer = (logBuffer + 1) % 0;
+      callback(intermediate[logBuffer]);
+    } while (logBuffer !== intermediate2);
   }
 }
-Qf.prototype.clear = function() {
+LogBuffer.prototype.clear = function () {
   this.j = [];
   this.l = -1;
-  this.o = !1
+  this.o = false;
 };
-
-function Tf() {
-  Rf || (Rf = new Qf);
-  return Rf
-};
-
-function Uf(a, b, c, d, e, f, g) {
-  var h = "";
-  a && (h += a + ":");
-  c && (h += "//", b && (h += b + "@"), h += c, d && (h += ":" + d));
-  e && (h += e);
-  f && (h += "?" + f);
-  g && (h += "#" + g);
-  return h
+function getLogBuffer() {
+  logBufferInstance || (logBufferInstance = new LogBuffer());
+  return logBufferInstance;
 }
-var Vf = RegExp(
-  "^(?:([^:/?#.]+):)?(?://(?:([^\\\\/?#]*)@)?([^\\\\/?#]*?)(?::([0-9]+))?(?=[\\\\/?#]|$))?([^?#]+)?(?:\\?([^#]*))?(?:#([\\s\\S]*))?$"
-  );
-
-function Wf(a, b) {
-  if (a) {
-    a = a.split("&");
-    for (var c = 0; c < a.length; c++) {
-      var d = a[c].indexOf("="),
-        e = null;
-      if (d >= 0) {
-        var f = a[c].substring(0, d);
-        e = a[c].substring(d + 1)
-      } else f = a[c];
-      b(f, e ? decodeURIComponent(e.replace(/\+/g, " ")) : "")
+/**
+ * URL 编解码工具：保留重复参数、编码和 fragment 行为。
+ */
+function buildUrl(scheme, userInfo, host, port, path, query, fragment) {
+  var url = "";
+  scheme && (url += scheme + ":");
+  host &&
+    ((url += "//"),
+    userInfo && (url += userInfo + "@"),
+    (url += host),
+    port && (url += ":" + port));
+  path && (url += path);
+  query && (url += "?" + query);
+  fragment && (url += "#" + fragment);
+  return url;
+}
+var urlPartsPattern = RegExp(
+  "^(?:([^:/?#.]+):)?(?://(?:([^\\\\/?#]*)@)?([^\\\\/?#]*?)(?::([0-9]+))?(?=[\\\\/?#]|$))?([^?#]+)?(?:\\?([^#]*))?(?:#([\\s\\S]*))?$",
+);
+function forEachQueryParameter(query, callback) {
+  if (query) {
+    query = query.split("&");
+    for (var index = 0; index < query.length; index++) {
+      var equalsIndex = query[index].indexOf("="),
+        encodedValue = null;
+      if (equalsIndex >= 0) {
+        var encodedKey = query[index].substring(0, equalsIndex);
+        encodedValue = query[index].substring(equalsIndex + 1);
+      } else encodedKey = query[index];
+      callback(
+        encodedKey,
+        encodedValue ? decodeURIComponent(encodedValue.replace(/\+/g, " ")) : "",
+      );
     }
   }
 }
-
-function Xf(a, b) {
-  if (!b) return a;
-  var c = a.indexOf("#");
-  c < 0 && (c = a.length);
-  var d = a.indexOf("?");
-  if (d < 0 || d > c) {
-    d = c;
-    var e = ""
-  } else e = a.substring(d + 1, c);
-  a = [a.slice(0, d), e, a.slice(c)];
-  c = a[1];
-  a[1] = b ? c ? c + "&" + b : b : c;
-  return a[0] + (a[1] ? "?" + a[1] : "") + a[2]
+function appendEncodedQuery(url, query) {
+  if (!query) return url;
+  var fragmentIndex = url.indexOf("#");
+  fragmentIndex < 0 && (fragmentIndex = url.length);
+  var queryIndex = url.indexOf("?");
+  if (queryIndex < 0 || queryIndex > fragmentIndex) {
+    queryIndex = fragmentIndex;
+    var existingQuery = "";
+  } else existingQuery = url.substring(queryIndex + 1, fragmentIndex);
+  url = [url.slice(0, queryIndex), existingQuery, url.slice(fragmentIndex)];
+  fragmentIndex = url[1];
+  url[1] = query ? (fragmentIndex ? fragmentIndex + "&" + query : query) : fragmentIndex;
+  return url[0] + (url[1] ? "?" + url[1] : "") + url[2];
 }
-
-function Yf(a, b, c) {
-  if (Array.isArray(b))
-    for (var d = 0; d < b.length; d++) Yf(a, String(b[d]), c);
-  else b != null && c.push(a + (b === "" ? "" : "=" + encodeURIComponent(String(b))))
+function appendQueryValue(key, value, output) {
+  if (Array.isArray(value))
+    for (var index = 0; index < value.length; index++)
+      appendQueryValue(key, String(value[index]), output);
+  else
+    value != null &&
+      output.push(key + (value === "" ? "" : "=" + encodeURIComponent(String(value))));
 }
-
-function Zf(a, b) {
-  var c = [];
-  for (b = b || 0; b < a.length; b += 2) Yf(a[b], a[b + 1], c);
-  return c.join("&")
+function encodeQueryPairs(pairs, startIndex) {
+  var values = [];
+  for (startIndex = startIndex || 0; startIndex < pairs.length; startIndex += 2)
+    appendQueryValue(pairs[startIndex], pairs[startIndex + 1], values);
+  return values.join("&");
 }
-
-function $f(a) {
-  var b = [],
-    c;
-  for (c in a) Yf(c, a[c], b);
-  return b.join("&")
+function encodeQueryObject(parameters) {
+  var values = [],
+    intermediate;
+  for (intermediate in parameters) appendQueryValue(intermediate, parameters[intermediate], values);
+  return values.join("&");
 }
-
-function W(a, b) {
-  var c = arguments.length == 2 ? Zf(arguments[1], 0) : Zf(arguments, 1);
-  return Xf(a, c)
+function appendQueryParameters(url, parameters) {
+  var intermediate =
+    arguments.length == 2 ? encodeQueryPairs(arguments[1], 0) : encodeQueryPairs(arguments, 1);
+  return appendEncodedQuery(url, intermediate);
+}
+var sanitizeReportUrl;
+sanitizeReportUrl = function (value) {
+  if (!value) return value;
+  value = (typeof value === "object" ? value.href : value).match(urlPartsPattern);
+  var intermediate = value[1];
+  return intermediate !== "http" && intermediate !== "https"
+    ? intermediate || ""
+    : buildUrl(value[1], "", value[3], value[4], value[5], value[6], "");
 };
-var ag;
-ag = function(a) {
-  if (!a) return a;
-  a = (typeof a === "object" ? a.href : a).match(Vf);
-  var b = a[1];
-  return b !== "http" && b !== "https" ? b || "" : Uf(a[1], "", a[3], a[4], a[5], a[6], "")
-};
-
-function bg(a) {
-  a && typeof a.dispose == "function" && a.dispose()
-};
-
-function cg(a) {
-  for (var b = 0, c = arguments.length; b < c; ++b) {
-    var d = arguments[b];
-    Ia(d) ? cg.apply(null, d) : bg(d)
+function disposeIfPossible(disposable) {
+  disposable && typeof disposable.dispose == "function" && disposable.dispose();
+}
+function disposeAll(disposables) {
+  for (var index = 0, length = arguments.length; index < length; ++index) {
+    var intermediate = arguments[index];
+    isArrayLike(intermediate)
+      ? disposeAll.apply(null, intermediate)
+      : disposeIfPossible(intermediate);
   }
-};
-
-function X() {
+}
+/**
+ * 生命周期与微任务：析构钩子、对象池、回调队列、AsyncContext 传播。
+ * 保留字段 ABI：I=已销毁，G=析构回调队列，N=析构钩子，na=已销毁查询。
+ */
+function Disposable() {
   this.I = this.I;
-  this.G = this.G
+  this.G = this.G;
 }
-X.prototype.I = !1;
-X.prototype.na = p("I");
-X.prototype.dispose = function() {
-  this.I || (this.I = !0, this.N())
+Disposable.prototype.I = false;
+Disposable.prototype.na = createPropertyGetter("I");
+Disposable.prototype.dispose = function () {
+  this.I || ((this.I = true), this.N());
 };
-X.prototype[Symbol.dispose] = function() {
-  this.dispose()
+Disposable.prototype[Symbol.dispose] = function () {
+  this.dispose();
 };
-
-function dg(a, b) {
-  b = Pa(bg, b);
-  a.I ? b() : (a.G || (a.G = []), a.G.push(b))
+/**
+ * 已销毁的 owner 立即释放 child，否则按原顺序登记析构回调。N 是保留的内部析构 ABI。
+ */
+function ownDisposable(owner, child) {
+  child = partialApply(disposeIfPossible, child);
+  owner.I ? child() : (owner.G || (owner.G = []), owner.G.push(child));
 }
-X.prototype.N = function() {
-  if (this.G)
-    for (; this.G.length;) this.G.shift()()
+Disposable.prototype.N = function () {
+  if (this.G) for (; this.G.length; ) this.G.shift()();
 };
-var eg = typeof AsyncContext !== "undefined" && typeof AsyncContext.Snapshot === "function" ? function(a) {
-  return a && AsyncContext.Snapshot.wrap(a)
-} : aa();
-
-function fg(a, b) {
-  this.o = a;
-  this.v = b;
+var wrapAsyncContext =
+  typeof AsyncContext !== "undefined" && typeof AsyncContext.Snapshot === "function"
+    ? function (value) {
+        return value && AsyncContext.Snapshot.wrap(value);
+      }
+    : createIdentityFunction();
+/**
+ * 保留字段 ABI：o=创建函数，v=重置函数，j=空闲链表，l=空闲数量。
+ */
+function ObjectPool(create, reset) {
+  this.o = create;
+  this.v = reset;
   this.l = 0;
-  this.j = null
+  this.j = null;
 }
-fg.prototype.get = function() {
+ObjectPool.prototype.get = function () {
   if (this.l > 0) {
     this.l--;
-    var a = this.j;
-    this.j = a.next;
-    a.next = null
-  } else a = this.o();
-  return a
+    var iterator = this.j;
+    this.j = iterator.next;
+    iterator.next = null;
+  } else iterator = this.o();
+  return iterator;
 };
-
-function gg(a, b) {
-  a.v(b);
-  a.l < 100 && (a.l++, b.next = a.j, a.j = b)
-};
-var hg = [],
-  ig = [],
-  jg = !1;
-
-function kg(a) {
-  hg[hg.length] = a;
-  if (jg)
-    for (var b = 0; b < ig.length; b++) a(B(ig[b].j, ig[b]))
-};
-kg(n());
-
-function lg() {
-  this.l = this.j = null
+function releaseToPool(pool, item) {
+  pool.v(item);
+  pool.l < 100 && (pool.l++, (item.next = pool.j), (pool.j = item));
 }
-lg.prototype.add = function(a, b) {
-  var c = mg.get();
-  c.set(a, b);
-  this.l ? this.l.next = c : this.j = c;
-  this.l = c
-};
-lg.prototype.remove = function() {
-  var a = null;
-  this.j && (a = this.j, this.j = this.j.next, this.j || (this.l = null), a.next = null);
-  return a
-};
-var mg = new fg(function() {
-  return new ng
-}, function(a) {
-  return a.reset()
-});
-
-function ng() {
-  this.next = this.scope = this.j = null
+var entryPointCallbacks = [],
+  entryPointMonitors = [],
+  entryPointsMonitored = false;
+function registerEntryPoint(callback) {
+  entryPointCallbacks[entryPointCallbacks.length] = callback;
+  if (entryPointsMonitored)
+    for (var index = 0; index < entryPointMonitors.length; index++)
+      callback(bindFunction(entryPointMonitors[index].j, entryPointMonitors[index]));
 }
-ng.prototype.set = function(a, b) {
-  this.j = a;
-  this.scope = b;
-  this.next = null
-};
-ng.prototype.reset = function() {
-  this.next = this.scope = this.j = null
-};
-var og, pg = !1,
-  qg = new lg;
-
-function rg(a, b) {
-  og || sg();
-  pg || (og(), pg = !0);
-  qg.add(a, b)
+registerEntryPoint(createNoopFunction());
+function CallbackQueue() {
+  this.l = this.j = null;
 }
-
-function sg() {
-  var a = Promise.resolve(void 0);
-  og = function() {
-    a.then(tg)
-  }
+CallbackQueue.prototype.add = function (value, other) {
+  var value2 = callbackNodePool.get();
+  value2.set(value, other);
+  this.l ? (this.l.next = value2) : (this.j = value2);
+  this.l = value2;
+};
+CallbackQueue.prototype.remove = function () {
+  var iterator = null;
+  this.j &&
+    ((iterator = this.j),
+    (this.j = this.j.next),
+    this.j || (this.l = null),
+    (iterator.next = null));
+  return iterator;
+};
+var callbackNodePool = new ObjectPool(
+  function () {
+    return new CallbackQueueNode();
+  },
+  function (value) {
+    return value.reset();
+  },
+);
+function CallbackQueueNode() {
+  this.next = this.scope = this.j = null;
 }
-
-function tg() {
-  for (var a; a = qg.remove();) {
+CallbackQueueNode.prototype.set = function (value, other) {
+  this.j = value;
+  this.scope = other;
+  this.next = null;
+};
+CallbackQueueNode.prototype.reset = function () {
+  this.next = this.scope = this.j = null;
+};
+var scheduleMicrotaskFlush,
+  microtaskFlushScheduled = false,
+  microtaskQueue = new CallbackQueue();
+function enqueueMicrotask(callback, receiver) {
+  scheduleMicrotaskFlush || initializeMicrotaskScheduler();
+  microtaskFlushScheduled || (scheduleMicrotaskFlush(), (microtaskFlushScheduled = true));
+  microtaskQueue.add(callback, receiver);
+}
+function initializeMicrotaskScheduler() {
+  var intermediate = Promise.resolve(void 0);
+  scheduleMicrotaskFlush = function () {
+    intermediate.then(flushMicrotasks);
+  };
+}
+function flushMicrotasks() {
+  for (var intermediate; (intermediate = microtaskQueue.remove()); ) {
     try {
-      a.j.call(a.scope)
-    } catch (b) {
-      Sa(b)
+      intermediate.j.call(intermediate.scope);
+    } catch (caughtError) {
+      throwAsynchronously(caughtError);
     }
-    gg(mg, a)
+    releaseToPool(callbackNodePool, intermediate);
   }
-  pg = !1
-};
-
-function ug() {};
-
-function vg(a) {
-  if (!a) return !1;
+  microtaskFlushScheduled = false;
+}
+function internalPromiseExecutor() {}
+function isClosureThenable(value) {
+  if (!value) return false;
   try {
-    return !!a.$goog_Thenable
-  } catch (b) {
-    return !1
+    return !!value.$goog_Thenable;
+  } catch (caughtError) {
+    return false;
   }
-};
-
-function wg(a) {
+}
+/**
+ * Closure Promise：thenable 同化、取消传播、回调对象池和未处理拒绝。不是原生 Promise 的简单别名。
+ * 保留字段 ABI：j=状态(0 pending/1 同化中/2 fulfilled/3 rejected)，I=结果，o=父链，l/v=回调队首/队尾，G=回调已排程，A=未处理拒绝。
+ */
+function LegacyPromise(executor) {
   this.j = 0;
   this.I = void 0;
   this.v = this.l = this.o = null;
-  this.A = this.G = !1;
-  if (a != ug) try {
-    var b = this;
-    a.call(void 0, function(c) {
-      xg(b, 2, c)
-    }, function(c) {
-      xg(b, 3, c)
-    })
-  } catch (c) {
-    xg(this, 3, c)
-  }
+  this.A = this.G = false;
+  if (executor != internalPromiseExecutor)
+    try {
+      var promise = this;
+      executor.call(
+        void 0,
+        function (settledValue) {
+          settlePromise(promise, 2, settledValue);
+        },
+        function (settledValue) {
+          settlePromise(promise, 3, settledValue);
+        },
+      );
+    } catch (caughtError) {
+      settlePromise(this, 3, caughtError);
+    }
 }
-
-function yg() {
+function PromiseCallbackNode() {
   this.next = this.o = this.l = this.v = this.j = null;
-  this.A = !1
+  this.A = false;
 }
-yg.prototype.reset = function() {
+PromiseCallbackNode.prototype.reset = function () {
   this.o = this.l = this.v = this.j = null;
-  this.A = !1
+  this.A = false;
 };
-var zg = new fg(function() {
-  return new yg
-}, function(a) {
-  a.reset()
-});
-
-function Ag(a, b, c) {
-  var d = zg.get();
-  d.v = a;
-  d.l = b;
-  d.o = c;
-  return d
+var promiseCallbackPool = new ObjectPool(
+  function () {
+    return new PromiseCallbackNode();
+  },
+  function (value) {
+    value.reset();
+  },
+);
+function allocatePromiseCallback(onFulfilled, onRejected, receiver) {
+  var callbackNode = promiseCallbackPool.get();
+  callbackNode.v = onFulfilled;
+  callbackNode.l = onRejected;
+  callbackNode.o = receiver;
+  return callbackNode;
 }
 
-function Bg() {
-  var a = new wg(ug);
-  xg(a, 2);
-  return a
+/**
+ * 这个 offscreen 特化版本只产生已兑现 undefined 的 Promise；传入参数也不作为返回值。
+ */
+function resolvedLegacyPromise() {
+  var legacyPromise = new LegacyPromise(internalPromiseExecutor);
+  settlePromise(legacyPromise, 2);
+  return legacyPromise;
 }
-
-function Cg(a, b, c) {
-  Dg(a, b, c, null) || rg(Pa(b, a))
+function resolveThenable(value, onFulfilled, onRejected) {
+  assimilateThenable(value, onFulfilled, onRejected, null) ||
+    enqueueMicrotask(partialApply(onFulfilled, value));
 }
-
-function Eg(a) {
-  return new wg(function(b, c) {
-    a.length || b(void 0);
-    for (var d, e = 0; e < a.length; e++) d = a[e], Cg(d, b, c)
-  })
-}
-
-function Fg(a) {
-  return new wg(function(b) {
-    var c = a.length,
-      d = [];
-    if (c)
-      for (var e = function(h, k, l) {
-          c--;
-          d[h] = k ? {
-            kb: !0,
-            value: l
-          } : {
-            kb: !1,
-            reason: l
-          };
-          c == 0 && b(d)
-        }, f, g = 0; g < a.length; g++) f = a[g], Cg(f, Pa(e, g, !0), Pa(e, g, !1));
-    else b(d)
-  })
-}
-
-function Gg() {
-  var a, b, c = new wg(function(d, e) {
-    a = d;
-    b = e
+/**
+ * 编译产物实际是竞速：任一输入兑现即兑现，任一拒绝即拒绝；不是 Promise.all。空输入兑现 undefined。
+ */
+function raceLegacyPromises(values) {
+  return new LegacyPromise(function (resolve, reject) {
+    values.length || resolve(void 0);
+    for (var input, index = 0; index < values.length; index++) {
+      input = values[index];
+      resolveThenable(input, resolve, reject);
+    }
   });
-  return new Hg(c, a, b)
 }
-wg.prototype.then = function(a, b, c) {
-  return Ig(this, eg(typeof a === "function" ? a : null), eg(typeof b === "function" ? b : null), c)
+/**
+ * 等待全部输入结束，输出原有的成功标记/value 或失败标记/reason 数组。
+ */
+function settleAllLegacyPromises(values) {
+  return new LegacyPromise(function (resolve) {
+    var remaining = values.length,
+      results = [];
+    if (remaining)
+      for (
+        var callback = function (value, other, options) {
+            remaining--;
+            results[value] = other ? { kb: true, value: options } : { kb: false, reason: options };
+            remaining == 0 && resolve(results);
+          },
+          intermediate,
+          index = 0;
+        index < values.length;
+        index++
+      ) {
+        intermediate = values[index];
+        resolveThenable(
+          intermediate,
+          partialApply(callback, index, true),
+          partialApply(callback, index, false),
+        );
+      }
+    else resolve(results);
+  });
+}
+/**
+ * 返回自定义 Promise 和它的 resolve/reject，保留原微任务及取消语义。
+ */
+function createDeferred() {
+  var resolve,
+    reject,
+    promise = new LegacyPromise(function (resolvePromise, rejectPromise) {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+  return new PromiseResolver(promise, resolve, reject);
+}
+LegacyPromise.prototype.then = function (onFulfilled, onRejected, receiver) {
+  return chainPromise(
+    this,
+    wrapAsyncContext(typeof onFulfilled === "function" ? onFulfilled : null),
+    wrapAsyncContext(typeof onRejected === "function" ? onRejected : null),
+    receiver,
+  );
 };
-wg.prototype.$goog_Thenable = !0;
-q = wg.prototype;
-q.ta = function(a, b) {
-  return Ig(this, null, eg(a), b)
+LegacyPromise.prototype.$goog_Thenable = true;
+prototypeAlias = LegacyPromise.prototype;
+/** catch 的隐藏页编译别名；不能只改属性名而遗漏业务调用。 */
+prototypeAlias.ta = function (onRejected, receiver) {
+  return chainPromise(this, null, wrapAsyncContext(onRejected), receiver);
 };
-q.Ra = wg.prototype.ta;
-q.cancel = function(a) {
+prototypeAlias.Ra = LegacyPromise.prototype.ta;
+prototypeAlias.cancel = function (reason) {
   if (this.j == 0) {
-    var b = new Jg(a);
-    rg(function() {
-      Kg(this, b)
-    }, this)
+    var promiseCancellationError = new PromiseCancellationError(reason);
+    enqueueMicrotask(function () {
+      cancelPromise(this, promiseCancellationError);
+    }, this);
   }
 };
 
-function Kg(a, b) {
-  if (a.j == 0)
-    if (a.o) {
-      var c = a.o;
-      if (c.l) {
-        for (var d = 0, e = null, f = null, g = c.l; g && (g.A || (d++, g.j == a && (e = g), !(e && d >
-          1))); g = g.next) e || (f = g);
-        e && (c.j == 0 && d == 1 ? Kg(c, b) : (f ? (d = f, d.next == c.v && (c.v = d), d.next = d.next.next) :
-          Lg(c), Mg(c, e, 3, b)))
+/**
+ * 取消向父 Promise 传播受有效订阅数量约束，不能直接把父链全部拒绝。
+ */
+function cancelPromise(promise, error) {
+  if (promise.j == 0)
+    if (promise.o) {
+      var parentPromise = promise.o;
+      if (parentPromise.l) {
+        for (
+          var subscriberCountOrPreviousNode = 0,
+            cancelledSubscription = null,
+            previousNode = null,
+            subscription = parentPromise.l;
+          subscription &&
+          (subscription.A ||
+            (subscriberCountOrPreviousNode++,
+            subscription.j == promise && (cancelledSubscription = subscription),
+            !(cancelledSubscription && subscriberCountOrPreviousNode > 1)));
+          subscription = subscription.next
+        )
+          cancelledSubscription || (previousNode = subscription);
+        cancelledSubscription &&
+          (parentPromise.j == 0 && subscriberCountOrPreviousNode == 1
+            ? cancelPromise(parentPromise, error)
+            : (previousNode
+                ? ((subscriberCountOrPreviousNode = previousNode),
+                  subscriberCountOrPreviousNode.next == parentPromise.v &&
+                    (parentPromise.v = subscriberCountOrPreviousNode),
+                  (subscriberCountOrPreviousNode.next = subscriberCountOrPreviousNode.next.next))
+                : shiftPromiseCallback(parentPromise),
+              executePromiseCallback(parentPromise, cancelledSubscription, 3, error)));
       }
-      a.o = null
-    } else xg(a, 3, b)
+      promise.o = null;
+    } else settlePromise(promise, 3, error);
 }
-
-function Ng(a, b) {
-  a.l || a.j != 2 && a.j != 3 || Og(a);
-  a.v ? a.v.next = b : a.l = b;
-  a.v = b
+function appendPromiseCallback(promise, callback) {
+  promise.l || (promise.j != 2 && promise.j != 3) || schedulePromiseCallbacks(promise);
+  promise.v ? (promise.v.next = callback) : (promise.l = callback);
+  promise.v = callback;
 }
-
-function Ig(a, b, c, d) {
-  var e = Ag(null, null, null);
-  e.j = new wg(function(f, g) {
-    e.v = b ? function(h) {
-      try {
-        var k = b.call(d, h);
-        f(k)
-      } catch (l) {
-        g(l)
-      }
-    } : f;
-    e.l = c ? function(h) {
-      try {
-        var k = c.call(d, h);
-        k === void 0 && h instanceof Jg ? g(h) : f(k)
-      } catch (l) {
-        g(l)
-      }
-    } : g
+function chainPromise(promise, onFulfilled, onRejected, receiver) {
+  var callbackNode = allocatePromiseCallback(null, null, null);
+  callbackNode.j = new LegacyPromise(function (resolveChild, rejectChild) {
+    callbackNode.v = onFulfilled
+      ? function (settledValue) {
+          try {
+            var callbackResult = onFulfilled.call(receiver, settledValue);
+            resolveChild(callbackResult);
+          } catch (caughtError) {
+            rejectChild(caughtError);
+          }
+        }
+      : resolveChild;
+    callbackNode.l = onRejected
+      ? function (settledValue) {
+          try {
+            var callbackResult = onRejected.call(receiver, settledValue);
+            callbackResult === void 0 && settledValue instanceof PromiseCancellationError
+              ? rejectChild(settledValue)
+              : resolveChild(callbackResult);
+          } catch (caughtError) {
+            rejectChild(caughtError);
+          }
+        }
+      : rejectChild;
   });
-  e.j.o = a;
-  Ng(a, e);
-  return e.j
+  callbackNode.j.o = promise;
+  appendPromiseCallback(promise, callbackNode);
+  return callbackNode.j;
 }
-q.zb = function(a) {
+prototypeAlias.zb = function (value) {
   this.j = 0;
-  xg(this, 2, a)
+  settlePromise(this, 2, value);
 };
-q.Ab = function(a) {
+prototypeAlias.Ab = function (value) {
   this.j = 0;
-  xg(this, 3, a)
+  settlePromise(this, 3, value);
 };
 
-function xg(a, b, c) {
-  a.j == 0 && (a === c && (b = 3, c = new TypeError("Promise cannot resolve to itself")), a.j = 1, Dg(c, a.zb,
-    a.Ab, a) || (a.I = c, a.j = b, a.o = null, Og(a), b != 3 || c instanceof Jg || Pg(a, c)))
+/**
+ * 只允许 pending 状态推进；拒绝自解析，再同化 thenable，最后排队执行回调。
+ */
+function settlePromise(promise, state, value) {
+  promise.j == 0 &&
+    (promise === value &&
+      ((state = 3), (value = new TypeError("Promise cannot resolve to itself"))),
+    (promise.j = 1),
+    assimilateThenable(value, promise.zb, promise.Ab, promise) ||
+      ((promise.I = value),
+      (promise.j = state),
+      (promise.o = null),
+      schedulePromiseCallbacks(promise),
+      state != 3 ||
+        value instanceof PromiseCancellationError ||
+        scheduleUnhandledRejection(promise, value)));
+}
+function assimilateThenable(value, onFulfilled, onRejected, receiver) {
+  if (value instanceof LegacyPromise)
+    return (
+      appendPromiseCallback(
+        value,
+        allocatePromiseCallback(
+          onFulfilled || internalPromiseExecutor,
+          onRejected || null,
+          receiver,
+        ),
+      ),
+      true
+    );
+  if (isClosureThenable(value)) return (value.then(onFulfilled, onRejected, receiver), true);
+  if (isObjectLike(value))
+    try {
+      var then = value.then;
+      if (typeof then === "function")
+        return (callThenSafely(value, then, onFulfilled, onRejected, receiver), true);
+    } catch (caughtError) {
+      return (onRejected.call(receiver, caughtError), true);
+    }
+  return false;
 }
 
-function Dg(a, b, c, d) {
-  if (a instanceof wg) return Ng(a, Ag(b || ug, c || null, d)), !0;
-  if (vg(a)) return a.then(b, c, d), !0;
-  if (Ka(a)) try {
-    var e = a.then;
-    if (typeof e === "function") return Qg(a, e, b, c, d), !0
-  } catch (f) {
-    return c.call(d, f), !0
+/**
+ * 恶意/异常 thenable 可能多次调用或抛错；共享完成标记保证只采纳第一次结果。
+ */
+function callThenSafely(thenable, thenMethod, onFulfilled, onRejected, receiver) {
+  function rejectOnce(settledValue) {
+    completed || ((completed = true), onRejected.call(receiver, settledValue));
   }
-  return !1
-}
-
-function Qg(a, b, c, d, e) {
-  function f(k) {
-    h || (h = !0, d.call(e, k))
+  function resolveOnce(settledValue) {
+    completed || ((completed = true), onFulfilled.call(receiver, settledValue));
   }
-
-  function g(k) {
-    h || (h = !0, c.call(e, k))
-  }
-  var h = !1;
+  var completed = false;
   try {
-    b.call(a, g, f)
-  } catch (k) {
-    f(k)
+    thenMethod.call(thenable, resolveOnce, rejectOnce);
+  } catch (caughtError) {
+    rejectOnce(caughtError);
   }
 }
-
-function Og(a) {
-  a.G || (a.G = !0, rg(a.jb, a))
+function schedulePromiseCallbacks(promise) {
+  promise.G || ((promise.G = true), enqueueMicrotask(promise.jb, promise));
 }
-
-function Lg(a) {
-  var b = null;
-  a.l && (b = a.l, a.l = b.next, b.next = null);
-  a.l || (a.v = null);
-  return b
+function shiftPromiseCallback(promise) {
+  var callbackNode = null;
+  promise.l &&
+    ((callbackNode = promise.l), (promise.l = callbackNode.next), (callbackNode.next = null));
+  promise.l || (promise.v = null);
+  return callbackNode;
 }
-q.jb = function() {
-  for (var a; a = Lg(this);) Mg(this, a, this.j, this.I);
-  this.G = !1
+prototypeAlias.jb = function () {
+  for (var intermediate; (intermediate = shiftPromiseCallback(this)); )
+    executePromiseCallback(this, intermediate, this.j, this.I);
+  this.G = false;
 };
-
-function Mg(a, b, c, d) {
-  if (c == 3 && b.l && !b.A)
-    for (; a && a.A; a = a.o) a.A = !1;
-  if (b.j) b.j.o = null, Rg(b, c, d);
-  else try {
-    b.A ? b.v.call(b.o) : Rg(b, c, d)
-  } catch (e) {
-    Sg.call(null, e)
-  }
-  gg(zg, b)
+function executePromiseCallback(promise, callback, state, value) {
+  if (state == 3 && callback.l && !callback.A)
+    for (; promise && promise.A; promise = promise.o) promise.A = false;
+  if (callback.j) {
+    callback.j.o = null;
+    invokePromiseCallback(callback, state, value);
+  } else
+    try {
+      callback.A ? callback.v.call(callback.o) : invokePromiseCallback(callback, state, value);
+    } catch (caughtError) {
+      unhandledRejectionHandler.call(null, caughtError);
+    }
+  releaseToPool(promiseCallbackPool, callback);
 }
-
-function Rg(a, b, c) {
-  b == 2 ? a.v.call(a.o, c) : a.l && a.l.call(a.o, c)
+function invokePromiseCallback(callback, state, value) {
+  state == 2
+    ? callback.v.call(callback.o, value)
+    : callback.l && callback.l.call(callback.o, value);
 }
-
-function Pg(a, b) {
-  a.A = !0;
-  rg(function() {
-    a.A && Sg.call(null, b)
-  })
+function scheduleUnhandledRejection(promise, error) {
+  promise.A = true;
+  enqueueMicrotask(function () {
+    promise.A && unhandledRejectionHandler.call(null, error);
+  });
 }
-var Sg = Sa;
-
-function Jg(a) {
-  D.call(this, a);
-  this.j = !1
+var unhandledRejectionHandler = throwAsynchronously;
+function PromiseCancellationError(message) {
+  ClosureError.call(this, message);
+  this.j = false;
 }
-C(Jg, D);
-Jg.prototype.name = "cancel";
-
-function Hg(a, b, c) {
-  this.promise = a;
-  this.resolve = b;
-  this.reject = c
-};
-/*
+inheritClosureClass(PromiseCancellationError, ClosureError);
+PromiseCancellationError.prototype.name = "cancel";
+function PromiseResolver(promise, resolve, reject) {
+  this.promise = promise;
+  this.resolve = resolve;
+  this.reject = reject;
+} /*
 
  Copyright 2005, 2007 Bob Ippolito. All Rights Reserved.
  Copyright The Closure Library Authors.
  SPDX-License-Identifier: MIT
 */
-function Tg() {
+
+/**
+ * 旧 Deferred：回调/错误链和取消；与上面的 Promise 是两套独立状态机。
+ */
+function LegacyDeferred() {
   this.A = [];
-  this.v = this.o = !1;
+  this.v = this.o = false;
   this.l = void 0;
-  this.F = this.L = this.I = !1;
+  this.F = this.L = this.I = false;
   this.G = 0;
   this.j = null;
-  this.B = 0
+  this.B = 0;
 }
-Tg.prototype.cancel = function(a) {
-  if (this.o) this.l instanceof Tg && this.l.cancel();
+LegacyDeferred.prototype.cancel = function (value) {
+  if (this.o) this.l instanceof LegacyDeferred && this.l.cancel();
   else {
     if (this.j) {
-      var b = this.j;
+      var intermediate = this.j;
       delete this.j;
-      a ? b.cancel(a) : (b.B--, b.B <= 0 && b.cancel())
+      value
+        ? intermediate.cancel(value)
+        : (intermediate.B--, intermediate.B <= 0 && intermediate.cancel());
     }
-    this.F = !0;
-    this.o || (a = new Ug(this), Vg(this), Wg(this, !1, a))
+    this.F = true;
+    this.o ||
+      ((value = new DeferredCanceledError(this)),
+      assertDeferredNotFired(this),
+      settleDeferred(this, false, value));
   }
 };
-Tg.prototype.J = function(a, b) {
-  this.I = !1;
-  Wg(this, a, b)
+LegacyDeferred.prototype.J = function (value, other) {
+  this.I = false;
+  settleDeferred(this, value, other);
 };
-
-function Wg(a, b, c) {
-  a.o = !0;
-  a.l = c;
-  a.v = !b;
-  Xg(a)
+function settleDeferred(deferred, succeeded, value) {
+  deferred.o = true;
+  deferred.l = value;
+  deferred.v = !succeeded;
+  runDeferredCallbacks(deferred);
 }
-
-function Vg(a) {
-  if (a.o) {
-    if (!a.F) throw new Yg(a);
-    a.F = !1
+function assertDeferredNotFired(deferred) {
+  if (deferred.o) {
+    if (!deferred.F) throw new DeferredAlreadyCalledError(deferred);
+    deferred.F = false;
   }
 }
-
-function Zg(a) {
-  throw a;
+function rethrowError(error) {
+  throw error;
 }
-
-function $g(a, b, c) {
-  return ah(a, b, null, c)
+function addDeferredCallback(deferred, callback, receiver) {
+  return addDeferredCallbacks(deferred, callback, null, receiver);
 }
-
-function bh(a, b, c) {
-  ah(a, b, function(d) {
-    var e = b.call(this, d);
-    if (e === void 0) throw d;
-    return e
-  }, c)
+function addDeferredBoth(deferred, callback, receiver) {
+  addDeferredCallbacks(
+    deferred,
+    callback,
+    function (value) {
+      var intermediate = callback.call(this, value);
+      if (intermediate === void 0) throw value;
+      return intermediate;
+    },
+    receiver,
+  );
 }
-
-function ah(a, b, c, d) {
-  var e = a.o;
-  e || (b === c ? b = c = eg(b) : (b = eg(b), c = eg(c)));
-  a.A.push([b, c, d]);
-  e && Xg(a);
-  return a
+function addDeferredCallbacks(deferred, onSuccess, onError, receiver) {
+  var intermediate = deferred.o;
+  intermediate ||
+    (onSuccess === onError
+      ? (onSuccess = onError = wrapAsyncContext(onSuccess))
+      : ((onSuccess = wrapAsyncContext(onSuccess)), (onError = wrapAsyncContext(onError))));
+  deferred.A.push([onSuccess, onError, receiver]);
+  intermediate && runDeferredCallbacks(deferred);
+  return deferred;
 }
-Tg.prototype.then = function(a, b, c) {
-  var d, e, f = new wg(function(g, h) {
-    e = g;
-    d = h
+LegacyDeferred.prototype.then = function (value, other, options) {
+  var callback,
+    intermediate,
+    legacyPromise = new LegacyPromise(function (value2, other2) {
+      intermediate = value2;
+      callback = other2;
+    });
+  addDeferredCallbacks(
+    this,
+    intermediate,
+    function (value2) {
+      value2 instanceof DeferredCanceledError ? legacyPromise.cancel() : callback(value2);
+      return deferredConsumedToken;
+    },
+    this,
+  );
+  return legacyPromise.then(value, other, options);
+};
+LegacyDeferred.prototype.$goog_Thenable = true;
+function hasDeferredErrback(deferred) {
+  return arraySome(deferred.A, function (value) {
+    return typeof value[1] === "function";
   });
-  ah(this, e, function(g) {
-    g instanceof Ug ? f.cancel() : d(g);
-    return ch
-  }, this);
-  return f.then(a, b, c)
-};
-Tg.prototype.$goog_Thenable = !0;
-
-function dh(a) {
-  return $a(a.A, function(b) {
-    return typeof b[1] === "function"
-  })
 }
-var ch = {};
+var deferredConsumedToken = {};
 
-function Xg(a) {
-  if (a.G && a.o && dh(a)) {
-    var b = a.G,
-      c = eh[b];
-    c && (A.clearTimeout(c.j), delete eh[b]);
-    a.G = 0
+/**
+ * 保留 Deferred 的特殊规则：回调返回 undefined 通常沿用旧值，不能等同于原生 then。
+ */
+function runDeferredCallbacks(deferred) {
+  if (deferred.G && deferred.o && hasDeferredErrback(deferred)) {
+    var intermediate = deferred.G,
+      intermediate2 = deferredUnhandledErrors[intermediate];
+    intermediate2 &&
+      (runtimeGlobal.clearTimeout(intermediate2.j), delete deferredUnhandledErrors[intermediate]);
+    deferred.G = 0;
   }
-  a.j && (a.j.B--, delete a.j);
-  b = a.l;
-  for (var d = c = !1; a.A.length && !a.I;) {
-    var e = a.A.shift(),
-      f = e[0],
-      g = e[1];
-    e = e[2];
-    if (f = a.v ? g : f) try {
-      var h = f.call(e || null, b);
-      h === ch && (h = void 0);
-      h !== void 0 && (a.v = a.v && (h == b || h instanceof Error), a.l = b = h);
-      if (vg(b) || typeof A.Promise === "function" && b instanceof A.Promise) d = !0, a.I = !0
-    } catch (k) {
-      b = k, a.v = !0, dh(a) || (c = !0)
-    }
+  deferred.j && (deferred.j.B--, delete deferred.j);
+  intermediate = deferred.l;
+  for (var intermediate3 = (intermediate2 = false); deferred.A.length && !deferred.I; ) {
+    var intermediate4 = deferred.A.shift(),
+      intermediate5 = intermediate4[0],
+      intermediate6 = intermediate4[1];
+    intermediate4 = intermediate4[2];
+    if ((intermediate5 = deferred.v ? intermediate6 : intermediate5))
+      try {
+        var intermediate7 = intermediate5.call(intermediate4 || null, intermediate);
+        intermediate7 === deferredConsumedToken && (intermediate7 = void 0);
+        intermediate7 !== void 0 &&
+          ((deferred.v =
+            deferred.v && (intermediate7 == intermediate || intermediate7 instanceof Error)),
+          (deferred.l = intermediate = intermediate7));
+        if (
+          isClosureThenable(intermediate) ||
+          (typeof runtimeGlobal.Promise === "function" &&
+            intermediate instanceof runtimeGlobal.Promise)
+        ) {
+          intermediate3 = true;
+          deferred.I = true;
+        }
+      } catch (caughtError) {
+        {
+          intermediate = caughtError;
+          deferred.v = true;
+          hasDeferredErrback(deferred) || (intermediate2 = true);
+        }
+      }
   }
-  a.l = b;
-  d && (h = B(a.J, a, !0), d = B(a.J, a, !1), b instanceof Tg ? (ah(b, h, d), b.L = !0) :
-    b.then(h, d));
-  c && (b = new fh(b), eh[b.j] = b, a.G = b.j)
+  deferred.l = intermediate;
+  intermediate3 &&
+    ((intermediate7 = bindFunction(deferred.J, deferred, true)),
+    (intermediate3 = bindFunction(deferred.J, deferred, false)),
+    intermediate instanceof LegacyDeferred
+      ? (addDeferredCallbacks(intermediate, intermediate7, intermediate3), (intermediate.L = true))
+      : intermediate.then(intermediate7, intermediate3));
+  intermediate2 &&
+    ((intermediate = new DeferredUnhandledError(intermediate)),
+    (deferredUnhandledErrors[intermediate.j] = intermediate),
+    (deferred.G = intermediate.j));
 }
-
-function gh(a) {
-  var b = new Tg;
-  Vg(b);
-  Wg(b, !0, a);
-  return b
+function resolvedDeferred(value) {
+  var legacyDeferred = new LegacyDeferred();
+  assertDeferredNotFired(legacyDeferred);
+  settleDeferred(legacyDeferred, true, value);
+  return legacyDeferred;
 }
-
-function Yg() {
-  D.call(this)
+function DeferredAlreadyCalledError() {
+  ClosureError.call(this);
 }
-C(Yg, D);
-Yg.prototype.message = "Deferred has already fired";
-Yg.prototype.name = "AlreadyCalledError";
-
-function Ug() {
-  D.call(this)
+inheritClosureClass(DeferredAlreadyCalledError, ClosureError);
+DeferredAlreadyCalledError.prototype.message = "Deferred has already fired";
+DeferredAlreadyCalledError.prototype.name = "AlreadyCalledError";
+function DeferredCanceledError() {
+  ClosureError.call(this);
 }
-C(Ug, D);
-Ug.prototype.message = "Deferred was canceled";
-Ug.prototype.name = "CanceledError";
-
-function fh(a) {
-  this.j = A.setTimeout(B(this.o, this), 0);
-  this.l = a
+inheritClosureClass(DeferredCanceledError, ClosureError);
+DeferredCanceledError.prototype.message = "Deferred was canceled";
+DeferredCanceledError.prototype.name = "CanceledError";
+function DeferredUnhandledError(error) {
+  this.j = runtimeGlobal.setTimeout(bindFunction(this.o, this), 0);
+  this.l = error;
 }
-fh.prototype.o = function() {
-  delete eh[this.j];
-  Zg(this.l)
+DeferredUnhandledError.prototype.o = function () {
+  delete deferredUnhandledErrors[this.j];
+  rethrowError(this.l);
 };
-var eh = {};
-
-function hh() {}
-
-function ih(a) {
-  return a != null && !!a.Ea
+var deferredUnhandledErrors = {};
+function Provider() {}
+function isJavaProvider(value) {
+  return value != null && !!value.Ea;
 }
-hh.prototype.Ea = !0;
-hh.prototype.D = ["javax.inject.Provider", 1];
-
-function jh() {}
-
-function kh(a) {
-  return a != null && !!a.Da
+Provider.prototype.Ea = true;
+Provider.prototype.D = ["javax.inject.Provider", 1];
+function FlagService() {}
+function isFlagService(value) {
+  return value != null && !!value.Da;
 }
-jh.prototype.Da = !0;
-jh.prototype.D = ["com.google.apps.docs.xplat.flag.FlagService", 1];
-var lh;
-
-function mh() {
-  if (lh == null) {
-    var a = new nh(null);
-    lh = function() {
-      return a
-    }
+FlagService.prototype.Da = true;
+FlagService.prototype.D = ["com.google.apps.docs.xplat.flag.FlagService", 1];
+var flagServiceProvider;
+/**
+ * 客户端 flags 与统计：Java 兼容对象、限流、时间窗口与环形队列。
+ */
+function getFlagService() {
+  if (flagServiceProvider == null) {
+    var flagServiceImpl = new FlagServiceImpl(null);
+    flagServiceProvider = function () {
+      return flagServiceImpl;
+    };
   }
-  var b;
-  return U((b = lh, b()), kh, jh)
-};
-
-function oh() {}
-x(oh, O);
-oh.prototype.get = function() {
+  var callback;
+  return checkedJavaCast(
+    ((callback = flagServiceProvider), callback()),
+    isFlagService,
+    FlagService,
+  );
+}
+function FlagServiceHelper() {}
+inheritCompiledClass(FlagServiceHelper, JavaObject);
+FlagServiceHelper.prototype.get = function () {
   if (this.l == null) {
-    var a = U(A._docs_flag_initialData, of, nf);
-    this.l = a != null ? a : U({}, of, nf)
+    var intermediate = checkedJavaCast(
+      runtimeGlobal._docs_flag_initialData,
+      isNativeObject,
+      NativeObjectClass,
+    );
+    this.l =
+      intermediate != null ? intermediate : checkedJavaCast({}, isNativeObject, NativeObjectClass);
   }
-  return this.l
+  return this.l;
 };
-oh.prototype.j = function() {
-  return this.get()
+FlagServiceHelper.prototype.j = function () {
+  return this.get();
 };
-oh.prototype.Ea = !0;
-oh.prototype.D = ["com.google.apps.docs.xplat.flag.FlagServiceHelper", 0];
-
-function ph(a) {
-  return typeof a == "string" ? a == "true" || a == "1" : !!a
-};
-
-function nh(a) {
-  this.j = new oh;
+FlagServiceHelper.prototype.Ea = true;
+FlagServiceHelper.prototype.D = ["com.google.apps.docs.xplat.flag.FlagServiceHelper", 0];
+function parseBooleanFlag(value) {
+  return typeof value == "string" ? value == "true" || value == "1" : !!value;
+}
+function FlagServiceImpl(helper) {
+  this.j = new FlagServiceHelper();
   this.l = null;
-  if (a != null)
-    for (var b in a) {
-      var c = b,
-        d = a[b];
-      if (this.l != null) throw Je("Cannot use setClientFlag when comparison is enabled.").j;
-      var e = U(this.j.j(), of, nf);
-      $e(d) ? (d = U(d, $e, Ye).X, e[c] = d) : e[c] = d != null ? d : null
+  if (helper != null)
+    for (var intermediate in helper) {
+      var intermediate2 = intermediate,
+        intermediate3 = helper[intermediate];
+      if (this.l != null)
+        throw createIllegalStateException("Cannot use setClientFlag when comparison is enabled.").j;
+      var intermediate4 = checkedJavaCast(this.j.j(), isNativeObject, NativeObjectClass);
+      isBoxedInteger(intermediate3)
+        ? ((intermediate3 = checkedJavaCast(intermediate3, isBoxedInteger, JavaInteger).X),
+          (intermediate4[intermediate2] = intermediate3))
+        : (intermediate4[intermediate2] = intermediate3 != null ? intermediate3 : null);
     }
 }
-x(nh, O);
-nh.prototype.clear = function() {
-  this.j = new oh;
-  this.l = null
+inheritCompiledClass(FlagServiceImpl, JavaObject);
+FlagServiceImpl.prototype.clear = function () {
+  this.j = new FlagServiceHelper();
+  this.l = null;
 };
-nh.prototype.get = function(a) {
-  qh(this, a);
-  return U(this.j.j(), of, nf)[a]
+FlagServiceImpl.prototype.get = function (value) {
+  checkFlagProviderAgreement(this, value);
+  return checkedJavaCast(this.j.j(), isNativeObject, NativeObjectClass)[value];
 };
-
-function rh(a, b) {
-  a = U(a.j.j(), of, nf);
-  return b in a
+function hasClientFlag(service, key) {
+  service = checkedJavaCast(service.j.j(), isNativeObject, NativeObjectClass);
+  return key in service;
 }
-
-function sh(a, b) {
-  qh(a, b);
-  if (!rh(a, b) || a.get(b) == null) return NaN;
+function readNumericClientFlag(service, key) {
+  checkFlagProviderAgreement(service, key);
+  if (!hasClientFlag(service, key) || service.get(key) == null) return NaN;
   try {
-    var c = P(a.get(b));
-    Ne == null && (Ne = RegExp(
-      "^\\s*[+-]?(NaN|Infinity|((\\d+\\.?\\d*)|(\\.\\d+))([eE][+-]?\\d+)?[dDfF]?)\\s*$"));
-    if (!Ne.test(c)) {
-      var d = new af;
-      d.l = 'For input string: "' + P(c) + '"';
-      T(d);
-      S(d, Error(d));
-      throw d.j;
+    var intermediate = javaString(service.get(key));
+    javaDoublePattern == null &&
+      (javaDoublePattern = RegExp(
+        "^\\s*[+-]?(NaN|Infinity|((\\d+\\.?\\d*)|(\\.\\d+))([eE][+-]?\\d+)?[dDfF]?)\\s*$",
+      ));
+    if (!javaDoublePattern.test(intermediate)) {
+      var javaNumberFormatException = new JavaNumberFormatException();
+      javaNumberFormatException.l = 'For input string: "' + javaString(intermediate) + '"';
+      captureJavaStack(javaNumberFormatException);
+      associateNativeError(javaNumberFormatException, Error(javaNumberFormatException));
+      throw javaNumberFormatException.j;
     }
-    return parseFloat(c)
-  } catch (f) {
-    var e = se(f);
-    if (e instanceof af) return NaN;
-    throw e.j;
+    return parseFloat(intermediate);
+  } catch (caughtError) {
+    var intermediate2 = wrapJavaThrowable(caughtError);
+    if (intermediate2 instanceof JavaNumberFormatException) return NaN;
+    throw intermediate2.j;
   }
 }
-
-function th(a, b) {
-  qh(a, b);
-  if (!rh(a, b)) return "";
-  a = a.get(b);
-  if (a == null) return "";
-  var c;
-  if (b = "number" === typeof a && (c = a, !0)) {
-    b = Pe(V(c));
-    var d = Pe(V(c));
-    b = b.equals(d)
+function readStringClientFlag(service, key) {
+  checkFlagProviderAgreement(service, key);
+  if (!hasClientFlag(service, key)) return "";
+  service = service.get(key);
+  if (service == null) return "";
+  var intermediate;
+  if ((key = "number" === typeof service && ((intermediate = service), true))) {
+    key = javaLongFromNumber(requireNonNull(intermediate));
+    var intermediate2 = javaLongFromNumber(requireNonNull(intermediate));
+    key = key.equals(intermediate2);
   }
-  return b ? "" + Pe(V(c)) : P(a)
+  return key ? "" + javaLongFromNumber(requireNonNull(intermediate)) : javaString(service);
 }
-
-function qh(a, b) {
-  if (a.l != null) {
+function checkFlagProviderAgreement(service, key) {
+  if (service.l != null) {
     try {
-      var c = U(a.j.j(), of, nf)[b]
-    } catch (h) {
-      var d = se(h);
-      if (d instanceof xe) c = "injection-failed";
-      else throw d.j;
+      var intermediate = checkedJavaCast(service.j.j(), isNativeObject, NativeObjectClass)[key];
+    } catch (caughtError) {
+      var intermediate2 = wrapJavaThrowable(caughtError);
+      if (intermediate2 instanceof JavaRuntimeException) intermediate = "injection-failed";
+      else throw intermediate2.j;
     }
     try {
-      var e = a.l;
-      if (e == null) throw te().j;
-      var f = U(U(e, ih, hh).j(), of, nf)[b]
-    } catch (h) {
-      var g = se(h);
-      if (g instanceof xe) f = "injection-failed";
-      else throw g.j;
+      var intermediate3 = service.l;
+      if (intermediate3 == null) throw createNullPointerException().j;
+      var intermediate4 = checkedJavaCast(
+        checkedJavaCast(intermediate3, isJavaProvider, Provider).j(),
+        isNativeObject,
+        NativeObjectClass,
+      )[key];
+    } catch (caughtError) {
+      var intermediate5 = wrapJavaThrowable(caughtError);
+      if (intermediate5 instanceof JavaRuntimeException) intermediate4 = "injection-failed";
+      else throw intermediate5.j;
     }
-    a = c;
-    !(b = ke(a, f)) && (b = a != null) && (b = a.equals ? a.equals(f) : Object.is(a, f));
-    if (!b) throw Je("Logging is not supported.").j;
+    service = intermediate;
+    !(key = javaObjectEquals(service, intermediate4)) &&
+      (key = service != null) &&
+      (key = service.equals ? service.equals(intermediate4) : Object.is(service, intermediate4));
+    if (!key) throw createIllegalStateException("Logging is not supported.").j;
   }
 }
-nh.prototype.Da = !0;
-nh.prototype.D = ["com.google.apps.docs.xplat.flag.FlagServiceImpl", 0];
-
-function uh(a) {
-  gf.call(this, a, null);
-  S(this, Error(this))
+FlagServiceImpl.prototype.Da = true;
+FlagServiceImpl.prototype.D = ["com.google.apps.docs.xplat.flag.FlagServiceImpl", 0];
+function LimitException(helper) {
+  XplatException.call(this, helper, null);
+  associateNativeError(this, Error(this));
 }
-x(uh, gf);
-uh.prototype.D = ["com.google.apps.docs.xplat.net.LimitException", 0];
-
-function vh(a, b, c, d) {
-  uf();
-  this.j = !1;
-  this.G = a;
-  this.o = b;
-  this.l = new wh(Math.imul(c, 1E3), d)
+inheritCompiledClass(LimitException, XplatException);
+LimitException.prototype.D = ["com.google.apps.docs.xplat.net.LimitException", 0];
+function QpsLimiter(helper, helper2, helper3, helper4) {
+  initializeDisposableChildren();
+  this.j = false;
+  this.G = helper;
+  this.o = helper2;
+  this.l = new BasicStat(Math.imul(helper3, 1e3), helper4);
 }
-x(vh, sf);
-
-function xh(a) {
-  if (!((a.l.get(null) + 1 | 0) / V(a.l.o / 1E3) <= a.o)) throw (new uh("Query would cause " + P(a.G) +
-    " to exceed " + a.o + " qps.")).j;
-  a = a.l;
-  var b = Sd(Zd(Date.now()));
-  yh(a, b);
-  var c = U(zh(a.j), Ah, Bh);
-  if (c == null || V(b) >= V(c.l)) b = Ch(a, V(b)), c = new Bh, c.l = b, c.j = 0, c.v = 2147483647, c.o = -
-    2147483648, a.j.add(c);
-  c.j = c.j + 1 | 0;
-  c.v = Math.min(1, c.v);
-  c.o = Math.max(1, c.o)
+inheritCompiledClass(QpsLimiter, JavaDisposable);
+function consumeQpsQuota(limiter) {
+  if (!(((limiter.l.get(null) + 1) | 0) / requireNonNull(limiter.l.o / 1e3) <= limiter.o))
+    throw new LimitException(
+      "Query would cause " + javaString(limiter.G) + " to exceed " + limiter.o + " qps.",
+    ).j;
+  limiter = limiter.l;
+  var intermediate = int64ToNumber(int64FromNumber(Date.now()));
+  resetStatisticsOnClockRollback(limiter, intermediate);
+  var intermediate2 = checkedJavaCast(
+    lastCircularBufferItem(limiter.j),
+    isStatisticsSlot,
+    BasicStatSlot,
+  );
+  if (intermediate2 == null || requireNonNull(intermediate) >= requireNonNull(intermediate2.l)) {
+    intermediate = endOfStatisticsSlot(limiter, requireNonNull(intermediate));
+    intermediate2 = new BasicStatSlot();
+    intermediate2.l = intermediate;
+    intermediate2.j = 0;
+    intermediate2.v = 2147483647;
+    intermediate2.o = -2147483648;
+    limiter.j.add(intermediate2);
+  }
+  intermediate2.j = (intermediate2.j + 1) | 0;
+  intermediate2.v = Math.min(1, intermediate2.v);
+  intermediate2.o = Math.max(1, intermediate2.o);
 }
-vh.prototype.D = ["com.google.apps.docs.xplat.net.QpsLimiter", 0];
-
-function Bh() {
-  this.o = this.v = this.j = 0
+QpsLimiter.prototype.D = ["com.google.apps.docs.xplat.net.QpsLimiter", 0];
+function BasicStatSlot() {
+  this.o = this.v = this.j = 0;
 }
-x(Bh, O);
-
-function Ah(a) {
-  return a instanceof Bh
+inheritCompiledClass(BasicStatSlot, JavaObject);
+function isStatisticsSlot(value) {
+  return value instanceof BasicStatSlot;
 }
-Bh.prototype.D = ["com.google.apps.docs.xplat.util.BasicStat$Slot", 0];
-
-function wh(a) {
+BasicStatSlot.prototype.D = ["com.google.apps.docs.xplat.util.BasicStat$Slot", 0];
+function BasicStat(helper) {
   this.l = 0;
-  this.o = a;
-  this.l = Qe(a / 50);
-  this.j = new Dh(Ze(50))
+  this.o = helper;
+  this.l = javaNumberToInt(helper / 50);
+  this.j = new CircularBuffer(boxInteger(50));
 }
-x(wh, O);
-wh.prototype.get = function(a) {
-  return Eh(this, a, function(b, c) {
-    b = U(b, $e, Ye);
-    c = U(c, Ah, Bh);
-    return Ze(b.X + c.j | 0)
-  })
+inheritCompiledClass(BasicStat, JavaObject);
+BasicStat.prototype.get = function (value) {
+  return aggregateStatistics(this, value, function (value2, other) {
+    value2 = checkedJavaCast(value2, isBoxedInteger, JavaInteger);
+    other = checkedJavaCast(other, isStatisticsSlot, BasicStatSlot);
+    return boxInteger((value2.X + other.j) | 0);
+  });
 };
-
-function Eh(a, b, c) {
-  b = b != null ? V(b) : Sd(Zd(Date.now()));
-  yh(a, b);
-  var d = 0;
-  b = Ch(a, V(b));
-  b = V(b) - a.o;
-  for (var e = a.j.j.length - 1 | 0; e >= 0; e = e - 1 | 0) {
-    var f = U(a.j.get(e), Ah, Bh);
-    if (V(f.l) <= b) break;
-    d = U(c(Ze(d), f), $e, Ye).X
+function aggregateStatistics(statistics, timestamp, reducer) {
+  timestamp =
+    timestamp != null ? requireNonNull(timestamp) : int64ToNumber(int64FromNumber(Date.now()));
+  resetStatisticsOnClockRollback(statistics, timestamp);
+  var intermediate = 0;
+  timestamp = endOfStatisticsSlot(statistics, requireNonNull(timestamp));
+  timestamp = requireNonNull(timestamp) - statistics.o;
+  for (
+    var intermediate2 = (statistics.j.j.length - 1) | 0;
+    intermediate2 >= 0;
+    intermediate2 = (intermediate2 - 1) | 0
+  ) {
+    var intermediate3 = checkedJavaCast(
+      statistics.j.get(intermediate2),
+      isStatisticsSlot,
+      BasicStatSlot,
+    );
+    if (requireNonNull(intermediate3.l) <= timestamp) break;
+    intermediate = checkedJavaCast(
+      reducer(boxInteger(intermediate), intermediate3),
+      isBoxedInteger,
+      JavaInteger,
+    ).X;
   }
-  return d
+  return intermediate;
 }
-
-function Ch(a, b) {
-  return a.l * Math.floor(b / a.l + 1)
+function endOfStatisticsSlot(statistics, timestamp) {
+  return statistics.l * Math.floor(timestamp / statistics.l + 1);
 }
-
-function yh(a, b) {
-  var c = U(zh(a.j), Ah, Bh);
-  c != null && (c = V(c.l) - a.l, V(b) < V(c) && a.j.clear())
+function resetStatisticsOnClockRollback(statistics, timestamp) {
+  var intermediate = checkedJavaCast(
+    lastCircularBufferItem(statistics.j),
+    isStatisticsSlot,
+    BasicStatSlot,
+  );
+  intermediate != null &&
+    ((intermediate = requireNonNull(intermediate.l) - statistics.l),
+    requireNonNull(timestamp) < requireNonNull(intermediate) && statistics.j.clear());
 }
-wh.prototype.D = ["com.google.apps.docs.xplat.util.BasicStat", 0];
-
-function Dh(a) {
+BasicStat.prototype.D = ["com.google.apps.docs.xplat.util.BasicStat", 0];
+function CircularBuffer(capacity) {
   this.l = this.o = 0;
-  a != null ? "number" === typeof a ? (a = V(a), a = Math.max(Math.min(a, 2147483647), -2147483648) | 0) : a =
-    a instanceof Rd ? V(a).K : a.X : a = 100;
-  this.o = a;
-  this.j = U([], mf, lf)
+  capacity != null
+    ? "number" === typeof capacity
+      ? ((capacity = requireNonNull(capacity)),
+        (capacity = Math.max(Math.min(capacity, 2147483647), -2147483648) | 0))
+      : (capacity = capacity instanceof Int64 ? requireNonNull(capacity).K : capacity.X)
+    : (capacity = 100);
+  this.o = capacity;
+  this.j = checkedJavaCast([], isNativeArray, NativeArrayType);
 }
-x(Dh, O);
-q = Dh.prototype;
-q.add = function(a) {
-  var b = this.j[this.l];
-  this.j[this.l] = a;
-  this.l = Qe((this.l + 1 | 0) % this.o);
-  return b
+inheritCompiledClass(CircularBuffer, JavaObject);
+prototypeAlias = CircularBuffer.prototype;
+prototypeAlias.add = function (value) {
+  var intermediate = this.j[this.l];
+  this.j[this.l] = value;
+  this.l = javaNumberToInt(((this.l + 1) | 0) % this.o);
+  return intermediate;
 };
-q.get = function(a) {
-  a = Fh(this, a);
-  return this.j[a]
+prototypeAlias.get = function (value) {
+  value = circularBufferIndex(this, value);
+  return this.j[value];
 };
-q.set = function(a, b) {
-  a = Fh(this, a);
-  this.j[a] = b
+prototypeAlias.set = function (value, other) {
+  value = circularBufferIndex(this, value);
+  this.j[value] = other;
 };
-q.clear = function() {
-  this.l = this.j.length = 0
+prototypeAlias.clear = function () {
+  this.l = this.j.length = 0;
 };
-q.la = function() {
-  for (var a = this.j.length, b = this.j.length - this.j.length | 0, c = U([], mf, lf); b < a; b = b + 1 |
-    0) {
-    var d = c,
-      e = this.get(b);
-    d.push(e)
+prototypeAlias.la = function () {
+  for (
+    var length = this.j.length,
+      intermediate = (this.j.length - this.j.length) | 0,
+      intermediate2 = checkedJavaCast([], isNativeArray, NativeArrayType);
+    intermediate < length;
+    intermediate = (intermediate + 1) | 0
+  ) {
+    var intermediate22 = intermediate2,
+      value = this.get(intermediate);
+    intermediate22.push(value);
   }
-  return c
+  return intermediate2;
 };
-
-function zh(a) {
-  return a.j.length == 0 ? null : a.get(a.j.length - 1 | 0)
+function lastCircularBufferItem(buffer) {
+  return buffer.j.length == 0 ? null : buffer.get((buffer.j.length - 1) | 0);
 }
-
-function Fh(a, b) {
-  if (b >= a.j.length) throw a = new ye, T(a), S(a, Error(a)), a.j;
-  return a.j.length < a.o ? b : Qe((a.l + b | 0) % a.o)
+function circularBufferIndex(buffer, index) {
+  if (index >= buffer.j.length)
+    throw (
+      (buffer = new JavaIndexOutOfBoundsException()),
+      captureJavaStack(buffer),
+      associateNativeError(buffer, Error(buffer)),
+      buffer.j
+    );
+  return buffer.j.length < buffer.o ? index : javaNumberToInt(((buffer.l + index) | 0) % buffer.o);
 }
-q.D = ["com.google.apps.docs.xplat.util.CircularBuffer", 0];
-
-function Gh() {
-  this.j = 0
+prototypeAlias.D = ["com.google.apps.docs.xplat.util.CircularBuffer", 0];
+function StatusState() {
+  this.j = 0;
 }
-var Hh, Ih;
-x(Gh, O);
-
-function Y(a, b) {
-  var c = new Gh;
-  c.l = a;
-  c.j = b;
-  Hh[a] = c !== void 0 ? c : null;
-  return c
+var networkStatusByName, offlineNetworkStatus;
+inheritCompiledClass(StatusState, JavaObject);
+function defineNetworkStatus(name, severity) {
+  var statusState = new StatusState();
+  statusState.l = name;
+  statusState.j = severity;
+  networkStatusByName[name] = statusState !== void 0 ? statusState : null;
+  return statusState;
 }
-Gh.prototype.toString = p("l");
-
-function Jh() {
-  Jh = n();
-  Hh = U({}, qf, pf);
-  Y("IDLE", 1);
-  Y("BUSY", 1);
-  Y("RECOVERING", 2);
-  Ih = Y("OFFLINE", 3);
-  Y("SERVER_DOWN", 3);
-  Y("FORBIDDEN", 4);
-  Y("AUTH_REQUIRED", 4);
-  Y("DELTA_STALE_CLIENT", 4);
-  Y("SESSION_LIMIT_EXCEEDED", 5);
-  Y("LOCKED", 5);
-  Y("INCOMPATIBLE_SERVER", 5);
-  Y("CLIENT_ERROR", 5);
-  Y("CLIENT_FATAL_ERROR", 5);
-  Y("CLIENT_FATAL_ERROR_PENDING_CHANGES", 5);
-  Y("BATCH_CLIENT_ERROR", 3);
-  Y("SAVE_ERROR", 5);
-  Y("DOCUMENT_TOO_LARGE", 5);
-  Y("CSE_BLOCKED_REQUEST", 5);
-  Y("BATCH_SAVE_ERROR", 3);
-  Y("DOCS_EVERYWHERE_IMPORT_ERROR", 5);
-  Y("POST_LIMIT_EXCEEDED_ERROR",
-    5);
-  Y("DOCS_QUOTA_EXCEEDED_ERROR", 5)
+StatusState.prototype.toString = createPropertyGetter("l");
+function initializeNetworkStatuses() {
+  initializeNetworkStatuses = createNoopFunction();
+  networkStatusByName = checkedJavaCast({}, isNativeObjectMap, NativeObjectMapClass);
+  defineNetworkStatus("IDLE", 1);
+  defineNetworkStatus("BUSY", 1);
+  defineNetworkStatus("RECOVERING", 2);
+  offlineNetworkStatus = defineNetworkStatus("OFFLINE", 3);
+  defineNetworkStatus("SERVER_DOWN", 3);
+  defineNetworkStatus("FORBIDDEN", 4);
+  defineNetworkStatus("AUTH_REQUIRED", 4);
+  defineNetworkStatus("DELTA_STALE_CLIENT", 4);
+  defineNetworkStatus("SESSION_LIMIT_EXCEEDED", 5);
+  defineNetworkStatus("LOCKED", 5);
+  defineNetworkStatus("INCOMPATIBLE_SERVER", 5);
+  defineNetworkStatus("CLIENT_ERROR", 5);
+  defineNetworkStatus("CLIENT_FATAL_ERROR", 5);
+  defineNetworkStatus("CLIENT_FATAL_ERROR_PENDING_CHANGES", 5);
+  defineNetworkStatus("BATCH_CLIENT_ERROR", 3);
+  defineNetworkStatus("SAVE_ERROR", 5);
+  defineNetworkStatus("DOCUMENT_TOO_LARGE", 5);
+  defineNetworkStatus("CSE_BLOCKED_REQUEST", 5);
+  defineNetworkStatus("BATCH_SAVE_ERROR", 3);
+  defineNetworkStatus("DOCS_EVERYWHERE_IMPORT_ERROR", 5);
+  defineNetworkStatus("POST_LIMIT_EXCEEDED_ERROR", 5);
+  defineNetworkStatus("DOCS_QUOTA_EXCEEDED_ERROR", 5);
 }
-Gh.prototype.D = ["com.google.apps.docs.xplat.net.Status$State", 0];
-
-function Kh() {}
-x(Kh, O);
-
-function Lh(a) {
-  return a instanceof Kh
+StatusState.prototype.D = ["com.google.apps.docs.xplat.net.Status$State", 0];
+function EventObserverTrackerObservableObserverPair() {}
+inheritCompiledClass(EventObserverTrackerObservableObserverPair, JavaObject);
+function isObserverPair(value) {
+  return value instanceof EventObserverTrackerObservableObserverPair;
 }
-Kh.prototype.D = ["com.google.apps.docsshared.xplat.observable.EventObserverTracker$ObservableObserverPair",
-  0];
-
-function Mh() {
-  uf();
-  this.j = !1;
-  this.l = U([], mf, lf)
+EventObserverTrackerObservableObserverPair.prototype.D = [
+  "com.google.apps.docsshared.xplat.observable.EventObserverTracker$ObservableObserverPair",
+  0,
+];
+function EventObserverTracker() {
+  initializeDisposableChildren();
+  this.j = false;
+  this.l = checkedJavaCast([], isNativeArray, NativeArrayType);
 }
-x(Mh, sf);
-
-function Nh(a, b, c) {
-  var d;
+inheritCompiledClass(EventObserverTracker, JavaDisposable);
+function trackObserver(tracker, observable, observer) {
+  var intermediate;
   a: {
-    for (d = 0; d < a.l.length; d = d + 1 | 0) {
-      var e = U(a.l[d], Lh, Kh);
-      if (ke(e.l, c) && ke(e.j, b)) {
-        d = !0;
-        break a
+    for (intermediate = 0; intermediate < tracker.l.length; intermediate = (intermediate + 1) | 0) {
+      var intermediate2 = checkedJavaCast(
+        tracker.l[intermediate],
+        isObserverPair,
+        EventObserverTrackerObservableObserverPair,
+      );
+      if (
+        javaObjectEquals(intermediate2.l, observer) &&
+        javaObjectEquals(intermediate2.j, observable)
+      ) {
+        intermediate = true;
+        break a;
       }
     }
-    d = !1
+    intermediate = false;
   }
-  d || (a = a.l, c = b.j(c), d = new Kh, d.j = b, d.l = c, a.push(d))
+  intermediate ||
+    ((tracker = tracker.l),
+    (observer = observable.j(observer)),
+    (intermediate = new EventObserverTrackerObservableObserverPair()),
+    (intermediate.j = observable),
+    (intermediate.l = observer),
+    tracker.push(intermediate));
 }
-Mh.prototype.sa = function() {
+EventObserverTracker.prototype.sa = function () {
   this.removeAll();
-  sf.prototype.sa.call(this)
+  JavaDisposable.prototype.sa.call(this);
 };
-Mh.prototype.removeAll = function() {
-  for (var a = U(this.l.pop(), Lh, Kh); a != null;) a.j.l(a.l), a = U(this.l.pop(), Lh, Kh)
-};
-Mh.prototype.D = ["com.google.apps.docsshared.xplat.observable.EventObserverTracker", 0];
+EventObserverTracker.prototype.removeAll = function () {
+  for (
+    var intermediate = checkedJavaCast(
+      this.l.pop(),
+      isObserverPair,
+      EventObserverTrackerObservableObserverPair,
+    );
+    intermediate != null;
 
-function Oh(a, b, c) {
-  for (var d in a) b.call(c, a[d], d, a)
-}
-
-function Ph(a) {
-  var b = {},
-    c;
-  for (c in a) b[c] = a[c];
-  return b
-}
-var Qh = "constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf"
-  .split(" ");
-
-function Rh(a, b) {
-  for (var c, d, e = 1; e < arguments.length; e++) {
-    d = arguments[e];
-    for (c in d) a[c] = d[c];
-    for (var f = 0; f < Qh.length; f++) c = Qh[f], Object.prototype.hasOwnProperty.call(d, c) && (a[c] = d[c])
+  ) {
+    intermediate.j.l(intermediate.l);
+    intermediate = checkedJavaCast(
+      this.l.pop(),
+      isObserverPair,
+      EventObserverTrackerObservableObserverPair,
+    );
   }
 };
-
-function Sh(a) {
+EventObserverTracker.prototype.D = [
+  "com.google.apps.docsshared.xplat.observable.EventObserverTracker",
+  0,
+];
+function forEachObjectValue(object, callback, receiver) {
+  for (var intermediate in object)
+    callback.call(receiver, object[intermediate], intermediate, object);
+}
+function shallowCloneObject(object) {
+  var record = {},
+    intermediate;
+  for (intermediate in object) record[intermediate] = object[intermediate];
+  return record;
+}
+var objectPrototypeKeys =
+  "constructor hasOwnProperty isPrototypeOf propertyIsEnumerable toLocaleString toString valueOf".split(
+    " ",
+  );
+function extendObject(target, source) {
+  for (var intermediate, intermediate2, index = 1; index < arguments.length; index++) {
+    intermediate2 = arguments[index];
+    for (intermediate in intermediate2) target[intermediate] = intermediate2[intermediate];
+    for (var index2 = 0; index2 < objectPrototypeKeys.length; index2++) {
+      intermediate = objectPrototypeKeys[index2];
+      Object.prototype.hasOwnProperty.call(intermediate2, intermediate) &&
+        (target[intermediate] = intermediate2[intermediate]);
+    }
+  }
+}
+/**
+ * 可变 URL 与 QueryData：延迟解析、多值参数、大小写策略和相对路径解析。
+ * 保留字段 ABI：v=scheme，I=userInfo，j=host，B=port，l=path，o=QueryData，G=fragment，A=参数忽略大小写。
+ */
+function MutableUrl(value) {
   this.j = this.I = this.v = "";
   this.B = null;
   this.G = this.l = "";
-  this.A = !1;
-  var b;
-  a instanceof Sh ? (this.A = a.A, Th(this, a.v), this.I = a.I, this.j = a.j, Uh(this, a.B), Vh(this, a.l),
-    Wh(this, a.o.clone()), this.G = a.G) : a && (b = String(a).match(Vf)) ? (this.A = !1, Th(this, b[1] ||
-    "", !0), this.I = Xh(b[2] || ""), this.j = Xh(b[3] || "", !0), Uh(this, b[4]), Vh(this, b[5] || "", !
-    0), Wh(this, b[6] || "", !0), this.G = Xh(b[7] || "")) : (this.A = !1, this.o = new Yh(null, this.A))
+  this.A = false;
+  var urlParts;
+  value instanceof MutableUrl
+    ? ((this.A = value.A),
+      setUrlScheme(this, value.v),
+      (this.I = value.I),
+      (this.j = value.j),
+      setUrlPort(this, value.B),
+      setUrlPath(this, value.l),
+      setUrlQueryData(this, value.o.clone()),
+      (this.G = value.G))
+    : value && (urlParts = String(value).match(urlPartsPattern))
+      ? ((this.A = false),
+        setUrlScheme(this, urlParts[1] || "", true),
+        (this.I = decodeUrlComponent(urlParts[2] || "")),
+        (this.j = decodeUrlComponent(urlParts[3] || "", true)),
+        setUrlPort(this, urlParts[4]),
+        setUrlPath(this, urlParts[5] || "", true),
+        setUrlQueryData(this, urlParts[6] || "", true),
+        (this.G = decodeUrlComponent(urlParts[7] || "")))
+      : ((this.A = false), (this.o = new QueryData(null, this.A)));
 }
-Sh.prototype.toString = function() {
-  var a = [],
-    b = this.v;
-  b && a.push(Zh(b, $h, !0), ":");
-  var c = this.j;
-  if (c || b == "file") a.push("//"), (b = this.I) && a.push(Zh(b, $h, !0), "@"), a.push(encodeURIComponent(
-    String(c)).replace(/%25([0-9a-fA-F]{2})/g, "%$1")), c = this.B, c != null && a.push(":", String(c));
-  if (c = this.l) this.j && c.charAt(0) != "/" && a.push("/"), a.push(Zh(c, c.charAt(0) == "/" ? ai : bi, !
-    0));
-  (c = this.o.toString()) && a.push("?", c);
-  (c = this.G) && a.push("#", Zh(c, ci));
-  return a.join("")
+MutableUrl.prototype.toString = function () {
+  var parts = [],
+    schemeOrUserInfo = this.v;
+  schemeOrUserInfo &&
+    parts.push(encodeUrlComponent(schemeOrUserInfo, schemeAndUserInfoEscapePattern, true), ":");
+  var component = this.j;
+  if (component || schemeOrUserInfo == "file") {
+    parts.push("//");
+    (schemeOrUserInfo = this.I) &&
+      parts.push(encodeUrlComponent(schemeOrUserInfo, schemeAndUserInfoEscapePattern, true), "@");
+    parts.push(encodeURIComponent(String(component)).replace(/%25([0-9a-fA-F]{2})/g, "%$1"));
+    component = this.B;
+    component != null && parts.push(":", String(component));
+  }
+  if ((component = this.l)) {
+    this.j && component.charAt(0) != "/" && parts.push("/");
+    parts.push(
+      encodeUrlComponent(
+        component,
+        component.charAt(0) == "/" ? absolutePathEscapePattern : relativePathEscapePattern,
+        true,
+      ),
+    );
+  }
+  (component = this.o.toString()) && parts.push("?", component);
+  (component = this.G) && parts.push("#", encodeUrlComponent(component, fragmentEscapePattern));
+  return parts.join("");
 };
-Sh.prototype.resolve = function(a) {
-  var b = this.clone(),
-    c = !!a.v;
-  c ? Th(b, a.v) : c = !!a.I;
-  c ? b.I = a.I : c = !!a.j;
-  c ? b.j = a.j : c = a.B != null;
-  var d = a.l;
-  if (c) Uh(b, a.B);
-  else if (c = !!a.l) {
-    if (d.charAt(0) != "/")
-      if (this.j && !this.l) d = "/" + d;
+
+/** 按 scheme → authority → path → query → fragment 逐级决定覆盖范围，并消解 . / ..；不是字符串拼接。 */
+MutableUrl.prototype.resolve = function (relativeUrl) {
+  var resolvedUrl = this.clone(),
+    overridesComponent = !!relativeUrl.v;
+  overridesComponent
+    ? setUrlScheme(resolvedUrl, relativeUrl.v)
+    : (overridesComponent = !!relativeUrl.I);
+  overridesComponent ? (resolvedUrl.I = relativeUrl.I) : (overridesComponent = !!relativeUrl.j);
+  overridesComponent
+    ? (resolvedUrl.j = relativeUrl.j)
+    : (overridesComponent = relativeUrl.B != null);
+  var path = relativeUrl.l;
+  if (overridesComponent) setUrlPort(resolvedUrl, relativeUrl.B);
+  else if ((overridesComponent = !!relativeUrl.l)) {
+    if (path.charAt(0) != "/")
+      if (this.j && !this.l) path = "/" + path;
       else {
-        var e = b.l.lastIndexOf("/");
-        e != -1 && (d = b.l.slice(0, e + 1) + d)
-      } e = d;
-    if (e == ".." || e == ".") d = "";
-    else if (e.indexOf("./") != -1 || e.indexOf("/.") != -1) {
-      d = e.lastIndexOf("/", 0) == 0;
-      e = e.split("/");
-      for (var f = [], g = 0; g < e.length;) {
-        var h = e[g++];
-        h == "." ? d && g == e.length && f.push("") : h == ".." ? ((f.length > 1 || f.length == 1 &&
-          f[0] != "") && f.pop(), d && g == e.length && f.push("")) : (f.push(h), d = !0)
+        var pathPartsOrSlashIndex = resolvedUrl.l.lastIndexOf("/");
+        pathPartsOrSlashIndex != -1 &&
+          (path = resolvedUrl.l.slice(0, pathPartsOrSlashIndex + 1) + path);
       }
-      d = f.join("/")
-    } else d = e
+    pathPartsOrSlashIndex = path;
+    if (pathPartsOrSlashIndex == ".." || pathPartsOrSlashIndex == ".") path = "";
+    else if (
+      pathPartsOrSlashIndex.indexOf("./") != -1 ||
+      pathPartsOrSlashIndex.indexOf("/.") != -1
+    ) {
+      path = pathPartsOrSlashIndex.lastIndexOf("/", 0) == 0;
+      pathPartsOrSlashIndex = pathPartsOrSlashIndex.split("/");
+      for (var segments = [], segmentIndex = 0; segmentIndex < pathPartsOrSlashIndex.length; ) {
+        var segment = pathPartsOrSlashIndex[segmentIndex++];
+        segment == "."
+          ? path && segmentIndex == pathPartsOrSlashIndex.length && segments.push("")
+          : segment == ".."
+            ? ((segments.length > 1 || (segments.length == 1 && segments[0] != "")) &&
+                segments.pop(),
+              path && segmentIndex == pathPartsOrSlashIndex.length && segments.push(""))
+            : (segments.push(segment), (path = true));
+      }
+      path = segments.join("/");
+    } else path = pathPartsOrSlashIndex;
   }
-  c ? Vh(b, d) : c = a.o.toString() !== "";
-  c ? Wh(b, a.o.clone()) : c = !!a.G;
-  c && (b.G = a.G);
-  return b
+  overridesComponent
+    ? setUrlPath(resolvedUrl, path)
+    : (overridesComponent = relativeUrl.o.toString() !== "");
+  overridesComponent
+    ? setUrlQueryData(resolvedUrl, relativeUrl.o.clone())
+    : (overridesComponent = !!relativeUrl.G);
+  overridesComponent && (resolvedUrl.G = relativeUrl.G);
+  return resolvedUrl;
 };
-Sh.prototype.clone = function() {
-  return new Sh(this)
+MutableUrl.prototype.clone = function () {
+  return new MutableUrl(this);
 };
-
-function Th(a, b, c) {
-  a.v = c ? Xh(b, !0) : b;
-  a.v && (a.v = a.v.replace(/:$/, ""))
+function setUrlScheme(url, scheme, decode) {
+  url.v = decode ? decodeUrlComponent(scheme, true) : scheme;
+  url.v && (url.v = url.v.replace(/:$/, ""));
 }
-
-function Uh(a, b) {
-  if (b) {
-    b = Number(b);
-    if (isNaN(b) || b < 0) throw Error("Bad port number " + b);
-    a.B = b
-  } else a.B = null
+function setUrlPort(url, port) {
+  if (port) {
+    port = Number(port);
+    if (isNaN(port) || port < 0) throw Error("Bad port number " + port);
+    url.B = port;
+  } else url.B = null;
 }
-
-function Vh(a, b, c) {
-  a.l = c ? Xh(b, !0) : b;
-  return a
+function setUrlPath(url, path, decode) {
+  url.l = decode ? decodeUrlComponent(path, true) : path;
+  return url;
 }
-
-function Wh(a, b, c) {
-  b instanceof Yh ? (a.o = b, di(a.o, a.A)) : (c || (b = Zh(b, ei)), a.o = new Yh(b, a.A))
+function setUrlQueryData(url, query, decode) {
+  query instanceof QueryData
+    ? ((url.o = query), setQueryIgnoreCase(url.o, url.A))
+    : (decode || (query = encodeUrlComponent(query, queryEscapePattern)),
+      (url.o = new QueryData(query, url.A)));
 }
-
-function Xh(a, b) {
-  return a ? b ? decodeURI(a.replace(/%25/g, "%2525")) : decodeURIComponent(a) : ""
+function decodeUrlComponent(text, preserveReserved) {
+  return text
+    ? preserveReserved
+      ? decodeURI(text.replace(/%25/g, "%2525"))
+      : decodeURIComponent(text)
+    : "";
 }
-
-function Zh(a, b, c) {
-  return typeof a === "string" ? (a = encodeURI(a).replace(b, fi), c && (a = a.replace(/%25([0-9a-fA-F]{2})/g,
-    "%$1")), a) : null
+function encodeUrlComponent(text, pattern, preserveEscapes) {
+  return typeof text === "string"
+    ? ((text = encodeURI(text).replace(pattern, percentEncodeCharacter)),
+      preserveEscapes && (text = text.replace(/%25([0-9a-fA-F]{2})/g, "%$1")),
+      text)
+    : null;
 }
-
-function fi(a) {
-  a = a.charCodeAt(0);
-  return "%" + (a >> 4 & 15).toString(16) + (a & 15).toString(16)
+function percentEncodeCharacter(character) {
+  character = character.charCodeAt(0);
+  return "%" + ((character >> 4) & 15).toString(16) + (character & 15).toString(16);
 }
-var $h = /[#\/\?@]/g,
-  bi = /[#\?:]/g,
-  ai = /[#\?]/g,
-  ei = /[#\?@]/g,
-  ci = /#/g;
+var schemeAndUserInfoEscapePattern = /[#\/\?@]/g,
+  relativePathEscapePattern = /[#\?:]/g,
+  absolutePathEscapePattern = /[#\?]/g,
+  queryEscapePattern = /[#\?@]/g,
+  fragmentEscapePattern = /#/g;
 
-function Yh(a, b) {
+/**
+ * 保留字段 ABI：j=参数 Map，l=值总数，o=编码字符串缓存，v=忽略键大小写。
+ */
+function QueryData(encodedQuery, ignoreCase) {
   this.l = this.j = null;
-  this.o = a || null;
-  this.v = !!b
+  this.o = encodedQuery || null;
+  this.v = !!ignoreCase;
 }
-
-function gi(a) {
-  a.j || (a.j = new Map, a.l = 0, a.o && Wf(a.o, function(b, c) {
-    a.add(decodeURIComponent(b.replace(/\+/g, " ")), c)
-  }))
+function initializeQueryData(query) {
+  query.j ||
+    ((query.j = new Map()),
+    (query.l = 0),
+    query.o &&
+      forEachQueryParameter(query.o, function (encodedKey, queryValue) {
+        query.add(decodeURIComponent(encodedKey.replace(/\+/g, " ")), queryValue);
+      }));
 }
-q = Yh.prototype;
-q.add = function(a, b) {
-  gi(this);
+prototypeAlias = QueryData.prototype;
+prototypeAlias.add = function (key, value) {
+  initializeQueryData(this);
   this.o = null;
-  a = hi(this, a);
-  var c = this.j.get(a);
-  c || this.j.set(a, c = []);
-  c.push(b);
+  key = normalizeQueryKey(this, key);
+  var existingValues = this.j.get(key);
+  existingValues || this.j.set(key, (existingValues = []));
+  existingValues.push(value);
   this.l = this.l + 1;
-  return this
+  return this;
 };
-q.remove = function(a) {
-  gi(this);
-  a = hi(this, a);
-  return this.j.has(a) ? (this.o = null, this.l = this.l - this.j.get(a).length, this.j.delete(a)) : !1
+prototypeAlias.remove = function (key) {
+  initializeQueryData(this);
+  key = normalizeQueryKey(this, key);
+  return this.j.has(key)
+    ? ((this.o = null), (this.l = this.l - this.j.get(key).length), this.j.delete(key))
+    : false;
 };
-q.clear = function() {
+prototypeAlias.clear = function () {
   this.j = this.o = null;
-  this.l = 0
+  this.l = 0;
 };
-
-function ii(a, b) {
-  gi(a);
-  b = hi(a, b);
-  return a.j.has(b)
+function hasQueryParameter(query, key) {
+  initializeQueryData(query);
+  key = normalizeQueryKey(query, key);
+  return query.j.has(key);
 }
-q.forEach = function(a, b) {
-  gi(this);
-  this.j.forEach(function(c, d) {
-    c.forEach(function(e) {
-      a.call(b, e, d, this)
-    }, this)
-  }, this)
+prototypeAlias.forEach = function (callback, receiver) {
+  initializeQueryData(this);
+  this.j.forEach(function (value, other) {
+    value.forEach(function (value2) {
+      callback.call(receiver, value2, other, this);
+    }, this);
+  }, this);
 };
-q.la = function(a) {
-  gi(this);
-  var b = [];
-  if (typeof a === "string") ii(this, a) && (b = b.concat(this.j.get(hi(this, a))));
+/** la(key) 返回该 key 的所有值；没有字符串 key 时返回所有参数值，不是只读第一个。 */
+prototypeAlias.la = function (key) {
+  initializeQueryData(this);
+  var values = [];
+  if (typeof key === "string")
+    hasQueryParameter(this, key) &&
+      (values = values.concat(this.j.get(normalizeQueryKey(this, key))));
   else {
-    a = Array.from(this.j.values());
-    for (var c = 0; c < a.length; c++) b = b.concat(a[c])
+    key = Array.from(this.j.values());
+    for (var index = 0; index < key.length; index++) values = values.concat(key[index]);
   }
-  return b
+  return values;
 };
-q.set = function(a, b) {
-  gi(this);
+prototypeAlias.set = function (key, value) {
+  initializeQueryData(this);
   this.o = null;
-  a = hi(this, a);
-  ii(this, a) && (this.l = this.l - this.j.get(a).length);
-  this.j.set(a, [b]);
+  key = normalizeQueryKey(this, key);
+  hasQueryParameter(this, key) && (this.l = this.l - this.j.get(key).length);
+  this.j.set(key, [value]);
   this.l = this.l + 1;
-  return this
+  return this;
 };
-q.get = function(a, b) {
-  if (!a) return b;
-  a = this.la(a);
-  return a.length > 0 ? String(a[0]) : b
+prototypeAlias.get = function (key, fallback) {
+  if (!key) return fallback;
+  key = this.la(key);
+  return key.length > 0 ? String(key[0]) : fallback;
 };
-q.toString = function() {
+prototypeAlias.toString = function () {
   if (this.o) return this.o;
   if (!this.j) return "";
-  for (var a = [], b = Array.from(this.j.keys()), c = 0; c < b.length; c++) {
-    var d = b[c],
-      e = encodeURIComponent(String(d));
-    d = this.la(d);
-    for (var f = 0; f < d.length; f++) {
-      var g = e;
-      d[f] !== "" && (g += "=" + encodeURIComponent(String(d[f])));
-      a.push(g)
+  for (
+    var parts = [], keys = Array.from(this.j.keys()), keyIndex = 0;
+    keyIndex < keys.length;
+    keyIndex++
+  ) {
+    var keyOrValues = keys[keyIndex],
+      encodedKey = encodeURIComponent(String(keyOrValues));
+    keyOrValues = this.la(keyOrValues);
+    for (var valueIndex = 0; valueIndex < keyOrValues.length; valueIndex++) {
+      var encodedPair = encodedKey;
+      keyOrValues[valueIndex] !== "" &&
+        (encodedPair += "=" + encodeURIComponent(String(keyOrValues[valueIndex])));
+      parts.push(encodedPair);
     }
   }
-  return this.o = a.join("&")
+  return (this.o = parts.join("&"));
 };
-q.clone = function() {
-  var a = new Yh;
-  a.o = this.o;
-  this.j && (a.j = new Map(this.j), a.l = this.l);
-  return a
+/** 原实现只复制 Map，不深拷贝每个值数组；不要在等价还原中悄悄改变别名共享行为。 */
+prototypeAlias.clone = function () {
+  var copy = new QueryData();
+  copy.o = this.o;
+  this.j && ((copy.j = new Map(this.j)), (copy.l = this.l));
+  return copy;
 };
-
-function hi(a, b) {
-  b = String(b);
-  a.v && (b = b.toLowerCase());
-  return b
+function normalizeQueryKey(query, key) {
+  key = String(key);
+  query.v && (key = key.toLowerCase());
+  return key;
 }
-
-function di(a, b) {
-  b && !a.v && (gi(a), a.o = null, a.j.forEach(function(c, d) {
-    var e = d.toLowerCase();
-    if (d != e && (this.remove(d), this.remove(e), c.length > 0)) {
-      this.o = null;
-      d = this.j;
-      var f = d.set;
-      e = hi(this, e);
-      var g = c.length;
-      if (g > 0) {
-        for (var h = Array(g), k = 0; k < g; k++) h[k] = c[k];
-        g = h
-      } else g = [];
-      f.call(d, e, g);
-      this.l = this.l + c.length
-    }
-  }, a));
-  a.v = b
-};
-
-function ji() {
-  var a = A.window;
-  a.onbeforeunload = n();
-  a.location.reload()
-};
-
-function ki() {
-  this.j = function() {
-    ji()
-  }
-}
-ki.prototype.notify = function() {
-  window.confirm(
-    "This error has been reported to Google and we'll look into it as soon as possible. Please reload this page to continue."
-    ) && this.j()
-};
-
-function li(a, b) {
-  this.type = a;
-  this.currentTarget = this.target = b;
-  this.defaultPrevented = this.l = !1
-}
-li.prototype.stopPropagation = function() {
-  this.l = !0
-};
-li.prototype.preventDefault = function() {
-  this.defaultPrevented = !0
-};
-var mi = function() {
-  if (!A.addEventListener || !Object.defineProperty) return !1;
-  var a = !1,
-    b = Object.defineProperty({}, "passive", {
-      get: function() {
-        a = !0
+function setQueryIgnoreCase(query, ignoreCase) {
+  ignoreCase &&
+    !query.v &&
+    (initializeQueryData(query),
+    (query.o = null),
+    query.j.forEach(function (value, other) {
+      var intermediate = other.toLowerCase();
+      if (
+        other != intermediate &&
+        (this.remove(other), this.remove(intermediate), value.length > 0)
+      ) {
+        this.o = null;
+        other = this.j;
+        var set = other.set;
+        intermediate = normalizeQueryKey(this, intermediate);
+        var length = value.length;
+        if (length > 0) {
+          for (var intermediate2 = Array(length), index = 0; index < length; index++)
+            intermediate2[index] = value[index];
+          length = intermediate2;
+        } else length = [];
+        set.call(other, intermediate, length);
+        this.l = this.l + value.length;
       }
+    }, query));
+  query.v = ignoreCase;
+}
+function reloadAfterError() {
+  var window2 = runtimeGlobal.window;
+  window2.onbeforeunload = createNoopFunction();
+  window2.location.reload();
+}
+function ReloadPrompt() {
+  this.j = function () {
+    reloadAfterError();
+  };
+}
+ReloadPrompt.prototype.notify = function () {
+  window.confirm(
+    "This error has been reported to Google and we'll look into it as soon as possible. Please reload this page to continue.",
+  ) && this.j();
+};
+/**
+ * 事件系统：原生事件包装、监听器索引、once/capture 与资源释放。
+ */
+function BaseEvent(type, target) {
+  this.type = type;
+  this.currentTarget = this.target = target;
+  this.defaultPrevented = this.l = false;
+}
+BaseEvent.prototype.stopPropagation = function () {
+  this.l = true;
+};
+BaseEvent.prototype.preventDefault = function () {
+  this.defaultPrevented = true;
+};
+var supportsPassiveEvents = (function () {
+  if (!runtimeGlobal.addEventListener || !Object.defineProperty) return false;
+  var intermediate = false,
+    intermediate2 = Object.defineProperty({}, "passive", {
+      get: function () {
+        intermediate = true;
+      },
     });
   try {
-    var c = n();
-    A.addEventListener("test", c, b);
-    A.removeEventListener("test", c, b)
-  } catch (d) {}
-  return a
-}();
-
-function ni(a, b) {
-  li.call(this, a ? a.type : "");
+    var noopFunction = createNoopFunction();
+    runtimeGlobal.addEventListener("test", noopFunction, intermediate2);
+    runtimeGlobal.removeEventListener("test", noopFunction, intermediate2);
+  } catch (caughtError) {}
+  return intermediate;
+})();
+function BrowserEvent(event, currentTarget) {
+  BaseEvent.call(this, event ? event.type : "");
   this.relatedTarget = this.currentTarget = this.target = null;
-  this.button = this.screenY = this.screenX = this.clientY = this.clientX = this.offsetY = this.offsetX = 0;
+  this.button =
+    this.screenY =
+    this.screenX =
+    this.clientY =
+    this.clientX =
+    this.offsetY =
+    this.offsetX =
+      0;
   this.key = "";
   this.charCode = this.keyCode = 0;
-  this.metaKey = this.shiftKey = this.altKey = this.ctrlKey = !1;
+  this.metaKey = this.shiftKey = this.altKey = this.ctrlKey = false;
   this.state = null;
   this.pointerId = 0;
   this.pointerType = "";
   this.timeStamp = 0;
   this.j = null;
-  a && this.init(a, b)
+  event && this.init(event, currentTarget);
 }
-C(ni, li);
-ni.prototype.init = function(a, b) {
-  var c = this.type = a.type,
-    d = a.changedTouches && a.changedTouches.length ? a.changedTouches[0] : null;
-  this.target = a.target || a.srcElement;
-  this.currentTarget = b;
-  b = a.relatedTarget;
-  b || (c == "mouseover" ? b = a.fromElement : c == "mouseout" && (b = a.toElement));
-  this.relatedTarget = b;
-  d ? (this.clientX = d.clientX !== void 0 ? d.clientX : d.pageX, this.clientY = d.clientY !== void 0 ? d
-    .clientY : d.pageY, this.screenX = d.screenX || 0, this.screenY = d.screenY || 0) : (this.offsetX = a
-    .offsetX, this.offsetY = a.offsetY, this.clientX =
-    a.clientX !== void 0 ? a.clientX : a.pageX, this.clientY = a.clientY !== void 0 ? a.clientY : a.pageY,
-    this.screenX = a.screenX || 0, this.screenY = a.screenY || 0);
-  this.button = a.button;
-  this.keyCode = a.keyCode || 0;
-  this.key = a.key || "";
-  this.charCode = a.charCode || (c == "keypress" ? a.keyCode : 0);
-  this.ctrlKey = a.ctrlKey;
-  this.altKey = a.altKey;
-  this.shiftKey = a.shiftKey;
-  this.metaKey = a.metaKey;
-  this.pointerId = a.pointerId || 0;
-  this.pointerType = a.pointerType;
-  this.state = a.state;
-  this.timeStamp = a.timeStamp;
-  this.j = a;
-  a.defaultPrevented && ni.W.preventDefault.call(this)
+inheritClosureClass(BrowserEvent, BaseEvent);
+BrowserEvent.prototype.init = function (value, other) {
+  var intermediate = (this.type = value.type),
+    intermediate2 =
+      value.changedTouches && value.changedTouches.length ? value.changedTouches[0] : null;
+  this.target = value.target || value.srcElement;
+  this.currentTarget = other;
+  other = value.relatedTarget;
+  other ||
+    (intermediate == "mouseover"
+      ? (other = value.fromElement)
+      : intermediate == "mouseout" && (other = value.toElement));
+  this.relatedTarget = other;
+  intermediate2
+    ? ((this.clientX =
+        intermediate2.clientX !== void 0 ? intermediate2.clientX : intermediate2.pageX),
+      (this.clientY =
+        intermediate2.clientY !== void 0 ? intermediate2.clientY : intermediate2.pageY),
+      (this.screenX = intermediate2.screenX || 0),
+      (this.screenY = intermediate2.screenY || 0))
+    : ((this.offsetX = value.offsetX),
+      (this.offsetY = value.offsetY),
+      (this.clientX = value.clientX !== void 0 ? value.clientX : value.pageX),
+      (this.clientY = value.clientY !== void 0 ? value.clientY : value.pageY),
+      (this.screenX = value.screenX || 0),
+      (this.screenY = value.screenY || 0));
+  this.button = value.button;
+  this.keyCode = value.keyCode || 0;
+  this.key = value.key || "";
+  this.charCode = value.charCode || (intermediate == "keypress" ? value.keyCode : 0);
+  this.ctrlKey = value.ctrlKey;
+  this.altKey = value.altKey;
+  this.shiftKey = value.shiftKey;
+  this.metaKey = value.metaKey;
+  this.pointerId = value.pointerId || 0;
+  this.pointerType = value.pointerType;
+  this.state = value.state;
+  this.timeStamp = value.timeStamp;
+  this.j = value;
+  value.defaultPrevented && BrowserEvent.W.preventDefault.call(this);
 };
-ni.prototype.stopPropagation = function() {
-  ni.W.stopPropagation.call(this);
-  this.j.stopPropagation ? this.j.stopPropagation() : this.j.cancelBubble = !0
+BrowserEvent.prototype.stopPropagation = function () {
+  BrowserEvent.W.stopPropagation.call(this);
+  this.j.stopPropagation ? this.j.stopPropagation() : (this.j.cancelBubble = true);
 };
-ni.prototype.preventDefault = function() {
-  ni.W.preventDefault.call(this);
-  var a = this.j;
-  a.preventDefault ? a.preventDefault() : a.returnValue = !1
+BrowserEvent.prototype.preventDefault = function () {
+  BrowserEvent.W.preventDefault.call(this);
+  var intermediate = this.j;
+  intermediate.preventDefault ? intermediate.preventDefault() : (intermediate.returnValue = false);
 };
-var oi = "closure_listenable_" + (Math.random() * 1E6 | 0);
-var pi = 0;
-
-function qi(a, b, c, d, e) {
-  this.listener = a;
+var listenableMarkerKey = "closure_listenable_" + ((Math.random() * 1e6) | 0);
+var nextListenerKey = 0;
+function EventListenerRecord(listener, source, type, capture, receiver) {
+  this.listener = listener;
   this.proxy = null;
-  this.src = b;
-  this.type = c;
-  this.capture = !!d;
-  this.handler = e;
-  this.key = ++pi;
-  this.removed = this.ia = !1
+  this.src = source;
+  this.type = type;
+  this.capture = !!capture;
+  this.handler = receiver;
+  this.key = ++nextListenerKey;
+  this.removed = this.ia = false;
 }
-
-function ri(a) {
-  a.removed = !0;
-  a.listener = null;
-  a.proxy = null;
-  a.src = null;
-  a.handler = null
-};
-
-function si(a) {
-  this.src = a;
+function clearListenerRecord(record) {
+  record.removed = true;
+  record.listener = null;
+  record.proxy = null;
+  record.src = null;
+  record.handler = null;
+}
+function ListenerMap(source) {
+  this.src = source;
   this.j = {};
-  this.l = 0
+  this.l = 0;
 }
-si.prototype.add = function(a, b, c, d, e) {
-  var f = a.toString();
-  a = this.j[f];
-  a || (a = this.j[f] = [], this.l++);
-  var g = ti(a, b, d, e);
-  g > -1 ? (b = a[g], c || (b.ia = !1)) : (b = new qi(b, this.src, f, !!d, e), b.ia = c, a.push(b));
-  return b
+ListenerMap.prototype.add = function (value, other, options, context, extra) {
+  var intermediate = value.toString();
+  value = this.j[intermediate];
+  value || ((value = this.j[intermediate] = []), this.l++);
+  var intermediate2 = findListenerIndex(value, other, context, extra);
+  intermediate2 > -1
+    ? ((other = value[intermediate2]), options || (other.ia = false))
+    : ((other = new EventListenerRecord(other, this.src, intermediate, !!context, extra)),
+      (other.ia = options),
+      value.push(other));
+  return other;
 };
-si.prototype.remove = function(a, b, c, d) {
-  a = a.toString();
-  if (!(a in this.j)) return !1;
-  var e = this.j[a];
-  b = ti(e, b, c, d);
-  return b > -1 ? (ri(e[b]), Array.prototype.splice.call(e, b, 1), e.length == 0 && (delete this.j[a], this
-    .l--), !0) : !1
+ListenerMap.prototype.remove = function (value, other, options, context) {
+  value = value.toString();
+  if (!(value in this.j)) return false;
+  var intermediate = this.j[value];
+  other = findListenerIndex(intermediate, other, options, context);
+  return other > -1
+    ? (clearListenerRecord(intermediate[other]),
+      Array.prototype.splice.call(intermediate, other, 1),
+      intermediate.length == 0 && (delete this.j[value], this.l--),
+      true)
+    : false;
 };
-
-function ui(a, b) {
-  var c = b.type;
-  c in a.j && ab(a.j[c], b) && (ri(b), a.j[c].length == 0 && (delete a.j[c], a.l--))
+function removeListenerRecord(map, record) {
+  var type = record.type;
+  type in map.j &&
+    removeArrayValue(map.j[type], record) &&
+    (clearListenerRecord(record), map.j[type].length == 0 && (delete map.j[type], map.l--));
 }
-si.prototype.removeAll = function(a) {
-  a = a && a.toString();
-  var b = 0,
-    c;
-  for (c in this.j)
-    if (!a || c == a) {
-      for (var d = this.j[c], e = 0; e < d.length; e++) ++b, ri(d[e]);
-      delete this.j[c];
-      this.l--
-    } return b
+ListenerMap.prototype.removeAll = function (value) {
+  value = value && value.toString();
+  var index = 0,
+    intermediate;
+  for (intermediate in this.j)
+    if (!value || intermediate == value) {
+      for (
+        var intermediate2 = this.j[intermediate], index2 = 0;
+        index2 < intermediate2.length;
+        index2++
+      ) {
+        ++index;
+        clearListenerRecord(intermediate2[index2]);
+      }
+      delete this.j[intermediate];
+      this.l--;
+    }
+  return index;
 };
-
-function ti(a, b, c, d) {
-  for (var e = 0; e < a.length; ++e) {
-    var f = a[e];
-    if (!f.removed && f.listener == b && f.capture == !!c && f.handler == d) return e
+function findListenerIndex(listeners, listener, capture, receiver) {
+  for (var index = 0; index < listeners.length; ++index) {
+    var intermediate = listeners[index];
+    if (
+      !intermediate.removed &&
+      intermediate.listener == listener &&
+      intermediate.capture == !!capture &&
+      intermediate.handler == receiver
+    )
+      return index;
   }
-  return -1
-};
-var vi = "closure_lm_" + (Math.random() * 1E6 | 0),
-  wi = {},
-  xi = 0;
-
-function yi(a, b, c, d, e) {
-  if (d && d.once) return zi(a, b, c, d, e);
-  if (Array.isArray(b)) {
-    for (var f = 0; f < b.length; f++) yi(a, b[f], c, d, e);
-    return null
-  }
-  c = Ai(c);
-  return a && a[oi] ? a.listen(b, c, Ka(d) ? !!d.capture : !!d, e) : Bi(a, b, c, !1, d, e)
+  return -1;
 }
-
-function Bi(a, b, c, d, e, f) {
-  if (!b) throw Error("Invalid event type");
-  var g = Ka(e) ? !!e.capture : !!e,
-    h = Di(a);
-  h || (a[vi] = h = new si(a));
-  c = h.add(b, c, d, g, f);
-  if (c.proxy) return c;
-  d = Ei();
-  c.proxy = d;
-  d.src = a;
-  d.listener = c;
-  if (a.addEventListener) mi || (e = g), e === void 0 && (e = !1), a.addEventListener(b.toString(), d, e);
-  else if (a.attachEvent) a.attachEvent(Fi(b.toString()), d);
-  else if (a.addListener && a.removeListener) a.addListener(d);
+var listenerMapKey = "closure_lm_" + ((Math.random() * 1e6) | 0),
+  onEventNameCache = {},
+  nativeListenerCount = 0;
+function listen(source, type, listener, options, receiver) {
+  if (options && options.once) return listenOnce(source, type, listener, options, receiver);
+  if (Array.isArray(type)) {
+    for (var index = 0; index < type.length; index++)
+      listen(source, type[index], listener, options, receiver);
+    return null;
+  }
+  listener = normalizeEventListener(listener);
+  return source && source[listenableMarkerKey]
+    ? source.listen(type, listener, isObjectLike(options) ? !!options.capture : !!options, receiver)
+    : registerNativeListener(source, type, listener, false, options, receiver);
+}
+function registerNativeListener(source, type, listener, once, options, receiver) {
+  if (!type) throw Error("Invalid event type");
+  var intermediate = isObjectLike(options) ? !!options.capture : !!options,
+    listenerMap = getListenerMap(source);
+  listenerMap || (source[listenerMapKey] = listenerMap = new ListenerMap(source));
+  listener = listenerMap.add(type, listener, once, intermediate, receiver);
+  if (listener.proxy) return listener;
+  once = createNativeEventProxy();
+  listener.proxy = once;
+  once.src = source;
+  once.listener = listener;
+  if (source.addEventListener) {
+    supportsPassiveEvents || (options = intermediate);
+    options === void 0 && (options = false);
+    source.addEventListener(type.toString(), once, options);
+  } else if (source.attachEvent) source.attachEvent(getOnEventName(type.toString()), once);
+  else if (source.addListener && source.removeListener) source.addListener(once);
   else throw Error("addEventListener and attachEvent are unavailable.");
-  xi++;
-  return c
+  nativeListenerCount++;
+  return listener;
 }
-
-function Ei() {
-  function a(c) {
-    return b.call(a.src, a.listener, c)
+function createNativeEventProxy() {
+  function helper(helper2) {
+    return dispatchNativeEvent2.call(helper.src, helper.listener, helper2);
   }
-  var b = Gi;
-  return a
+  var dispatchNativeEvent2 = dispatchNativeEvent;
+  return helper;
 }
-
-function zi(a, b, c, d, e) {
-  if (Array.isArray(b)) {
-    for (var f = 0; f < b.length; f++) zi(a, b[f], c, d, e);
-    return null
+function listenOnce(source, type, listener, options, receiver) {
+  if (Array.isArray(type)) {
+    for (var index = 0; index < type.length; index++)
+      listenOnce(source, type[index], listener, options, receiver);
+    return null;
   }
-  c = Ai(c);
-  return a && a[oi] ? a.l.add(String(b), c, !0, Ka(d) ? !!d.capture : !!d, e) : Bi(a, b, c, !0, d, e)
+  listener = normalizeEventListener(listener);
+  return source && source[listenableMarkerKey]
+    ? source.l.add(
+        String(type),
+        listener,
+        true,
+        isObjectLike(options) ? !!options.capture : !!options,
+        receiver,
+      )
+    : registerNativeListener(source, type, listener, true, options, receiver);
 }
-
-function Hi(a, b, c, d, e) {
-  if (Array.isArray(b))
-    for (var f = 0; f < b.length; f++) Hi(a, b[f], c, d, e);
-  else(d = Ka(d) ? !!d.capture : !!d, c = Ai(c), a && a[oi]) ? a.l.remove(String(b), c, d, e) : a && (a = Di(
-    a)) && (b = a.j[b.toString()], a = -1, b && (a = ti(b, c, d, e)), (c = a > -1 ? b[a] : null) && Ii(c))
+function unlisten(source, type, listener, options, receiver) {
+  if (Array.isArray(type))
+    for (var index = 0; index < type.length; index++)
+      unlisten(source, type[index], listener, options, receiver);
+  else
+    ((options = isObjectLike(options) ? !!options.capture : !!options),
+    (listener = normalizeEventListener(listener)),
+    source && source[listenableMarkerKey])
+      ? source.l.remove(String(type), listener, options, receiver)
+      : source &&
+        (source = getListenerMap(source)) &&
+        ((type = source.j[type.toString()]),
+        (source = -1),
+        type && (source = findListenerIndex(type, listener, options, receiver)),
+        (listener = source > -1 ? type[source] : null) && unlistenByKey(listener));
 }
-
-function Ii(a) {
-  if (typeof a !== "number" && a && !a.removed) {
-    var b = a.src;
-    if (b && b[oi]) ui(b.l, a);
+function unlistenByKey(record) {
+  if (typeof record !== "number" && record && !record.removed) {
+    var src = record.src;
+    if (src && src[listenableMarkerKey]) removeListenerRecord(src.l, record);
     else {
-      var c = a.type,
-        d = a.proxy;
-      b.removeEventListener ? b.removeEventListener(c, d, a.capture) : b.detachEvent ? b.detachEvent(Fi(c),
-        d) : b.addListener && b.removeListener && b.removeListener(d);
-      xi--;
-      (c = Di(b)) ? (ui(c, a), c.l == 0 && (c.src = null, b[vi] = null)) : ri(a)
+      var type = record.type,
+        proxy = record.proxy;
+      src.removeEventListener
+        ? src.removeEventListener(type, proxy, record.capture)
+        : src.detachEvent
+          ? src.detachEvent(getOnEventName(type), proxy)
+          : src.addListener && src.removeListener && src.removeListener(proxy);
+      nativeListenerCount--;
+      (type = getListenerMap(src))
+        ? (removeListenerRecord(type, record),
+          type.l == 0 && ((type.src = null), (src[listenerMapKey] = null)))
+        : clearListenerRecord(record);
     }
   }
 }
-
-function Fi(a) {
-  return a in wi ? wi[a] : wi[a] = "on" + a
+function getOnEventName(type) {
+  return type in onEventNameCache ? onEventNameCache[type] : (onEventNameCache[type] = "on" + type);
 }
-
-function Gi(a, b) {
-  if (a.removed) a = !0;
+function dispatchNativeEvent(record, event) {
+  if (record.removed) record = true;
   else {
-    b = new ni(b, this);
-    var c = a.listener,
-      d = a.handler || a.src;
-    a.ia && Ii(a);
-    a = c.call(d, b)
+    event = new BrowserEvent(event, this);
+    var listener = record.listener,
+      intermediate = record.handler || record.src;
+    record.ia && unlistenByKey(record);
+    record = listener.call(intermediate, event);
   }
-  return a
+  return record;
 }
-
-function Di(a) {
-  a = a[vi];
-  return a instanceof si ? a : null
+function getListenerMap(source) {
+  source = source[listenerMapKey];
+  return source instanceof ListenerMap ? source : null;
 }
-var Ji = "__closure_events_fn_" + (Math.random() * 1E9 >>> 0);
-
-function Ai(a) {
-  if (typeof a === "function") return a;
-  a[Ji] || (a[Ji] = function(b) {
-    return a.handleEvent(b)
-  });
-  return a[Ji]
+var listenerWrapperKey = "__closure_events_fn_" + ((Math.random() * 1e9) >>> 0);
+function normalizeEventListener(listener) {
+  if (typeof listener === "function") return listener;
+  listener[listenerWrapperKey] ||
+    (listener[listenerWrapperKey] = function (value) {
+      return listener.handleEvent(value);
+    });
+  return listener[listenerWrapperKey];
 }
-kg(function(a) {
-  Gi = a(Gi)
+registerEntryPoint(function (callback) {
+  dispatchNativeEvent = callback(dispatchNativeEvent);
 });
-
-function Ki(a, b) {
-  li.call(this, a);
-  this.error = b
+function ErrorEvent(type, error) {
+  BaseEvent.call(this, type);
+  this.error = error;
 }
-x(Ki, li);
-var Li = /\/d\/([^\/]+)/,
-  Mi = /\/r\/([^\/]+)/;
-
-function Ni(a) {
-  a = a.match(Vf)[5] || null;
-  return Li.test(a)
+inheritCompiledClass(ErrorEvent, BaseEvent);
+var documentIdPathPattern = /\/d\/([^\/]+)/,
+  resourceIdPathPattern = /\/r\/([^\/]+)/;
+function hasDocumentPath(url) {
+  url = url.match(urlPartsPattern)[5] || null;
+  return documentIdPathPattern.test(url);
 }
-
-function Oi(a, b) {
-  if (Ni(a)) {
-    Ni(a);
-    a = a.match(Vf);
-    var c = a[5];
-    c = c.replace(b, "");
-    b = Uf(a[1], a[2], a[3], a[4], c, a[6], a[7])
-  } else b = a;
-  return b
-};
-
-function Z() {
-  X.call(this);
-  this.l = new si(this);
+function redactDocumentPath(url, value) {
+  if (hasDocumentPath(url)) {
+    hasDocumentPath(url);
+    url = url.match(urlPartsPattern);
+    var intermediate = url[5];
+    intermediate = intermediate.replace(value, "");
+    value = buildUrl(url[1], url[2], url[3], url[4], intermediate, url[6], url[7]);
+  } else value = url;
+  return value;
+}
+function EventTarget() {
+  Disposable.call(this);
+  this.l = new ListenerMap(this);
   this.Sa = this;
-  this.R = null
+  this.R = null;
 }
-C(Z, X);
-Z.prototype[oi] = !0;
-q = Z.prototype;
-q.addEventListener = function(a, b, c, d) {
-  yi(this, a, b, c, d)
+inheritClosureClass(EventTarget, Disposable);
+EventTarget.prototype[listenableMarkerKey] = true;
+prototypeAlias = EventTarget.prototype;
+prototypeAlias.addEventListener = function (value, other, options, context) {
+  listen(this, value, other, options, context);
 };
-q.removeEventListener = function(a, b, c, d) {
-  Hi(this, a, b, c, d)
+prototypeAlias.removeEventListener = function (value, other, options, context) {
+  unlisten(this, value, other, options, context);
 };
-q.dispatchEvent = function(a) {
-  var b = this.R;
-  if (b) {
-    var c = [];
-    for (var d = 1; b; b = b.R) c.push(b), ++d
+prototypeAlias.dispatchEvent = function (value) {
+  var intermediate = this.R;
+  if (intermediate) {
+    var values = [];
+    for (var index = 1; intermediate; intermediate = intermediate.R) {
+      values.push(intermediate);
+      ++index;
+    }
   }
-  b = this.Sa;
-  d = a.type || a;
-  if (typeof a === "string") a = new li(a, b);
-  else if (a instanceof li) a.target = a.target || b;
+  intermediate = this.Sa;
+  index = value.type || value;
+  if (typeof value === "string") value = new BaseEvent(value, intermediate);
+  else if (value instanceof BaseEvent) value.target = value.target || intermediate;
   else {
-    var e = a;
-    a = new li(d, b);
-    Rh(a, e)
+    var value2 = value;
+    value = new BaseEvent(index, intermediate);
+    extendObject(value, value2);
   }
-  e = !0;
-  var f;
-  if (c)
-    for (f = c.length - 1; !a.l && f >= 0; f--) {
-      var g = a.currentTarget = c[f];
-      e = Pi(g, d, !0, a) && e
+  value2 = true;
+  var index2;
+  if (values)
+    for (index2 = values.length - 1; !value.l && index2 >= 0; index2--) {
+      var intermediate2 = (value.currentTarget = values[index2]);
+      value2 = dispatchListeners(intermediate2, index, true, value) && value2;
     }
-  a.l || (g = a.currentTarget = b, e = Pi(g, d, !0, a) && e, a.l || (e = Pi(g, d, !1, a) && e));
-  if (c)
-    for (f = 0; !a.l && f < c.length; f++) g = a.currentTarget = c[f], e = Pi(g, d, !1, a) && e;
-  return e
+  value.l ||
+    ((intermediate2 = value.currentTarget = intermediate),
+    (value2 = dispatchListeners(intermediate2, index, true, value) && value2),
+    value.l || (value2 = dispatchListeners(intermediate2, index, false, value) && value2));
+  if (values)
+    for (index2 = 0; !value.l && index2 < values.length; index2++) {
+      intermediate2 = value.currentTarget = values[index2];
+      value2 = dispatchListeners(intermediate2, index, false, value) && value2;
+    }
+  return value2;
 };
-q.N = function() {
-  Z.W.N.call(this);
+prototypeAlias.N = function () {
+  EventTarget.W.N.call(this);
   this.l && this.l.removeAll(void 0);
-  this.R = null
+  this.R = null;
 };
-q.listen = function(a, b, c, d) {
-  return this.l.add(String(a), b, !1, c, d)
+prototypeAlias.listen = function (value, other, options, context) {
+  return this.l.add(String(value), other, false, options, context);
 };
-
-function Pi(a, b, c, d) {
-  b = a.l.j[String(b)];
-  if (!b) return !0;
-  b = b.concat();
-  for (var e = !0, f = 0; f < b.length; ++f) {
-    var g = b[f];
-    if (g && !g.removed && g.capture == c) {
-      var h = g.listener,
-        k = g.handler || g.src;
-      g.ia && ui(a.l, g);
-      e = h.call(k, d) !== !1 && e
+function dispatchListeners(target, type, capture, event) {
+  type = target.l.j[String(type)];
+  if (!type) return true;
+  type = type.concat();
+  for (var intermediate = true, index = 0; index < type.length; ++index) {
+    var intermediate2 = type[index];
+    if (intermediate2 && !intermediate2.removed && intermediate2.capture == capture) {
+      var listener = intermediate2.listener,
+        intermediate3 = intermediate2.handler || intermediate2.src;
+      intermediate2.ia && removeListenerRecord(target.l, intermediate2);
+      intermediate = listener.call(intermediate3, event) !== false && intermediate;
     }
   }
-  return e && !d.defaultPrevented
-};
-
-function Qi(a, b) {
-  if (typeof a !== "function")
-    if (a && typeof a.handleEvent == "function") a = B(a.handleEvent, a);
+  return intermediate && !event.defaultPrevented;
+}
+/**
+ * 计时与日志发送：延迟、抖动退避、缓冲队列和错误重试。不是文档 outbox。
+ */
+function schedule(callback, delay) {
+  if (typeof callback !== "function")
+    if (callback && typeof callback.handleEvent == "function")
+      callback = bindFunction(callback.handleEvent, callback);
     else throw Error("Invalid listener argument");
-  return Number(b) > 2147483647 ? -1 : A.setTimeout(a, b || 0)
+  return Number(delay) > 2147483647 ? -1 : runtimeGlobal.setTimeout(callback, delay || 0);
 }
-
-function Ri() {
-  var a = null;
-  return (new wg(function(b, c) {
-    a = Qi(function() {
-      b(void 0)
-    }, 14E3);
-    a == -1 && c(Error("Failed to schedule timer."))
-  })).ta(function(b) {
-    A.clearTimeout(a);
-    throw b;
-  })
-};
-
-function Si(a, b, c) {
-  X.call(this);
-  this.j = a;
-  this.o = b || 0;
-  this.l = c;
-  this.v = B(this.hb, this)
+function waitForFrameTimeout() {
+  var intermediate = null;
+  return new LegacyPromise(function (callback, callback2) {
+    intermediate = schedule(function () {
+      callback(void 0);
+    }, 14e3);
+    intermediate == -1 && callback2(Error("Failed to schedule timer."));
+  }).ta(function (value) {
+    runtimeGlobal.clearTimeout(intermediate);
+    throw value;
+  });
 }
-C(Si, X);
-q = Si.prototype;
-q.ha = 0;
-q.N = function() {
-  Si.W.N.call(this);
+function DelayTimer(callback, delay, receiver) {
+  Disposable.call(this);
+  this.j = callback;
+  this.o = delay || 0;
+  this.l = receiver;
+  this.v = bindFunction(this.hb, this);
+}
+inheritClosureClass(DelayTimer, Disposable);
+prototypeAlias = DelayTimer.prototype;
+prototypeAlias.ha = 0;
+prototypeAlias.N = function () {
+  DelayTimer.W.N.call(this);
   this.stop();
   delete this.j;
-  delete this.l
+  delete this.l;
 };
-q.start = function(a) {
+prototypeAlias.start = function (value) {
   this.stop();
-  this.ha = Qi(this.v, a !== void 0 ? a : this.o)
+  this.ha = schedule(this.v, value !== void 0 ? value : this.o);
 };
-q.stop = function() {
-  this.isActive() && A.clearTimeout(this.ha);
-  this.ha = 0
-};
-q.isActive = function() {
-  return this.ha != 0
-};
-q.hb = function() {
+prototypeAlias.stop = function () {
+  this.isActive() && runtimeGlobal.clearTimeout(this.ha);
   this.ha = 0;
-  this.j && this.j.call(this.l)
 };
-
-function Ti(a, b, c, d) {
-  X.call(this);
-  this.o = d != null ? d : .15;
-  this.A = a;
-  this.v = b;
-  this.F = c;
-  this.j = new Si(this.ub, void 0, this);
+prototypeAlias.isActive = function () {
+  return this.ha != 0;
+};
+prototypeAlias.hb = function () {
+  this.ha = 0;
+  this.j && this.j.call(this.l);
+};
+function BackoffTimer(callback, initialDelay, maximumDelay, jitter) {
+  Disposable.call(this);
+  this.o = jitter != null ? jitter : 0.15;
+  this.A = callback;
+  this.v = initialDelay;
+  this.F = maximumDelay;
+  this.j = new DelayTimer(this.ub, void 0, this);
   this.B = Number.NEGATIVE_INFINITY;
-  this.l = 0
+  this.l = 0;
 }
-x(Ti, X);
-q = Ti.prototype;
-q.isActive = function() {
-  return this.j.isActive()
+inheritCompiledClass(BackoffTimer, Disposable);
+prototypeAlias = BackoffTimer.prototype;
+prototypeAlias.isActive = function () {
+  return this.j.isActive();
 };
-q.start = function() {
-  Ui(this, !1, !1)
+prototypeAlias.start = function () {
+  restartBackoff(this, false, false);
 };
-
-function Ui(a, b, c) {
-  b && (a.j.stop(), Vi(a, a.v));
-  a.isActive() || (b = Math.max(0, a.B + a.l - Date.now()), b == 0 && (c ? b = Vi(a, a.v) : a.l = 0), a.j
-    .start(b))
+function restartBackoff(timer, reset, runImmediately) {
+  reset && (timer.j.stop(), calculateBackoffDelay(timer, timer.v));
+  timer.isActive() ||
+    ((reset = Math.max(0, timer.B + timer.l - Date.now())),
+    reset == 0 &&
+      (runImmediately ? (reset = calculateBackoffDelay(timer, timer.v)) : (timer.l = 0)),
+    timer.j.start(reset));
 }
-q.stop = function() {
-  this.j.stop()
+prototypeAlias.stop = function () {
+  this.j.stop();
 };
-
-function Vi(a, b) {
-  b > 0 && a.o != 0 && (b = Math.floor(b * (1 - a.o + Math.random() * a.o * 2)));
-  return a.l = b
+function calculateBackoffDelay(timer, delay) {
+  delay > 0 &&
+    timer.o != 0 &&
+    (delay = Math.floor(delay * (1 - timer.o + Math.random() * timer.o * 2)));
+  return (timer.l = delay);
 }
-q.ub = function() {
+prototypeAlias.ub = function () {
   this.B = Date.now();
-  Vi(this, Math.min(Math.max(this.l * 2, this.v), this.F));
-  this.A()
+  calculateBackoffDelay(this, Math.min(Math.max(this.l * 2, this.v), this.F));
+  this.A();
 };
-q.N = function() {
+prototypeAlias.N = function () {
   this.j.dispose();
   delete this.j;
   delete this.A;
-  X.prototype.N.call(this)
+  Disposable.prototype.N.call(this);
 };
-
-function Wi(a) {
-  X.call(this);
-  this.l = a;
-  this.j = {}
+function EventHandler(receiver) {
+  Disposable.call(this);
+  this.l = receiver;
+  this.j = {};
 }
-C(Wi, X);
-var Xi = [];
-Wi.prototype.listen = function(a, b, c, d) {
-  Array.isArray(b) || (b && (Xi[0] = b.toString()), b = Xi);
-  for (var e = 0; e < b.length; e++) {
-    var f = yi(a, b[e], c || this.handleEvent, d || !1, this.l || this);
-    if (!f) break;
-    this.j[f.key] = f
+inheritClosureClass(EventHandler, Disposable);
+var eventHandlerTypeBuffer = [];
+EventHandler.prototype.listen = function (value, other, options, context) {
+  Array.isArray(other) ||
+    (other && (eventHandlerTypeBuffer[0] = other.toString()), (other = eventHandlerTypeBuffer));
+  for (var index = 0; index < other.length; index++) {
+    var intermediate = listen(
+      value,
+      other[index],
+      options || this.handleEvent,
+      context || false,
+      this.l || this,
+    );
+    if (!intermediate) break;
+    this.j[intermediate.key] = intermediate;
   }
-  return this
+  return this;
 };
-Wi.prototype.removeAll = function() {
-  Oh(this.j, function(a, b) {
-    this.j.hasOwnProperty(b) && Ii(a)
-  }, this);
-  this.j = {}
+EventHandler.prototype.removeAll = function () {
+  forEachObjectValue(
+    this.j,
+    function (value, other) {
+      this.j.hasOwnProperty(other) && unlistenByKey(value);
+    },
+    this,
+  );
+  this.j = {};
 };
-Wi.prototype.N = function() {
-  Wi.W.N.call(this);
-  this.removeAll()
+EventHandler.prototype.N = function () {
+  EventHandler.W.N.call(this);
+  this.removeAll();
 };
-Wi.prototype.handleEvent = function() {
+EventHandler.prototype.handleEvent = function () {
   throw Error("EventHandler.handleEvent not implemented");
 };
-
-function Yi(a, b, c, d, e, f, g) {
-  g = g === void 0 ? !0 : g;
-  X.call(this);
-  var h = this;
-  this.j = a;
-  this.j.O = 1E4;
-  this.da = b;
-  this.o = f;
-  this.l = new Ti(function() {
-    return h.za()
-  }, 3E4, 36E5);
+function RetryingLogTransport(
+  request,
+  endpoint,
+  limiter,
+  timeout,
+  onSuccess,
+  options,
+  reportFailures,
+) {
+  reportFailures = reportFailures === void 0 ? true : reportFailures;
+  Disposable.call(this);
+  var instance = this;
+  this.j = request;
+  this.j.O = 1e4;
+  this.da = endpoint;
+  this.o = options;
+  this.l = new BackoffTimer(
+    function () {
+      return instance.za();
+    },
+    3e4,
+    36e5,
+  );
   this.A = 0;
   this.F = null;
-  this.S = new vh("errorsender", 1, 8, d);
-  dg(this, this.S);
-  this.R = !1;
+  this.S = new QpsLimiter("errorsender", 1, 8, timeout);
+  ownDisposable(this, this.S);
+  this.R = false;
   this.L = null;
-  this.B = new Set;
-  this.J = new Wi(this);
-  this.ea = c || 10;
-  this.U = e || null;
+  this.B = new Set();
+  this.J = new EventHandler(this);
+  this.ea = limiter || 10;
+  this.U = onSuccess || null;
   this.J.listen(this.j, "complete", this.pb);
   this.J.listen(this.j, "ready", this.za);
   this.P = null;
-  this.M = new Mh;
-  dg(this, this.M);
-  this.o && Nh(this.M, this.o.l(), function() {
-    h.o.getState().j >= 3 && (h.P =
-      (Jh(), Ih));
-    h.o.getState().j >= 3 || h.P !== (Jh(), Ih) || Zi(h)
-  });
-  this.O = g;
-  this.V = {}
-}
-x(Yi, X);
-q = Yi.prototype;
-q.send = function(a, b, c, d) {
-  ph(this.da.get("docs-dafjera")) && (a = Oi(Oi(a, Mi), Li));
-  var e = $g($g(gh(this.v.length), function(f) {
-    if (!(f >= this.ea)) return this.O && (a = W(a, "errorSender_enqueueTimeMs", Date.now()
-    .toString())), f = {}, f.u = a, f.m = b, f.c = c, f.h = d, this.enqueue(f)
-  }, this), this.za, this);
-  bh(e, function() {
-    this.B.delete(e)
-  }, this);
-  this.B.add(e)
-};
-
-function $i(a) {
-  return Fg(Array.from(a.B.values())).then(n())
-}
-q.za = function() {
-  var a = this.o && this.o.getState().j >= 3,
-    b = this.na() || this.j.isActive() || this.l.isActive() || this.R;
-  return a || b ? gh() : aj(this)
-};
-
-function aj(a) {
-  return function() {
-    return $g(gh(a.v[0] !== void 0 ? a.v[0] : null), function(b) {
-      return bj(a, b)
-    })
-  }()
-}
-
-function bj(a, b) {
-  if (a.l.isActive() || a.j.isActive() || a.R) return gh();
-  if (!b) return a.l.stop(), gh();
-  if (b.u.length > 4E3) return cj(a);
-  try {
-    xh(a.S);
-    a.L = new Tg;
-    var c = b.u;
-    a.U != null && (c = W(c, "reportingSessionId", a.U));
-    a.A > 0 && (c = W(c, "retryCount", a.A));
-    a.F != null && (c = W(c, "previousErrorSendStatus", a.F));
-    a.O && (c = W(c, "errorSender_sendTimeMs", Date.now().toString()), c = W(c, "errorSenderType", a.Ka()), b
-      .errorSender_frontIndex && (c = W(c, "errorSender_frontIndex", b.errorSender_frontIndex)), b
-      .errorSender_nextIndex && (c = W(c, "errorSender_nextIndex",
-        b.errorSender_nextIndex)), b.errorSender_queueSize && (c = W(c, "errorSender_queueSize", b
-        .errorSender_queueSize)));
-    a.V = b;
-    var d = b.m,
-      e = b.c,
-      f = b.h;
-    return $g($g(cj(a), function() {
-      a.j.send(c, d, e, f)
-    }), function() {
-      return a.L
-    })
-  } catch (g) {
-    if (vf(g) instanceof uh) a.R = !0;
-    else throw Jf(g, {
-      "docs-origin-class": "docs.debug.ErrorSender"
+  this.M = new EventObserverTracker();
+  ownDisposable(this, this.M);
+  this.o &&
+    trackObserver(this.M, this.o.l(), function () {
+      instance.o.getState().j >= 3 &&
+        (instance.P = (initializeNetworkStatuses(), offlineNetworkStatus));
+      instance.o.getState().j >= 3 ||
+        instance.P !== (initializeNetworkStatuses(), offlineNetworkStatus) ||
+        scheduleLogRetry(instance);
     });
-  }
-  return gh()
+  this.O = reportFailures;
+  this.V = {};
 }
-q.pb = function() {
-  var a = dj(this.j),
-    b = this.L,
-    c = ej(this.j) || a >= 400 && a <= 500,
-    d = this.A > 3;
-  c || d ? (this.A = 0, this.F = null, this.l.stop(), $g(gh(), function() {
-    Vg(b);
-    Wg(b, !0)
-  })) : (this.A++, this.F = a === -1 ? this.j.B : a, Zi(this), this.enqueue(this.V), Vg(b), Wg(b, !0))
+inheritCompiledClass(RetryingLogTransport, Disposable);
+prototypeAlias = RetryingLogTransport.prototype;
+prototypeAlias.send = function (value, other, options, context) {
+  parseBooleanFlag(this.da.get("docs-dafjera")) &&
+    (value = redactDocumentPath(
+      redactDocumentPath(value, resourceIdPathPattern),
+      documentIdPathPattern,
+    ));
+  var intermediate = addDeferredCallback(
+    addDeferredCallback(
+      resolvedDeferred(this.v.length),
+      function (value2) {
+        if (!(value2 >= this.ea))
+          return (
+            this.O &&
+              (value = appendQueryParameters(
+                value,
+                "errorSender_enqueueTimeMs",
+                Date.now().toString(),
+              )),
+            (value2 = {}),
+            (value2.u = value),
+            (value2.m = other),
+            (value2.c = options),
+            (value2.h = context),
+            this.enqueue(value2)
+          );
+      },
+      this,
+    ),
+    this.za,
+    this,
+  );
+  addDeferredBoth(
+    intermediate,
+    function () {
+      this.B.delete(intermediate);
+    },
+    this,
+  );
+  this.B.add(intermediate);
 };
-
-function Zi(a) {
-  a.A != 1 || a.l.isActive() ? a.l.start() : Ui(a.l, !0, !0)
+function flushBufferedLogs(transport) {
+  return settleAllLegacyPromises(Array.from(transport.B.values())).then(createNoopFunction());
 }
-q.N = function() {
-  cg(this.J, this.l, this.j, this.M);
+prototypeAlias.za = function () {
+  var intermediate = this.o && this.o.getState().j >= 3,
+    intermediate2 = this.na() || this.j.isActive() || this.l.isActive() || this.R;
+  return intermediate || intermediate2 ? resolvedDeferred() : flushLogTransport(this);
+};
+function flushLogTransport(transport) {
+  return (function () {
+    return addDeferredCallback(
+      resolvedDeferred(transport.v[0] !== void 0 ? transport.v[0] : null),
+      function (value) {
+        return sendNextLogEntry(transport, value);
+      },
+    );
+  })();
+}
+function sendNextLogEntry(transport, entry) {
+  if (transport.l.isActive() || transport.j.isActive() || transport.R) return resolvedDeferred();
+  if (!entry) return (transport.l.stop(), resolvedDeferred());
+  if (entry.u.length > 4e3) return dropFirstLogEntry(transport);
+  try {
+    consumeQpsQuota(transport.S);
+    transport.L = new LegacyDeferred();
+    var intermediate = entry.u;
+    transport.U != null &&
+      (intermediate = appendQueryParameters(intermediate, "reportingSessionId", transport.U));
+    transport.A > 0 &&
+      (intermediate = appendQueryParameters(intermediate, "retryCount", transport.A));
+    transport.F != null &&
+      (intermediate = appendQueryParameters(intermediate, "previousErrorSendStatus", transport.F));
+    transport.O &&
+      ((intermediate = appendQueryParameters(
+        intermediate,
+        "errorSender_sendTimeMs",
+        Date.now().toString(),
+      )),
+      (intermediate = appendQueryParameters(intermediate, "errorSenderType", transport.Ka())),
+      entry.errorSender_frontIndex &&
+        (intermediate = appendQueryParameters(
+          intermediate,
+          "errorSender_frontIndex",
+          entry.errorSender_frontIndex,
+        )),
+      entry.errorSender_nextIndex &&
+        (intermediate = appendQueryParameters(
+          intermediate,
+          "errorSender_nextIndex",
+          entry.errorSender_nextIndex,
+        )),
+      entry.errorSender_queueSize &&
+        (intermediate = appendQueryParameters(
+          intermediate,
+          "errorSender_queueSize",
+          entry.errorSender_queueSize,
+        )));
+    transport.V = entry;
+    var intermediate2 = entry.m,
+      intermediate3 = entry.c,
+      intermediate4 = entry.h;
+    return addDeferredCallback(
+      addDeferredCallback(dropFirstLogEntry(transport), function () {
+        transport.j.send(intermediate, intermediate2, intermediate3, intermediate4);
+      }),
+      function () {
+        return transport.L;
+      },
+    );
+  } catch (caughtError) {
+    if (toJavaThrowable(caughtError) instanceof LimitException) transport.R = true;
+    else
+      throw normalizeErrorWithContext(caughtError, {
+        "docs-origin-class": "docs.debug.ErrorSender",
+      });
+  }
+  return resolvedDeferred();
+}
+prototypeAlias.pb = function () {
+  var xhrStatus = readXhrStatus(this.j),
+    intermediate = this.L,
+    intermediate2 = isSuccessfulXhr(this.j) || (xhrStatus >= 400 && xhrStatus <= 500),
+    intermediate3 = this.A > 3;
+  intermediate2 || intermediate3
+    ? ((this.A = 0),
+      (this.F = null),
+      this.l.stop(),
+      addDeferredCallback(resolvedDeferred(), function () {
+        assertDeferredNotFired(intermediate);
+        settleDeferred(intermediate, true);
+      }))
+    : (this.A++,
+      (this.F = xhrStatus === -1 ? this.j.B : xhrStatus),
+      scheduleLogRetry(this),
+      this.enqueue(this.V),
+      assertDeferredNotFired(intermediate),
+      settleDeferred(intermediate, true));
+};
+function scheduleLogRetry(transport) {
+  transport.A != 1 || transport.l.isActive()
+    ? transport.l.start()
+    : restartBackoff(transport.l, true, true);
+}
+prototypeAlias.N = function () {
+  disposeAll(this.J, this.l, this.j, this.M);
   this.B.clear();
-  X.prototype.N.call(this)
+  Disposable.prototype.N.call(this);
 };
-q.Ka = ba("BaseErrorSender");
-
-function fj(a, b, c, d, e) {
-  Yi.call(this, a, b, c, void 0, d, e, void 0);
-  this.v = []
+prototypeAlias.Ka = createConstantFunction("BaseErrorSender");
+function BufferedLogTransport(request, endpoint, limiter, onSuccess, options) {
+  RetryingLogTransport.call(this, request, endpoint, limiter, void 0, onSuccess, options, void 0);
+  this.v = [];
 }
-x(fj, Yi);
-fj.prototype.enqueue = function(a) {
-  this.v.push(a);
-  return gh()
+inheritCompiledClass(BufferedLogTransport, RetryingLogTransport);
+BufferedLogTransport.prototype.enqueue = function (value) {
+  this.v.push(value);
+  return resolvedDeferred();
 };
-
-function cj(a) {
-  a.v.shift();
-  return gh()
+function dropFirstLogEntry(transport) {
+  transport.v.shift();
+  return resolvedDeferred();
 }
-fj.prototype.Ka = ba("MemoryErrorSender");
-fj.prototype.N = function() {
+BufferedLogTransport.prototype.Ka = createConstantFunction("MemoryErrorSender");
+BufferedLogTransport.prototype.N = function () {
   delete this.v;
-  Yi.prototype.N.call(this)
+  RetryingLogTransport.prototype.N.call(this);
 };
-
-function gj() {
-  var a = a === void 0 ? !1 : a;
-  if (a === void 0 ? 0 : a) throw Error(
-    "A module ID must be set on the Fava ServiceId a in order to modify extra edges.");
+function createFavaServiceId() {
+  var intermediate = intermediate === void 0 ? false : intermediate;
+  if (intermediate === void 0 ? 0 : intermediate)
+    throw Error("A module ID must be set on the Fava ServiceId a in order to modify extra edges.");
 }
-gj.prototype.toString = ba("a");
-new gj;
-
-function hj(a) {
-  this.j = Cd(je(), Hc(a));
-  a = pd(this.j, 1);
-  this.l = Math.floor(Math.random() * 100) < a
+createFavaServiceId.prototype.toString = createConstantFunction("a");
+new createFavaServiceId();
+function ExperimentSamplingConfig(array) {
+  this.j = immutableMessageFromArray(getDefaultExperimentSamplingMessage(), cloneJsonValue(array));
+  array = readCoercedNumberField(this.j, 1);
+  this.l = Math.floor(Math.random() * 100) < array;
 }
-hj.prototype.toString = function() {
-  var a = "{bool=" + !(this.l ? !od(this.j, 5) : !od(this.j, 2)) + ', string="',
-    b = this.l ? td(this.j, 6) : rd(this.j, 3);
-  a = a + (b != null ? String(b) : "") + '", int=';
-  b = this.l ? qc(K(this.j, 7, void 0, Tc)) : pd(this.j, 4, -1);
-  return a + (b != null ? Number(b) : -1) + "}"
+ExperimentSamplingConfig.prototype.toString = function () {
+  var intermediate =
+      "{bool=" +
+      !(this.l ? !readBooleanField(this.j, 5) : !readBooleanField(this.j, 2)) +
+      ', string="',
+    intermediate2 = this.l ? readStringField(this.j, 6) : readStringOrDefault(this.j, 3);
+  intermediate = intermediate + (intermediate2 != null ? String(intermediate2) : "") + '", int=';
+  intermediate2 = this.l
+    ? coerceNumericInt32(getMessageField(this.j, 7, void 0, preserveNullFieldToken))
+    : readCoercedNumberField(this.j, 4, -1);
+  return intermediate + (intermediate2 != null ? Number(intermediate2) : -1) + "}";
 };
-
-function ij(a) {
-  this.j = new Map;
+function ExperimentMetadata(values) {
+  this.j = new Map();
   this.l = [];
-  if (a = a.get("docs-cei")) {
-    var b = a.i;
-    b && bb(this.l, b);
-    a = a.cf || {};
-    for (var c in a) this.j.set(c, new hj(a[c]))
+  if ((values = values.get("docs-cei"))) {
+    var intermediate = values.i;
+    intermediate && extendArray(this.l, intermediate);
+    values = values.cf || {};
+    for (var intermediate2 in values)
+      this.j.set(intermediate2, new ExperimentSamplingConfig(values[intermediate2]));
   }
 }
-ij.prototype.get = function(a) {
-  return this.j.get(a) || null
+ExperimentMetadata.prototype.get = function (value) {
+  return this.j.get(value) || null;
 };
-
-function jj() {
-  for (var a in Array.prototype) return !1;
-  return !0
-};
-var kj = ['window[("_callback_" + expid)] is not a function',
-    "Cannot read properties of null (reading 'readyState')", "request failed on client side"
+function isArrayPrototypeIntact() {
+  for (var intermediate in Array.prototype) return false;
+  return true;
+}
+var knownInjectedErrorMessages = [
+    'window[("_callback_" + expid)] is not a function',
+    "Cannot read properties of null (reading 'readyState')",
+    "request failed on client side",
   ],
-  lj = [/(undefined|constructor).*YT|YT.*(undefined|constructor)/];
-
-function yd(a) {
-  this.j = a
+  knownInjectedErrorPatterns = [/(undefined|constructor).*YT|YT.*(undefined|constructor)/];
+function BootstrapString(value) {
+  this.j = value;
 }
-
-function Bd(a) {
-  var b = a.j;
-  if (b == null) return null;
-  if (typeof b === "string") return b;
-  throw new TypeError("Invalid string data <K1cgmc>: " + a.j + " (typeof " + typeof a.j + ")");
+function unwrapBootstrapString(wrapper) {
+  var intermediate = wrapper.j;
+  if (intermediate == null) return null;
+  if (typeof intermediate === "string") return intermediate;
+  throw new TypeError(
+    "Invalid string data <K1cgmc>: " + wrapper.j + " (typeof " + typeof wrapper.j + ")",
+  );
 }
-yd.prototype.toString = function() {
-  var a = Bd(this);
-  if (a === null) throw Error("Data K1cgmc not defined.");
-  return a
+BootstrapString.prototype.toString = function () {
+  var intermediate = unwrapBootstrapString(this);
+  if (intermediate === null) throw Error("Data K1cgmc not defined.");
+  return intermediate;
 };
-
-function mj(a) {
-  this.C = J(a)
+function CrashClassificationMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(mj, M);
-mj.prototype.qa = function(a) {
-  ud(this, 7, a)
+inheritCompiledClass(CrashClassificationMessage, ArrayMessage);
+CrashClassificationMessage.prototype.qa = function (value) {
+  setStringField(this, 7, value);
 };
-
-function nj(a) {
-  this.C = J(a)
+function CrashClientStateMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(nj, M);
-
-function oj(a) {
-  return kd(a, mj, ed(a, pj, 4))
+inheritCompiledClass(CrashClientStateMessage, ArrayMessage);
+function readCrashClassification(message) {
+  return getNestedMessageOrDefault(
+    message,
+    CrashClassificationMessage,
+    getActiveOneofField(message, crashStateOneofFields, 4),
+  );
 }
-var pj = [4, 5];
-
-function qj(a) {
-  this.C = J(a)
+var crashStateOneofFields = [4, 5];
+function CrashSeverityMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(qj, M);
-
-function rj(a) {
-  this.C = J(a)
+inheritCompiledClass(CrashSeverityMessage, ArrayMessage);
+function CrashMetadataMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(rj, M);
-
-function Ad(a) {
-  this.C = J(a)
+inheritCompiledClass(CrashMetadataMessage, ArrayMessage);
+function TelemetryBootstrapMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(Ad, M);
-
-function sj(a) {
-  return kd(a, nj, 1)
-};
-
-function tj() {
-  this.j = xd()
+inheritCompiledClass(TelemetryBootstrapMessage, ArrayMessage);
+function readCrashClientState(message) {
+  return getNestedMessageOrDefault(message, CrashClientStateMessage, 1);
 }
-tj.prototype.fa = function() {
-  var a = new Map,
-    b, c = (b = this.j) == null ? void 0 : oj(sj(b));
-  if (c == null ? 0 : pc(K(c, 2)) != null) {
-    var d;
-    (b = (d = sd(c, 2)) == null ? void 0 : d.toString()) && a.set("canaryanalysisservertestgroup", b);
-    if (c == null) var e = void 0;
-    else if ((c = ld(c, ee, 3)) == null) e = void 0;
+function BootstrapConfigProvider() {
+  this.j = readTelemetryBootstrapMessage();
+}
+BootstrapConfigProvider.prototype.fa = function () {
+  var map = new Map(),
+    intermediate,
+    intermediate2 =
+      (intermediate = this.j) == null
+        ? void 0
+        : readCrashClassification(readCrashClientState(intermediate));
+  if (intermediate2 == null ? 0 : coerceInt32(getMessageField(intermediate2, 2)) != null) {
+    var callback;
+    (intermediate =
+      (callback = readNumberField(intermediate2, 2)) == null ? void 0 : callback.toString()) &&
+      map.set("canaryanalysisservertestgroup", intermediate);
+    if (intermediate2 == null) var intermediate3 = void 0;
+    else if ((intermediate2 = readNestedMessage(intermediate2, ExperimentConfigMessage, 3)) == null)
+      intermediate3 = void 0;
     else {
-      d = Number;
-      e = e === void 0 ? "0" : e;
-      b = K(c, 1, void 0, void 0, uc);
-      var f = f === void 0 ? !1 : f;
-      var g = typeof b;
-      b == null ? f = b : g === "bigint" ? f = String(hc(64, b)) : oc(b) ? g === "string" ? (f = b, oc(f),
-        b = kc(Number(f)), ic(b) ? f = String(b) : (b = f.indexOf("."), b !== -1 && (f = f.substring(0,
-          b)), f = rc(f))) : f = f ? tc(b) : sc(b) : f = void 0;
-      e = d(f != null ? f : e);
-      c = pd(c, 2);
-      e = (new Date(e * 1E3 + c / 1E6)).valueOf().toString()
+      callback = Number;
+      intermediate3 = intermediate3 === void 0 ? "0" : intermediate3;
+      intermediate = getMessageField(intermediate2, 1, void 0, void 0, coerceInt64);
+      var intermediate4 = intermediate4 === void 0 ? false : intermediate4;
+      var intermediate5 = typeof intermediate;
+      intermediate == null
+        ? (intermediate4 = intermediate)
+        : intermediate5 === "bigint"
+          ? (intermediate4 = String(bigIntAsIntN(64, intermediate)))
+          : isNumericRepresentation(intermediate)
+            ? intermediate5 === "string"
+              ? ((intermediate4 = intermediate),
+                isNumericRepresentation(intermediate4),
+                (intermediate = truncateNumber(Number(intermediate4))),
+                isSafeInteger(intermediate)
+                  ? (intermediate4 = String(intermediate))
+                  : ((intermediate = intermediate4.indexOf(".")),
+                    intermediate !== -1 &&
+                      (intermediate4 = intermediate4.substring(0, intermediate)),
+                    (intermediate4 = normalizeInt64String(intermediate4))))
+              : (intermediate4 = intermediate4
+                  ? numberToInt64String(intermediate)
+                  : numberToInt64Representation(intermediate))
+            : (intermediate4 = void 0);
+      intermediate3 = callback(intermediate4 != null ? intermediate4 : intermediate3);
+      intermediate2 = readCoercedNumberField(intermediate2, 2);
+      intermediate3 = new Date(intermediate3 * 1e3 + intermediate2 / 1e6).valueOf().toString();
     }
-    e && a.set("serverstarttimemillis", e)
+    intermediate3 && map.set("serverstarttimemillis", intermediate3);
   }
-  var h, k;
-  (e = (h = this.j) == null ? void 0 : (k = ld(h, nj, 1)) == null ? void 0 : sd(k, 6)) && a.set("clientApp",
-    String(e));
-  return a
+  var intermediate6, intermediate7;
+  (intermediate3 =
+    (intermediate6 = this.j) == null
+      ? void 0
+      : (intermediate7 = readNestedMessage(intermediate6, CrashClientStateMessage, 1)) == null
+        ? void 0
+        : readNumberField(intermediate7, 6)) && map.set("clientApp", String(intermediate3));
+  return map;
 };
-
-function uj(a, b) {
-  this.width = a;
-  this.height = b
+function Size(width, height) {
+  this.width = width;
+  this.height = height;
 }
-q = uj.prototype;
-q.clone = function() {
-  return new uj(this.width, this.height)
+prototypeAlias = Size.prototype;
+prototypeAlias.clone = function () {
+  return new Size(this.width, this.height);
 };
-q.aspectRatio = function() {
-  return this.width / this.height
+prototypeAlias.aspectRatio = function () {
+  return this.width / this.height;
 };
-q.ceil = function() {
+prototypeAlias.ceil = function () {
   this.width = Math.ceil(this.width);
   this.height = Math.ceil(this.height);
-  return this
+  return this;
 };
-q.floor = function() {
+prototypeAlias.floor = function () {
   this.width = Math.floor(this.width);
   this.height = Math.floor(this.height);
-  return this
+  return this;
 };
-q.round = function() {
+prototypeAlias.round = function () {
   this.width = Math.round(this.width);
   this.height = Math.round(this.height);
-  return this
+  return this;
 };
-
-function vj(a) {
-  var b = document;
-  a = String(a);
-  b.contentType === "application/xhtml+xml" && (a = a.toLowerCase());
-  return b.createElement(a)
-};
-
-function wj() {
-  function a() {}
-  this.j = a.call.bind(a.toString)
+function createDomElement(tagName) {
+  var document2 = document;
+  tagName = String(tagName);
+  document2.contentType === "application/xhtml+xml" && (tagName = tagName.toLowerCase());
+  return document2.createElement(tagName);
 }
-wj.prototype.fa = function() {
-  var a = new Map;
-  xj() && a.set("apps_telemetry.screen_tampered", "true");
+/**
+ * 遥测环境检查与错误分类：保留原有检测、规则及采样，不增加新的数据收集。
+ */
+function EnvironmentInspector() {
+  function helper() {}
+  this.j = helper.call.bind(helper.toString);
+}
+EnvironmentInspector.prototype.fa = function () {
+  var map = new Map();
+  isScreenTampered() && map.set("apps_telemetry.screen_tampered", "true");
   a: {
-    var b = y(Array.prototype),
-      c = b.next(),
-      d;
+    var iterator = getIterator(Array.prototype),
+      iteration = iterator.next(),
+      intermediate;
     try {
-      for (; !c.done; c = b.next()) {
-        var e = !0;
-        break a
+      for (; !iteration.done; iteration = iterator.next()) {
+        var intermediate2 = true;
+        break a;
       }
     } finally {
-      c && !c.done && (d = b.return) && d.call(b)
+      iteration &&
+        !iteration.done &&
+        (intermediate = iterator.return) &&
+        intermediate.call(iterator);
     }
-    e = !1
+    intermediate2 = false;
   }
-  e && a.set("apps_telemetry.array_prototype_tampered", "true");
-  yj() || a.set("apps_telemetry.canvas_creation_broken", "true");
-  !zj() && A.navigator && A.navigator.webdriver && a.set("apps_telemetry.webdriver", "true");
-  e = !1;
-  b = y(Aj);
-  c = b.next();
-  var f;
+  intermediate2 && map.set("apps_telemetry.array_prototype_tampered", "true");
+  canCreateCanvas() || map.set("apps_telemetry.canvas_creation_broken", "true");
+  !isWorkerGlobalScope() &&
+    runtimeGlobal.navigator &&
+    runtimeGlobal.navigator.webdriver &&
+    map.set("apps_telemetry.webdriver", "true");
+  intermediate2 = false;
+  iterator = getIterator(automationPropertyProbes);
+  iteration = iterator.next();
+  var intermediate3;
   try {
-    for (; !c.done; c = b.next()) {
-      var g = c.value,
-        h = Bj(g.key);
-      h === 0 ? (a.set("apps_telemetry.automation_property_present." + g.T, "true"), e = !0) : h === 2 && a
-        .set("apps_telemetry.automation_property_check_failed." + g.T, "true")
+    for (; !iteration.done; iteration = iterator.next()) {
+      var value = iteration.value,
+        intermediate4 = probeGlobalProperty(value.key);
+      intermediate4 === 0
+        ? (map.set("apps_telemetry.automation_property_present." + value.T, "true"),
+          (intermediate2 = true))
+        : intermediate4 === 2 &&
+          map.set("apps_telemetry.automation_property_check_failed." + value.T, "true");
     }
   } finally {
-    c && !c.done && (f = b.return) && f.call(b)
+    iteration &&
+      !iteration.done &&
+      (intermediate3 = iterator.return) &&
+      intermediate3.call(iterator);
   }
-  e && a.set("apps_telemetry.automation_detected", "true");
-  f = !1;
-  g = y(Cj);
-  h = g.next();
-  var k;
+  intermediate2 && map.set("apps_telemetry.automation_detected", "true");
+  intermediate3 = false;
+  value = getIterator(nativeFunctionProbes);
+  intermediate4 = value.next();
+  var intermediate5;
   try {
-    for (; !h.done; h = g.next()) {
-      var l = h.value,
-        m = l.T,
-        r = Dj(this, l.name, l.Ja);
-      if (!r.ca) {
-        var t = r.reason;
-        a.set("apps_telemetry.native_function_tampering." + m + ".reason", t);
-        t === "non_function_type" && a.set("apps_telemetry.native_function_tampering." +
-          m + ".type", r.type);
-        f = !0
+    for (; !intermediate4.done; intermediate4 = value.next()) {
+      var value2 = intermediate4.value,
+        intermediate6 = value2.T,
+        intermediate7 = inspectNativeFunction(this, value2.name, value2.Ja);
+      if (!intermediate7.ca) {
+        var reason = intermediate7.reason;
+        map.set("apps_telemetry.native_function_tampering." + intermediate6 + ".reason", reason);
+        reason === "non_function_type" &&
+          map.set(
+            "apps_telemetry.native_function_tampering." + intermediate6 + ".type",
+            intermediate7.type,
+          );
+        intermediate3 = true;
       }
     }
   } finally {
-    h && !h.done && (k = g.return) && k.call(g)
+    intermediate4 &&
+      !intermediate4.done &&
+      (intermediate5 = value.return) &&
+      intermediate5.call(value);
   }
-  f && a.set("apps_telemetry.native_function_tampering_detected", "true");
-  return a
+  intermediate3 && map.set("apps_telemetry.native_function_tampering_detected", "true");
+  return map;
 };
-
-function xj() {
-  if (zj()) return !1;
-  var a = A.screen,
-    b = !(a instanceof Screen);
-  if (db || cb) return b;
+function isScreenTampered() {
+  if (isWorkerGlobalScope()) return false;
+  var screen = runtimeGlobal.screen,
+    intermediate = !(screen instanceof Screen);
+  if (isSafariLike || isFirefox) return intermediate;
   try {
-    var c = n();
-    a.addEventListener("change", c);
-    a.removeEventListener("change", c)
-  } catch (d) {
-    b = !0
+    var noopFunction = createNoopFunction();
+    screen.addEventListener("change", noopFunction);
+    screen.removeEventListener("change", noopFunction);
+  } catch (caughtError) {
+    intermediate = true;
   }
-  return b
+  return intermediate;
 }
-
-function yj() {
-  function a(b) {
+function canCreateCanvas() {
+  function helper(helper2) {
     try {
-      var c = new uj(1, 500);
-      return (b ? vj("CANVAS") : new OffscreenCanvas(c.width, c.height)).getContext("2d") != null
-    } catch (d) {
-      return !1
+      var size = new Size(1, 500);
+      return (
+        (helper2
+          ? createDomElement("CANVAS")
+          : new OffscreenCanvas(size.width, size.height)
+        ).getContext("2d") != null
+      );
+    } catch (caughtError) {
+      return false;
     }
   }
-  return a(!1) && (zj() || a(!0))
+  return helper(false) && (isWorkerGlobalScope() || helper(true));
 }
-
-function zj() {
-  return "WorkerGlobalScope" in A && typeof A.WorkerGlobalScope === "function" && self instanceof A
-    .WorkerGlobalScope
+function isWorkerGlobalScope() {
+  return (
+    "WorkerGlobalScope" in runtimeGlobal &&
+    typeof runtimeGlobal.WorkerGlobalScope === "function" &&
+    self instanceof runtimeGlobal.WorkerGlobalScope
+  );
 }
-
-function Bj(a) {
-  if (zj() || !A) return 1;
+function probeGlobalProperty(key) {
+  if (isWorkerGlobalScope() || !runtimeGlobal) return 1;
   try {
-    if (a in A || A.document && a in A.document) return 0
-  } catch (b) {
-    return 2
+    if (key in runtimeGlobal || (runtimeGlobal.document && key in runtimeGlobal.document)) return 0;
+  } catch (caughtError) {
+    return 2;
   }
-  return 1
+  return 1;
 }
-
-function Dj(a, b, c) {
+function inspectNativeFunction(inspector, name, getFunction) {
   try {
-    var d = c()
-  } catch (f) {
-    return {
-      ca: !1,
-      reason: "not_reachable"
-    }
+    var function2 = getFunction();
+  } catch (caughtError) {
+    return { ca: false, reason: "not_reachable" };
   }
-  c = Ej(d);
-  if (c !== "function") return {
-    ca: !1,
-    reason: "non_function_type",
-    type: c
-  };
+  getFunction = describeJsType(function2);
+  if (getFunction !== "function")
+    return { ca: false, reason: "non_function_type", type: getFunction };
   try {
-    var e = a.j(d)
-  } catch (f) {
-    return {
-      ca: !1,
-      reason: "to_string_failed"
-    }
+    var intermediate = inspector.j(function2);
+  } catch (caughtError) {
+    return { ca: false, reason: "to_string_failed" };
   }
-  a = Fj.exec(e);
-  return a ? (a = a[1]) ? a !== b ? {
-    ca: !1,
-    reason: "likely_wrong_native_function"
-  } : {
-    ca: !0
-  } : {
-    ca: !1,
-    reason: "likely_bound_function"
-  } : {
-    ca: !1,
-    reason: "likely_non_native_source"
-  }
+  inspector = nativeFunctionPatterns.exec(intermediate);
+  return inspector
+    ? (inspector = inspector[1])
+      ? inspector !== name
+        ? { ca: false, reason: "likely_wrong_native_function" }
+        : { ca: true }
+      : { ca: false, reason: "likely_bound_function" }
+    : { ca: false, reason: "likely_non_native_source" };
 }
-
-function Ej(a) {
-  switch (typeof a) {
+function describeJsType(value) {
+  switch (typeof value) {
     case "function":
       return "function";
     case "undefined":
@@ -5428,539 +6577,593 @@ function Ej(a) {
     case "string":
       return "string";
     case "object":
-      return a === null ? "null" : "object";
+      return value === null ? "null" : "object";
     case "symbol":
       return "symbol";
     case "bigint":
       return "bigint";
     default:
-      return "unknown"
+      return "unknown";
   }
 }
-var Aj = [{
-    key: "Cypress",
-    T: "cypress"
-  }, {
-    key: "$cdc_asdjflasutopfhvcZLmcfl_",
-    T: "selenium"
-  }, {
-    key: "$wdc_",
-    T: "chrome_driver"
-  }, {
-    key: "domAutomationController",
-    T: "chromium_automation"
-  }, {
-    key: "callPhantom",
-    T: "phantomjs"
-  }, {
-    key: "windmill",
-    T: "windmill"
-  }, {
-    key: "____LocationIntercept",
-    T: "awesomium"
-  }, {
-    key: "awesomium",
-    T: "awesomium"
-  }, {
-    key: "ubot",
-    T: "ubot"
-  }, {
-    key: "cefsharp_CreatePromise",
-    T: "cefsharp"
-  }, {
-    key: "__nightmare",
-    T: "nightmare"
-  }],
-  Cj = [{
-    name: "getOwnPropertyDescriptor",
-    Ja: function() {
-      return Object.getOwnPropertyDescriptor
-    },
-    T: "Object.getOwnPropertyDescriptor"
-  }, {
-    name: "addEventListener",
-    Ja: function() {
-      return A.addEventListener
-    },
-    T: "global.addEventListener"
-  }],
-  Fj = /^function\s*(?:\s([a-zA-Z_$][\w$]+))?\(\) \{\s+\[native code\]\s+\}$/;
-var Gj = [],
-  Hj = [],
-  Ij = [RegExp("^_0x[a-f0-9]{6} is not defined$"), RegExp("[Zz]otero"), RegExp(
-    '^Not found$|^Unknown Error of type "string": Not found$')],
-  Jj =
-  "egfdjlfmgnehecnclamagfafdccgfndp mndnfokpggljbaajbnioimlmbfngpief mlkejohendkgipaomdopolhpbihbhfnf kgonammgkackdilhodbgbmodpepjocdp klbcgckkldhdhonijdbnhhaiedfkllef pmehocpgjmkenlokgjfkaichfjdhpeol cjlaeehoipngghikfjogbdkpbdgebppb ghbmnnjooekpmoecnnnilnnbdlolhkhi lmjegmlicamnimmfhcmpkclmigmmcbeh gmbmikajjgmnabiglmofipeabaddhgne lpcaedmchfhocbbapmcbpinfpgnhiddi gbkeegbaiigmenfmjfclcdgdpimamgkj adokjfanaflbkibffcbhihgihpgijcei iklnnbgdcppplombffihcijanngoeifm"
-  .split(" "),
-  Kj = [RegExp("chrome-extension://([^/]+)", "g"), RegExp("moz-extension://([^/]+)", "g"), RegExp(
-    "ms-browser-extension://([^/]+)", "g"), RegExp("webkit-masked-url://([^/]+)", "g"), RegExp(
-    "safari-web-extension://([^/]+)", "g")],
-  Lj = [RegExp("^Permission denied$"), RegExp("index out of range: \\d+ \\+ \\d+ > \\d+"), RegExp(
-    "getReadMode(Config|Render|Extract)")],
-  Mj = [RegExp("at file:///|@file:///|phantomjs|node:electron|py-scrap|eval code|Program Files"), RegExp(
-    "_0x[a-f0-9]+.*anonymous")],
-  Nj = [RegExp("Script https://meet\\.google\\.com/.*meetsw.*load failed"),
-    RegExp("A bad HTTP response code \\(\\d+\\) was received when fetching the script")
+var automationPropertyProbes = [
+    { key: "Cypress", T: "cypress" },
+    { key: "$cdc_asdjflasutopfhvcZLmcfl_", T: "selenium" },
+    { key: "$wdc_", T: "chrome_driver" },
+    { key: "domAutomationController", T: "chromium_automation" },
+    { key: "callPhantom", T: "phantomjs" },
+    { key: "windmill", T: "windmill" },
+    { key: "____LocationIntercept", T: "awesomium" },
+    { key: "awesomium", T: "awesomium" },
+    { key: "ubot", T: "ubot" },
+    { key: "cefsharp_CreatePromise", T: "cefsharp" },
+    { key: "__nightmare", T: "nightmare" },
   ],
-  Oj = [RegExp("Error loading.*Consecutive load failures"), RegExp(
-    "Failed to load module.*Consecutive load failures")];
-
-function Pj(a, b) {
-  this.ua = a;
-  this.ka = b
+  nativeFunctionProbes = [
+    {
+      name: "getOwnPropertyDescriptor",
+      Ja: function () {
+        return Object.getOwnPropertyDescriptor;
+      },
+      T: "Object.getOwnPropertyDescriptor",
+    },
+    {
+      name: "addEventListener",
+      Ja: function () {
+        return runtimeGlobal.addEventListener;
+      },
+      T: "global.addEventListener",
+    },
+  ],
+  nativeFunctionPatterns = /^function\s*(?:\s([a-zA-Z_$][\w$]+))?\(\) \{\s+\[native code\]\s+\}$/;
+var injectedUrlPatterns = [],
+  injectedErrorPatterns = [],
+  ignoredErrorPatterns = [
+    RegExp("^_0x[a-f0-9]{6} is not defined$"),
+    RegExp("[Zz]otero"),
+    RegExp('^Not found$|^Unknown Error of type "string": Not found$'),
+  ],
+  knownExtensionIds =
+    "egfdjlfmgnehecnclamagfafdccgfndp mndnfokpggljbaajbnioimlmbfngpief mlkejohendkgipaomdopolhpbihbhfnf kgonammgkackdilhodbgbmodpepjocdp klbcgckkldhdhonijdbnhhaiedfkllef pmehocpgjmkenlokgjfkaichfjdhpeol cjlaeehoipngghikfjogbdkpbdgebppb ghbmnnjooekpmoecnnnilnnbdlolhkhi lmjegmlicamnimmfhcmpkclmigmmcbeh gmbmikajjgmnabiglmofipeabaddhgne lpcaedmchfhocbbapmcbpinfpgnhiddi gbkeegbaiigmenfmjfclcdgdpimamgkj adokjfanaflbkibffcbhihgihpgijcei iklnnbgdcppplombffihcijanngoeifm".split(
+      " ",
+    ),
+  knownExtensionHosts = [
+    RegExp("chrome-extension://([^/]+)", "g"),
+    RegExp("moz-extension://([^/]+)", "g"),
+    RegExp("ms-browser-extension://([^/]+)", "g"),
+    RegExp("webkit-masked-url://([^/]+)", "g"),
+    RegExp("safari-web-extension://([^/]+)", "g"),
+  ],
+  knownInjectedNames = [
+    RegExp("^Permission denied$"),
+    RegExp("index out of range: \\d+ \\+ \\d+ > \\d+"),
+    RegExp("getReadMode(Config|Render|Extract)"),
+  ],
+  knownInjectedScripts = [
+    RegExp("at file:///|@file:///|phantomjs|node:electron|py-scrap|eval code|Program Files"),
+    RegExp("_0x[a-f0-9]+.*anonymous"),
+  ],
+  knownInjectedUrls = [
+    RegExp("Script https://meet\\.google\\.com/.*meetsw.*load failed"),
+    RegExp("A bad HTTP response code \\(\\d+\\) was received when fetching the script"),
+  ],
+  knownInjectedErrorTokens = [
+    RegExp("Error loading.*Consecutive load failures"),
+    RegExp("Failed to load module.*Consecutive load failures"),
+  ];
+function ErrorClassifier(classification, code) {
+  this.ua = classification;
+  this.ka = code;
 }
-
-function Qj(a, b) {
-  return (b = a.j(b)) ? {
-    ua: a.ua,
-    ka: a.ka,
-    Ba: b.toUpperCase()
-  } : null
-};
-
-function Rj() {
-  Pj.call(this, 1, 1)
+function classifyError(classifier, error) {
+  return (error = classifier.j(error))
+    ? { ua: classifier.ua, ka: classifier.ka, Ba: error.toUpperCase() }
+    : null;
 }
-x(Rj, Pj);
-Rj.prototype.j = function(a) {
+function StackErrorClassifier() {
+  ErrorClassifier.call(this, 1, 1);
+}
+inheritCompiledClass(StackErrorClassifier, ErrorClassifier);
+StackErrorClassifier.prototype.j = function (value) {
   a: {
-    a = Sj(a);
-    var b = !1,
-      c = y(Kj),
-      d = c.next(),
-      e;
+    value = formatErrorRecord(value);
+    var intermediate = false,
+      iterator = getIterator(knownExtensionHosts),
+      iteration = iterator.next(),
+      intermediate2;
     try {
-      for (; !d.done; d = c.next()) {
-        var f = a.matchAll(d.value),
-          g = y(f),
-          h = g.next(),
-          k;
+      for (; !iteration.done; iteration = iterator.next()) {
+        var intermediate3 = value.matchAll(iteration.value),
+          iterator2 = getIterator(intermediate3),
+          iteration2 = iterator2.next(),
+          intermediate4;
         try {
-          for (; !h.done; h = g.next()) {
-            var l = h.value[1];
-            if (l) {
-              if (Jj.includes(l)) {
-                var m = !1;
-                break a
+          for (; !iteration2.done; iteration2 = iterator2.next()) {
+            var intermediate5 = iteration2.value[1];
+            if (intermediate5) {
+              if (knownExtensionIds.includes(intermediate5)) {
+                var intermediate6 = false;
+                break a;
               }
-              b = !0
+              intermediate = true;
             }
           }
         } finally {
-          h && !h.done && (k = g.return) && k.call(g)
+          iteration2 &&
+            !iteration2.done &&
+            (intermediate4 = iterator2.return) &&
+            intermediate4.call(iterator2);
         }
       }
     } finally {
-      d && !d.done && (e = c.return) && e.call(c)
+      iteration &&
+        !iteration.done &&
+        (intermediate2 = iterator.return) &&
+        intermediate2.call(iterator);
     }
-    m = b
+    intermediate6 = intermediate;
   }
-  return m ? "warning" : null
+  return intermediate6 ? "warning" : null;
 };
-
-function Tj(a, b, c) {
-  c = c === void 0 ? Uj : c;
-  Pj.call(this, a, b);
-  this.l = c
+function KnownErrorClassifier(classification, code, rules) {
+  rules = rules === void 0 ? knownErrorRules : rules;
+  ErrorClassifier.call(this, classification, code);
+  this.l = rules;
 }
-x(Tj, Pj);
-Tj.prototype.j = function(a) {
-  var b = typeof a.l.get("apps_telemetry.cross_origin_scripts") === "string" ? a.l.get(
-      "apps_telemetry.cross_origin_scripts") : "",
-    c = a.l.get("apps_telemetry.native_function_tampering_detected") === "true",
-    d = Sj(a),
-    e = d.includes("blob:"),
-    f = y(this.l),
-    g = f.next(),
-    h;
+inheritCompiledClass(KnownErrorClassifier, ErrorClassifier);
+KnownErrorClassifier.prototype.j = function (value) {
+  var intermediate =
+      typeof value.l.get("apps_telemetry.cross_origin_scripts") === "string"
+        ? value.l.get("apps_telemetry.cross_origin_scripts")
+        : "",
+    intermediate2 = value.l.get("apps_telemetry.native_function_tampering_detected") === "true",
+    intermediate3 = formatErrorRecord(value),
+    intermediate4 = intermediate3.includes("blob:"),
+    iterator = getIterator(this.l),
+    iteration = iterator.next(),
+    intermediate5;
   try {
-    for (; !g.done; g = f.next()) {
-      var k = g.value,
-        l = k.errorMessage,
-        m = k.Ca,
-        r = m === void 0 ? [] : m,
-        t = k.Y,
-        w = t === void 0 ? [] : t,
-        u = k.pa,
-        L = u === void 0 ? !1 : u,
-        E = k.Ha,
-        ka = k.rb,
-        R = ka === void 0 ? !1 : ka;
-      if ((E === void 0 ? 0 : E) ? a.message === l : d.includes(l)) {
-        var Ja = r.some(function(yf) {
-            return b.includes(yf)
+    for (; !iteration.done; iteration = iterator.next()) {
+      var value2 = iteration.value,
+        errorMessage = value2.errorMessage,
+        intermediate6 = value2.Ca,
+        intermediate7 = intermediate6 === void 0 ? [] : intermediate6,
+        intermediate8 = value2.Y,
+        intermediate9 = intermediate8 === void 0 ? [] : intermediate8,
+        intermediate10 = value2.pa,
+        intermediate11 = intermediate10 === void 0 ? false : intermediate10,
+        intermediate12 = value2.Ha,
+        intermediate13 = value2.rb,
+        intermediate14 = intermediate13 === void 0 ? false : intermediate13;
+      if (
+        (intermediate12 === void 0 ? 0 : intermediate12)
+          ? value.message === errorMessage
+          : intermediate3.includes(errorMessage)
+      ) {
+        var intermediate15 = intermediate7.some(function (value3) {
+            return intermediate.includes(value3);
           }),
-          Ci = w.some(function(yf) {
-            return a.j.includes(yf)
+          intermediate16 = intermediate9.some(function (value3) {
+            return value.j.includes(value3);
           });
-        r = L && e;
-        R = R && c;
-        if (Ja || Ci || r || R) return "warning"
+        intermediate7 = intermediate11 && intermediate4;
+        intermediate14 = intermediate14 && intermediate2;
+        if (intermediate15 || intermediate16 || intermediate7 || intermediate14) return "warning";
       }
     }
   } finally {
-    g && !g.done && (h = f.return) && h.call(f)
+    iteration &&
+      !iteration.done &&
+      (intermediate5 = iterator.return) &&
+      intermediate5.call(iterator);
   }
-  return null
+  return null;
 };
-var Uj = [{
-  errorMessage: "Cannot read properties of undefined (reading 'addListener')",
-  pa: !0,
-  Ca: ["infird.com"]
-}, {
-  errorMessage: "browser_polyfill_default(...).runtime.getManifest is not a function",
-  pa: !0,
-  Ca: ["infird.com"]
-}, {
-  errorMessage: 'fileName":',
-  Ca: ["walkme.com"]
-}, {
-  errorMessage: "] is not a function",
-  pa: !0
-}, {
-  errorMessage: "(reading 'toLowerCase')",
-  pa: !0,
-  Y: ["__aiNetCmd__"]
-}, {
-  errorMessage: "Cannot read properties of undefined",
-  Y: ["recaptcha"]
-}, {
-  errorMessage: "a is not defined",
-  Ha: !0,
-  Y: ["<anonymous>"]
-}, {
-  errorMessage: "i is not defined",
-  Ha: !0,
-  Y: ["<anonymous>"]
-}, {
-  errorMessage: "Failed to fetch",
-  Y: ["__DLD__", "frontend.min.js"]
-}, {
-  errorMessage: "Maximum call stack size exceeded",
-  rb: !0
-}, {
-  errorMessage: "Unexpected end of JSON input",
-  Y: ["facebook.net"]
-}];
-
-function Vj(a, b, c, d, e) {
-  e = e === void 0 ? new Map : e;
-  this.message = a;
-  this.j = b;
-  this.cause = c;
-  this.o = d;
-  this.l = e
+var knownErrorRules = [
+  {
+    errorMessage: "Cannot read properties of undefined (reading 'addListener')",
+    pa: true,
+    Ca: ["infird.com"],
+  },
+  {
+    errorMessage: "browser_polyfill_default(...).runtime.getManifest is not a function",
+    pa: true,
+    Ca: ["infird.com"],
+  },
+  { errorMessage: 'fileName":', Ca: ["walkme.com"] },
+  { errorMessage: "] is not a function", pa: true },
+  { errorMessage: "(reading 'toLowerCase')", pa: true, Y: ["__aiNetCmd__"] },
+  { errorMessage: "Cannot read properties of undefined", Y: ["recaptcha"] },
+  { errorMessage: "a is not defined", Ha: true, Y: ["<anonymous>"] },
+  { errorMessage: "i is not defined", Ha: true, Y: ["<anonymous>"] },
+  { errorMessage: "Failed to fetch", Y: ["__DLD__", "frontend.min.js"] },
+  { errorMessage: "Maximum call stack size exceeded", rb: true },
+  { errorMessage: "Unexpected end of JSON input", Y: ["facebook.net"] },
+];
+/**
+ * 错误记录与分类流水线：cause 深度限制、元数据和严重程度调整。
+ */
+function ErrorRecord(message, stack, cause, severity, metadata) {
+  metadata = metadata === void 0 ? new Map() : metadata;
+  this.message = message;
+  this.j = stack;
+  this.cause = cause;
+  this.o = severity;
+  this.l = metadata;
 }
-
-function Wj(a) {
-  return (a = a.cause) ? a.message + "\n" + a.j + "\n" + Wj(a) : ""
+function formatCauseChain(error) {
+  return (error = error.cause)
+    ? error.message + "\n" + error.j + "\n" + formatCauseChain(error)
+    : "";
 }
-
-function Sj(a) {
-  return a.message + "\n" + a.j + "\n" + Wj(a)
+function formatErrorRecord(error) {
+  return error.message + "\n" + error.j + "\n" + formatCauseChain(error);
 }
-
-function Xj() {
+function ErrorRecordBuilder() {
   this.o = this.j = this.message = "";
-  this.l = new Map
+  this.l = new Map();
 }
-
-function Yj(a, b) {
-  a.message = b;
-  return a
+function setErrorRecordMessage(builder, message) {
+  builder.message = message;
+  return builder;
 }
-
-function Zj(a) {
-  return new Vj(a.message, a.j, a.cause, a.o, a.l)
-};
-
-function ak(a) {
-  return a instanceof Error || a && a.message !== void 0 ? a.message : bk(a)
+function buildErrorRecord(builder) {
+  return new ErrorRecord(builder.message, builder.j, builder.cause, builder.o, builder.l);
 }
-
-function ck(a) {
-  return a instanceof Error || a && a.stack !== void 0 ? a.stack || "" : ""
+function readErrorMessage(error) {
+  return error instanceof Error || (error && error.message !== void 0)
+    ? error.message
+    : stringifyError(error);
 }
-
-function dk(a, b) {
-  var c = a && a.cause !== void 0;
-  if (b >= 3 || !c) return null;
-  c = new Xj;
-  a = a.cause;
-  if (ek(a)) {
-    if (Yj(c, ak(a)), c.j = ck(a), b = dk(a, b + 1)) c.cause = b
-  } else Yj(c, bk(a));
-  return Zj(c)
+function readErrorStack(error) {
+  return error instanceof Error || (error && error.stack !== void 0) ? error.stack || "" : "";
 }
-
-function ek(a) {
-  return a instanceof Error || !!a && a.message !== void 0 && a.stack !== void 0
+function buildErrorCause(error, depth) {
+  var intermediate = error && error.cause !== void 0;
+  if (depth >= 3 || !intermediate) return null;
+  intermediate = new ErrorRecordBuilder();
+  error = error.cause;
+  if (isErrorLike(error)) {
+    if (
+      (setErrorRecordMessage(intermediate, readErrorMessage(error)),
+      (intermediate.j = readErrorStack(error)),
+      (depth = buildErrorCause(error, depth + 1)))
+    )
+      intermediate.cause = depth;
+  } else setErrorRecordMessage(intermediate, stringifyError(error));
+  return buildErrorRecord(intermediate);
 }
-
-function bk(a) {
+function isErrorLike(value) {
+  return value instanceof Error || (!!value && value.message !== void 0 && value.stack !== void 0);
+}
+function stringifyError(value) {
   try {
-    return ek(a) ? a.message + "\n" + a.stack : a && a instanceof Object ? JSON.stringify(a) : String(a)
-  } catch (b) {
-    return String(a)
+    return isErrorLike(value)
+      ? value.message + "\n" + value.stack
+      : value && value instanceof Object
+        ? JSON.stringify(value)
+        : String(value);
+  } catch (caughtError) {
+    return String(value);
   }
 }
-
-function fk(a, b, c) {
-  c = c === void 0 ? new Map : c;
-  var d = Yj(new Xj, ak(a));
-  d.j = ck(a);
-  d.l = c;
-  if (a = dk(a, 0)) d.cause = a;
-  b && (d.o = b);
-  return Zj(d)
-};
-
-function gk(a, b, c, d) {
-  Pj.call(this, c, d);
-  this.l = a;
-  this.o = b
+function createErrorRecord(error, severity, metadata) {
+  metadata = metadata === void 0 ? new Map() : metadata;
+  var intermediate = setErrorRecordMessage(new ErrorRecordBuilder(), readErrorMessage(error));
+  intermediate.j = readErrorStack(error);
+  intermediate.l = metadata;
+  if ((error = buildErrorCause(error, 0))) intermediate.cause = error;
+  severity && (intermediate.o = severity);
+  return buildErrorRecord(intermediate);
 }
-x(gk, Pj);
-gk.prototype.j = function(a) {
-  var b = Wj(a);
-  return hk(a.message, this.l) || hk(a.j, this.o) || hk(b, this.l) || hk(b, this.o) ? "warning" : null
+function RegexErrorClassifier(patterns, label, classification, code) {
+  ErrorClassifier.call(this, classification, code);
+  this.l = patterns;
+  this.o = label;
+}
+inheritCompiledClass(RegexErrorClassifier, ErrorClassifier);
+RegexErrorClassifier.prototype.j = function (value) {
+  var intermediate = formatCauseChain(value);
+  return matchesAnyPattern(value.message, this.l) ||
+    matchesAnyPattern(value.j, this.o) ||
+    matchesAnyPattern(intermediate, this.l) ||
+    matchesAnyPattern(intermediate, this.o)
+    ? "warning"
+    : null;
 };
-
-function hk(a, b) {
-  b = y(b);
-  var c = b.next(),
-    d;
+function matchesAnyPattern(text, patterns) {
+  patterns = getIterator(patterns);
+  var iteration = patterns.next(),
+    intermediate;
   try {
-    for (; !c.done; c = b.next())
-      if (c.value.test(a)) return !0
+    for (; !iteration.done; iteration = patterns.next())
+      if (iteration.value.test(text)) return true;
   } finally {
-    c && !c.done && (d = b.return) && d.call(b)
+    iteration && !iteration.done && (intermediate = patterns.return) && intermediate.call(patterns);
   }
-  return !1
-};
-
-function ik(a, b, c, d, e) {
-  Pj.call(this, c, d);
-  this.l = a;
-  this.Y = b;
-  this.matchType = e
+  return false;
 }
-x(ik, Pj);
-ik.prototype.j = function(a) {
+function TokenErrorClassifier(tokens, label, classification, code, matchType) {
+  ErrorClassifier.call(this, classification, code);
+  this.l = tokens;
+  this.Y = label;
+  this.matchType = matchType;
+}
+inheritCompiledClass(TokenErrorClassifier, ErrorClassifier);
+TokenErrorClassifier.prototype.j = function (value) {
   switch (this.matchType) {
     case 0:
       a: {
-        var b = a.message,
-          c = y(this.l);a = c.next();
-        var d;
+        var message = value.message,
+          iterator = getIterator(this.l);
+        value = iterator.next();
+        var iterator2;
         try {
-          for (; !a.done; a = c.next())
-            if (b === a.value) {
-              var e = !0;
-              break a
+          for (; !value.done; value = iterator.next())
+            if (message === value.value) {
+              var intermediate = true;
+              break a;
             }
         } finally {
-          a && !a.done && (d = c.return) && d.call(c)
+          value && !value.done && (iterator2 = iterator.return) && iterator2.call(iterator);
         }
-        e = !1
+        intermediate = false;
       }
-      return e ? "warning" : null;
+      return intermediate ? "warning" : null;
     case 1:
       a: {
-        e = a.message;d = y(this.l);a = d.next();
+        intermediate = value.message;
+        iterator2 = getIterator(this.l);
+        value = iterator2.next();
         try {
-          for (; !a.done; a = d.next())
-            if (e.startsWith(a.value)) {
-              b = !0;
-              break a
+          for (; !value.done; value = iterator2.next())
+            if (intermediate.startsWith(value.value)) {
+              message = true;
+              break a;
             }
         } finally {
-          a && !a.done && (c = d.return) && c.call(d)
+          value && !value.done && (iterator = iterator2.return) && iterator.call(iterator2);
         }
-        b = !1
+        message = false;
       }
-      return b ? "warning" : null;
+      return message ? "warning" : null;
     case 2:
-      return e = Sj(a), jk(e, this.l) || jk(e, this.Y) ? "warning" : null;
+      return (
+        (intermediate = formatErrorRecord(value)),
+        includesAnyToken(intermediate, this.l) || includesAnyToken(intermediate, this.Y)
+          ? "warning"
+          : null
+      );
     default:
-      return null
+      return null;
   }
 };
-
-function jk(a, b) {
-  b = y(b);
-  var c = b.next(),
-    d;
+function includesAnyToken(text, tokens) {
+  tokens = getIterator(tokens);
+  var iteration = tokens.next(),
+    intermediate;
   try {
-    for (; !c.done; c = b.next())
-      if (a.includes(c.value)) return !0
+    for (; !iteration.done; iteration = tokens.next())
+      if (text.includes(iteration.value)) return true;
   } finally {
-    c && !c.done && (d = b.return) && d.call(b)
+    iteration && !iteration.done && (intermediate = tokens.return) && intermediate.call(tokens);
   }
-  return !1
+  return false;
 }
-
-function kk(a, b, c) {
-  return new ik(a, b, c, 0, 2)
-};
-
-function lk(a, b, c) {
-  Pj.call(this, a, b);
-  this.l = c()
+function createTokenClassifier(tokens, label, classification) {
+  return new TokenErrorClassifier(tokens, label, classification, 0, 2);
 }
-x(lk, Pj);
-lk.prototype.j = function() {
-  return this.l ? null : "unsupported_severe"
+function EnvironmentErrorClassifier(classification, code, createInspector) {
+  ErrorClassifier.call(this, classification, code);
+  this.l = createInspector();
+}
+inheritCompiledClass(EnvironmentErrorClassifier, ErrorClassifier);
+EnvironmentErrorClassifier.prototype.j = function () {
+  return this.l ? null : "unsupported_severe";
 };
-var mk = [new Rj, kk(
-      "Trusted Type;TrustedHTML;TrustedScript;cannot communicate with background;zaloJSV2;kaspersky-labs;@user-script;Object Not Found Matching Id;contextChanged;Not implemented on this platform;Extension context invalidated;neurosurgeonundergo;realTimeClData;Failed to execute 'querySelectorAll' on 'Document';Promise.all(...).then(...).catch(...).finally is not a function;Error executing Chrome API, chrome.tabs;Identifier 'originalPrompt' has already been declared;User rejected the request;Could not inject ethereum provider because it's not your default extension;Cannot redefine property: googletag;Can't find variable: HTMLDialogElement;Identifier 'listenerName' has already been declared;Cannot read properties of undefined (reading 'info');Permission denied to access property \"type\";Error: Promise timed out;Request timeout ToolbarStatus;Can't find variable: nc;imtgo;ton is not a function;__renderMessageNode is not defined;Cannot redefine property: ethereum;unknown action:;Receiving end does not exist;get-frame-manager-configuration;Key not found;'isAWS';Identifier 'contentScriptListenerRegistered' has already been declared;window.ethereum.selectedAddress;extDomain is not defined;No Listener: tabs:outgoing.message.ready;This script should only be loaded in a browser extension;Identifier 'initCoreHelpers' has already been declared;undefined is not an object (evaluating 't.tab.customFillData');No tab with id:;The browser is shutting down.;User mapping loading timeout;Internal JSON-RPC error;TOKEN_EXPIRED;A listener indicated an asynchronous response by returning true;You must authenticate your request with an API key"
-      .split(";"),
-      "puppeteer;kaspersky-labs;@user-script;jsQuilting;linkbolic;neurosurgeonundergo;tlscdn;https://cdnjs.cloudflare.com/ajax/libs/mathjax/;secured-pixel.com;Can't find variable: nc;imtgo;_simulateEvent;goguardian"
-      .split(";"), 1), new gk(Ij, Hj, 1, 0), kk(
-      "status is 0, navigator.onLine =;Network sync is disabled. Aborting a network request of int type;The service is currently unavailable.;Internal error encountered.;data does not exist in AF cache;There was an error during the transport or processing of this request;Failed to load gapi;Rpc failed due to xhr error. error code: 6, error:  [0];An interceptor has requested that the request be retried;8,\"generic\";A network error occurred;NetworkError: Connection failure due to HTTP 401;NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope';NetworkError: Load failed"
-      .split(";"),
-      Gj, 2), new gk([], Hj, 2, 0), new gk(Lj, Mj, 3, 0), kk(
-      "Kg is not defined;uncaught error;The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.;Illegal invocation;Script error;zCommon;can't access dead object;Java exception was raised during method invocation;pauseVideo is not a function;ResizeObserver loop;wallet must has at least one account;xbrowser is not defined;jQuery is not defined;Cannot read properties of null (reading 'requestAnimationFrame');Class extends value undefined is not a constructor or null;GM3TooltipService: No tooltip with id;Mole was disposed;getInitialTopicListResponse is missing for stream rendering;getPeopleById call preempted;The operation is insecure;class heritage;The play() request was interrupted;args.site.enabledFeatures is undefined;frappe is not defined;Cannot set properties of undefined (setting 'hidden');Identifier 'checkOngoingMeeting' has already been declared;AutofillCallbackHandler;invalid wire type;zp_token;isReCreate;HTMLOUT is not defined;Shopify root is null;CanvasMaskingStrategy_Redact;_chromeNamespace;feature named `performanceMetrics`;feature named `webCompat`;Cannot redefine property: webdriver;reCAPTCHA Timeout;feature named `pageObserver` was not found;feature named `hover` was not found;Request timeout appSettingsDistributor.getValue;TimeoutError: operation timed out;Sink type mismatch violation blocked by CSP;__firefox__;: Java object is gone;Cannot read properties of undefined (reading 'domInteractive');: t is not defined;sendMessage(). Tab not found.;Can't find variable: __gCrWeb;WKWebView API client did not respond to this postMessage;The provider is disconnected from all chains;The user aborted a request.;Task was cancelled.;lettersVoicesDistributor"
-      .split(";"),
-      ["postUserData", "inline.cdn.mcas.ms", "evaluating 'n.standardSelectors'"], 3), new gk(Nj, Hj, 5, 0),
-    kk(
-      "Service worker registration is disabled by MDA;An unknown error occurred when fetching the script;Operation has been aborted;Timed out while trying to start the Service Worker;The Service Worker system has shutdown;The user denied permission to use Service Worker;The script resource is behind a redirect, which is disallowed;The document is in an invalid state;ServiceWorker script evaluation failed;ServiceWorker cannot be started;Failed to access storage;Worker disallowed;encountered an error during installation"
-      .split(";"),
-      Gj, 5), new gk(Oj, Oj, 4, 0), kk([
-      "Timeout reached for loading script https://www.gstatic.com/_/apps-fileview/_/js/",
-      "Error while loading script https://www.gstatic.com/_/apps-fileview/_/js/"
-    ], Gj, 4)
+var defaultErrorClassifiers = [
+    new StackErrorClassifier(),
+    createTokenClassifier(
+      "Trusted Type;TrustedHTML;TrustedScript;cannot communicate with background;zaloJSV2;kaspersky-labs;@user-script;Object Not Found Matching Id;contextChanged;Not implemented on this platform;Extension context invalidated;neurosurgeonundergo;realTimeClData;Failed to execute 'querySelectorAll' on 'Document';Promise.all(...).then(...).catch(...).finally is not a function;Error executing Chrome API, chrome.tabs;Identifier 'originalPrompt' has already been declared;User rejected the request;Could not inject ethereum provider because it's not your default extension;Cannot redefine property: googletag;Can't find variable: HTMLDialogElement;Identifier 'listenerName' has already been declared;Cannot read properties of undefined (reading 'info');Permission denied to access property \"type\";Error: Promise timed out;Request timeout ToolbarStatus;Can't find variable: nc;imtgo;ton is not a function;__renderMessageNode is not defined;Cannot redefine property: ethereum;unknown action:;Receiving end does not exist;get-frame-manager-configuration;Key not found;'isAWS';Identifier 'contentScriptListenerRegistered' has already been declared;window.ethereum.selectedAddress;extDomain is not defined;No Listener: tabs:outgoing.message.ready;This script should only be loaded in a browser extension;Identifier 'initCoreHelpers' has already been declared;undefined is not an object (evaluating 't.tab.customFillData');No tab with id:;The browser is shutting down.;User mapping loading timeout;Internal JSON-RPC error;TOKEN_EXPIRED;A listener indicated an asynchronous response by returning true;You must authenticate your request with an API key".split(
+        ";",
+      ),
+      "puppeteer;kaspersky-labs;@user-script;jsQuilting;linkbolic;neurosurgeonundergo;tlscdn;https://cdnjs.cloudflare.com/ajax/libs/mathjax/;secured-pixel.com;Can't find variable: nc;imtgo;_simulateEvent;goguardian".split(
+        ";",
+      ),
+      1,
+    ),
+    new RegexErrorClassifier(ignoredErrorPatterns, injectedErrorPatterns, 1, 0),
+    createTokenClassifier(
+      "status is 0, navigator.onLine =;Network sync is disabled. Aborting a network request of int type;The service is currently unavailable.;Internal error encountered.;data does not exist in AF cache;There was an error during the transport or processing of this request;Failed to load gapi;Rpc failed due to xhr error. error code: 6, error:  [0];An interceptor has requested that the request be retried;8,\"generic\";A network error occurred;NetworkError: Connection failure due to HTTP 401;NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope';NetworkError: Load failed".split(
+        ";",
+      ),
+      injectedUrlPatterns,
+      2,
+    ),
+    new RegexErrorClassifier([], injectedErrorPatterns, 2, 0),
+    new RegexErrorClassifier(knownInjectedNames, knownInjectedScripts, 3, 0),
+    createTokenClassifier(
+      "Kg is not defined;uncaught error;The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.;Illegal invocation;Script error;zCommon;can't access dead object;Java exception was raised during method invocation;pauseVideo is not a function;ResizeObserver loop;wallet must has at least one account;xbrowser is not defined;jQuery is not defined;Cannot read properties of null (reading 'requestAnimationFrame');Class extends value undefined is not a constructor or null;GM3TooltipService: No tooltip with id;Mole was disposed;getInitialTopicListResponse is missing for stream rendering;getPeopleById call preempted;The operation is insecure;class heritage;The play() request was interrupted;args.site.enabledFeatures is undefined;frappe is not defined;Cannot set properties of undefined (setting 'hidden');Identifier 'checkOngoingMeeting' has already been declared;AutofillCallbackHandler;invalid wire type;zp_token;isReCreate;HTMLOUT is not defined;Shopify root is null;CanvasMaskingStrategy_Redact;_chromeNamespace;feature named `performanceMetrics`;feature named `webCompat`;Cannot redefine property: webdriver;reCAPTCHA Timeout;feature named `pageObserver` was not found;feature named `hover` was not found;Request timeout appSettingsDistributor.getValue;TimeoutError: operation timed out;Sink type mismatch violation blocked by CSP;__firefox__;: Java object is gone;Cannot read properties of undefined (reading 'domInteractive');: t is not defined;sendMessage(). Tab not found.;Can't find variable: __gCrWeb;WKWebView API client did not respond to this postMessage;The provider is disconnected from all chains;The user aborted a request.;Task was cancelled.;lettersVoicesDistributor".split(
+        ";",
+      ),
+      ["postUserData", "inline.cdn.mcas.ms", "evaluating 'n.standardSelectors'"],
+      3,
+    ),
+    new RegexErrorClassifier(knownInjectedUrls, injectedErrorPatterns, 5, 0),
+    createTokenClassifier(
+      "Service worker registration is disabled by MDA;An unknown error occurred when fetching the script;Operation has been aborted;Timed out while trying to start the Service Worker;The Service Worker system has shutdown;The user denied permission to use Service Worker;The script resource is behind a redirect, which is disallowed;The document is in an invalid state;ServiceWorker script evaluation failed;ServiceWorker cannot be started;Failed to access storage;Worker disallowed;encountered an error during installation".split(
+        ";",
+      ),
+      injectedUrlPatterns,
+      5,
+    ),
+    new RegexErrorClassifier(knownInjectedErrorTokens, knownInjectedErrorTokens, 4, 0),
+    createTokenClassifier(
+      [
+        "Timeout reached for loading script https://www.gstatic.com/_/apps-fileview/_/js/",
+        "Error while loading script https://www.gstatic.com/_/apps-fileview/_/js/",
+      ],
+      injectedUrlPatterns,
+      4,
+    ),
   ],
-  nk = new Set(["SEVERE", "SEVERE_AFTER_INITIAL", "UNKNOWN", "FATAL", ""]);
-
-function ok(a) {
-  this.l = a;
-  this.j = !1
+  severeDowngradeCodes = new Set(["SEVERE", "SEVERE_AFTER_INITIAL", "UNKNOWN", "FATAL", ""]);
+function ErrorClassificationPipeline(classifiers) {
+  this.l = classifiers;
+  this.j = false;
 }
-
-function pk(a, b, c, d) {
-  var e = [Error("uncaught error").message];
-  c = c === void 0 ? !1 : c;
-  d = d === void 0 ? ba(!0) : d;
-  var f = [];
-  b.length > 0 && f.push(qk(b));
-  f.push.apply(f, oa(mk));
-  a = y(a);
-  b = a.next();
-  var g;
+function createClassificationPipeline(
+  extraClassifiers,
+  patterns,
+  downgradeEnabled,
+  shouldClassify,
+) {
+  var values = [Error("uncaught error").message];
+  downgradeEnabled = downgradeEnabled === void 0 ? false : downgradeEnabled;
+  shouldClassify = shouldClassify === void 0 ? createConstantFunction(true) : shouldClassify;
+  var values2 = [];
+  patterns.length > 0 && values2.push(compileErrorPatterns(patterns));
+  values2.push.apply(values2, iterableToArray(defaultErrorClassifiers));
+  extraClassifiers = getIterator(extraClassifiers);
+  patterns = extraClassifiers.next();
+  var intermediate;
   try {
-    for (; !b.done; b = a.next()) f.push(b.value)
+    for (; !patterns.done; patterns = extraClassifiers.next()) values2.push(patterns.value);
   } finally {
-    b && !b.done && (g = a.return) && g.call(a)
+    patterns &&
+      !patterns.done &&
+      (intermediate = extraClassifiers.return) &&
+      intermediate.call(extraClassifiers);
   }
-  e.length > 0 && f.push(new ik(e, [], 3, 5, 0));
-  f.push(new Tj(3, 0));
-  c && f.push(new lk(8, 0, d));
-  return new ok(f)
+  values.length > 0 && values2.push(new TokenErrorClassifier(values, [], 3, 5, 0));
+  values2.push(new KnownErrorClassifier(3, 0));
+  downgradeEnabled && values2.push(new EnvironmentErrorClassifier(8, 0, shouldClassify));
+  return new ErrorClassificationPipeline(values2);
 }
-
-function rk(a, b) {
-  var c = "missing",
-    d = new Map,
-    e = !0;
+function runErrorClassification(pipeline, error) {
+  var intermediate = "missing",
+    map = new Map(),
+    intermediate2 = true;
   try {
-    c = b.o;
-    a.j && d.set("apps_telemetry.after_downgraded_severe", "true");
-    var f = y(a.l),
-      g = f.next(),
-      h;
+    intermediate = error.o;
+    pipeline.j && map.set("apps_telemetry.after_downgraded_severe", "true");
+    var iterator = getIterator(pipeline.l),
+      iteration = iterator.next(),
+      intermediate3;
     try {
-      for (; !g.done; g = f.next()) {
-        var k = g.value;
+      for (; !iteration.done; iteration = iterator.next()) {
+        var value = iteration.value;
         try {
-          var l = Qj(k, b);
-          if (l) {
-            var m = c,
-              r = sk(a, c) ? l.Ba : c;
-            tk(l, m, r).forEach(function(w, u) {
-              d.set(u, w)
-            });
-            c = r;
-            break
+          var intermediate4 = classifyError(value, error);
+          if (intermediate4) {
+            var intermediate5 = intermediate,
+              intermediate6 = markSevereDowngrade(pipeline, intermediate)
+                ? intermediate4.Ba
+                : intermediate;
+            createClassificationMetadata(intermediate4, intermediate5, intermediate6).forEach(
+              function (value2, other) {
+                map.set(other, value2);
+              },
+            );
+            intermediate = intermediate6;
+            break;
           }
-        } catch (w) {
-          e = !1;
-          var t = fk(w, c);
-          d.set("apps_telemetry.handling_error", Sj(t) + "\n\nclassifier: " + k.constructor.name)
+        } catch (caughtError) {
+          intermediate2 = false;
+          var errorRecord = createErrorRecord(caughtError, intermediate);
+          map.set(
+            "apps_telemetry.handling_error",
+            formatErrorRecord(errorRecord) + "\n\nclassifier: " + value.constructor.name,
+          );
         }
       }
     } finally {
-      g && !g.done && (h = f.return) && h.call(f)
+      iteration &&
+        !iteration.done &&
+        (intermediate3 = iterator.return) &&
+        intermediate3.call(iterator);
     }
-  } catch (w) {
-    e = !1, a = fk(w, c), d.set("apps_telemetry.handling_error",
-      Sj(a))
+  } catch (caughtError) {
+    {
+      intermediate2 = false;
+      pipeline = createErrorRecord(caughtError, intermediate);
+      map.set("apps_telemetry.handling_error", formatErrorRecord(pipeline));
+    }
   }
-  d.set("apps_telemetry.processed", String(e));
-  return {
-    Ba: c,
-    wa: d
-  }
+  map.set("apps_telemetry.processed", String(intermediate2));
+  return { Ba: intermediate, wa: map };
 }
-
-function tk(a, b, c) {
-  var d = new Map;
-  d.set("apps_telemetry.classification", a.ua.toString());
-  d.set("apps_telemetry.classification_code", a.ka ? a.ka.toString() : "");
-  d.set("apps_telemetry.incoming_severity", b);
-  d.set("apps_telemetry.outgoing_severity", c);
-  return d
+function createClassificationMetadata(classification, error, metadata) {
+  var map = new Map();
+  map.set("apps_telemetry.classification", classification.ua.toString());
+  map.set(
+    "apps_telemetry.classification_code",
+    classification.ka ? classification.ka.toString() : "",
+  );
+  map.set("apps_telemetry.incoming_severity", error);
+  map.set("apps_telemetry.outgoing_severity", metadata);
+  return map;
 }
-
-function sk(a, b) {
-  return nk.has(b.toUpperCase()) ? a.j = !0 : !1
+function markSevereDowngrade(pipeline, code) {
+  return severeDowngradeCodes.has(code.toUpperCase()) ? (pipeline.j = true) : false;
 }
-
-function qk(a) {
-  var b = [];
-  a = y(a);
-  var c = a.next(),
-    d;
+function compileErrorPatterns(patterns) {
+  var values = [];
+  patterns = getIterator(patterns);
+  var iteration = patterns.next(),
+    intermediate;
   try {
-    for (; !c.done; c = a.next()) b.push(new RegExp(c.value))
+    for (; !iteration.done; iteration = patterns.next()) values.push(new RegExp(iteration.value));
   } finally {
-    c && !c.done && (d = a.return) && d.call(a)
+    iteration && !iteration.done && (intermediate = patterns.return) && intermediate.call(patterns);
   }
-  return new gk(b, b, 7, 0)
-};
-
-function uk() {}
-uk.prototype.fa = function() {
-  if ("WorkerGlobalScope" in A && typeof A.WorkerGlobalScope === "function" && self instanceof A
-    .WorkerGlobalScope) return new Map;
+  return new RegexErrorClassifier(values, values, 7, 0);
+}
+function TelemetryObserver() {}
+TelemetryObserver.prototype.fa = function () {
+  if (
+    "WorkerGlobalScope" in runtimeGlobal &&
+    typeof runtimeGlobal.WorkerGlobalScope === "function" &&
+    self instanceof runtimeGlobal.WorkerGlobalScope
+  )
+    return new Map();
   try {
-    var a = Array.from(document.querySelectorAll("script")).filter(this.l).slice(0, 30).map(this.j).join(
-      "\n")
-  } catch (b) {
-    a = "Error getting cross-origin scripts"
+    var intermediate = Array.from(document.querySelectorAll("script"))
+      .filter(this.l)
+      .slice(0, 30)
+      .map(this.j)
+      .join("\n");
+  } catch (caughtError) {
+    intermediate = "Error getting cross-origin scripts";
   }
-  return (new Map).set("apps_telemetry.cross_origin_scripts", a)
+  return new Map().set("apps_telemetry.cross_origin_scripts", intermediate);
 };
-uk.prototype.l = function(a) {
-  var b = new RegExp(/^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)*google\.com(?:$|[\/#?])/);
-  return (a = a.getAttribute("src")) ? !(a.startsWith("/") || b.test(a)) : !1
+TelemetryObserver.prototype.l = function (value) {
+  var regExp = new RegExp(/^(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)*google\.com(?:$|[\/#?])/);
+  return (value = value.getAttribute("src"))
+    ? !(value.startsWith("/") || regExp.test(value))
+    : false;
 };
-uk.prototype.j = function(a) {
-  return a.innerHTML ? a.outerHTML.slice(0, a.outerHTML.indexOf(a.innerHTML)) : a.outerHTML
+TelemetryObserver.prototype.j = function (value) {
+  return value.innerHTML
+    ? value.outerHTML.slice(0, value.outerHTML.indexOf(value.innerHTML))
+    : value.outerHTML;
 };
-
-function vk() {}
-vk.prototype.fa = function() {
+function NoopEnvironmentInspector() {}
+NoopEnvironmentInspector.prototype.fa = function () {
   try {
-    var a = performance.getEntriesByType("resource").slice(-5).map(function(b) {
-      return ag(b.name)
-    }).join("\n")
-  } catch (b) {
-    a = "Error getting last 5 resources"
+    var intermediate = performance
+      .getEntriesByType("resource")
+      .slice(-5)
+      .map(function (value) {
+        return sanitizeReportUrl(value.name);
+      })
+      .join("\n");
+  } catch (caughtError) {
+    intermediate = "Error getting last 5 resources";
   }
-  return (new Map).set("apps_telemetry.resources", a)
-};
-/*
+  return new Map().set("apps_telemetry.resources", intermediate);
+}; /*
 
 Math.uuid.js (v1.4)
 http://www.broofa.com
@@ -5968,507 +7171,598 @@ mailto:robert@broofa.com
 Copyright (c) 2010 Robert Kieffer
 Dual licensed under the MIT and GPL licenses.
 */
-var wk = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
-
-function xk() {
-  var a = [],
-    b;
-  a[8] = a[13] = a[18] = a[23] = "-";
-  a[14] = "4";
-  for (b = 0; b < 36; b++)
-    if (!a[b]) {
-      var c = 0 | Math.random() * 16;
-      a[b] = wk[b == 19 ? c & 3 | 8 : c]
-    } return a.join("")
-};
-
-function yk(a, b) {
-  var c = b === void 0 ? {} : b;
-  b = c.va;
-  b = b === void 0 ? [] : b;
-  var d = c.sb;
-  d = d === void 0 ? [] : d;
-  var e = c.Ga;
-  e = e === void 0 ? [] : e;
-  var f = c.Bb;
-  var g = c.sessionId;
-  g = g === void 0 ? xk() : g;
-  c = c.xb;
-  this.o = pk(b, d, f === void 0 ? !1 : f, c === void 0 ? ba(!0) : c);
-  this.j = [new wj, new uk, new vk];
-  this.j.push.apply(this.j, oa(e));
-  this.sessionId = g;
-  var h;
-  this.v = (h = A.performance) == null ? void 0 : h.timeOrigin;
-  this.l = a;
-  this.l.qa(g)
+var uuidAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");
+function createUuid() {
+  var values = [],
+    index;
+  values[8] = values[13] = values[18] = values[23] = "-";
+  values[14] = "4";
+  for (index = 0; index < 36; index++)
+    if (!values[index]) {
+      var intermediate = 0 | (Math.random() * 16);
+      values[index] = uuidAlphabet[index == 19 ? (intermediate & 3) | 8 : intermediate];
+    }
+  return values.join("");
 }
-
-function zk(a, b, c, d) {
-  d["apps_telemetry.session_id"] = a.sessionId;
-  d["apps_telemetry.session_start_time_ms"] = String(a.v);
-  "apps_telemetry.processed" in d && (d["apps_telemetry.multi_processed"] = "true");
-  var e = a.fa();
-  (a = Ak(a, b, c, e)) && Bk(e, a.wa);
-  e.forEach(function(g, h) {
-    d[h] = g
+function TelemetryProcessor(observer, options) {
+  var intermediate = options === void 0 ? {} : options;
+  options = intermediate.va;
+  options = options === void 0 ? [] : options;
+  var intermediate2 = intermediate.sb;
+  intermediate2 = intermediate2 === void 0 ? [] : intermediate2;
+  var intermediate3 = intermediate.Ga;
+  intermediate3 = intermediate3 === void 0 ? [] : intermediate3;
+  var intermediate4 = intermediate.Bb;
+  var sessionId = intermediate.sessionId;
+  sessionId = sessionId === void 0 ? createUuid() : sessionId;
+  intermediate = intermediate.xb;
+  this.o = createClassificationPipeline(
+    options,
+    intermediate2,
+    intermediate4 === void 0 ? false : intermediate4,
+    intermediate === void 0 ? createConstantFunction(true) : intermediate,
+  );
+  this.j = [new EnvironmentInspector(), new TelemetryObserver(), new NoopEnvironmentInspector()];
+  this.j.push.apply(this.j, iterableToArray(intermediate3));
+  this.sessionId = sessionId;
+  var intermediate5;
+  this.v = (intermediate5 = runtimeGlobal.performance) == null ? void 0 : intermediate5.timeOrigin;
+  this.l = observer;
+  this.l.qa(sessionId);
+}
+function addTelemetrySessionMetadata(processor, error, severity, context) {
+  context["apps_telemetry.session_id"] = processor.sessionId;
+  context["apps_telemetry.session_start_time_ms"] = String(processor.v);
+  "apps_telemetry.processed" in context && (context["apps_telemetry.multi_processed"] = "true");
+  var intermediate = processor.fa();
+  (processor = processTelemetryError(processor, error, severity, intermediate)) &&
+    copyMapEntries(intermediate, processor.wa);
+  intermediate.forEach(function (value, other) {
+    context[other] = value;
   });
-  var f;
-  return (f = a == null ? void 0 : a.Ba) != null ? f : c
+  var intermediate2;
+  return (intermediate2 = processor == null ? void 0 : processor.Ba) != null
+    ? intermediate2
+    : severity;
 }
-
-function Ak(a, b, c, d) {
-  var e = null,
-    f = null;
+function processTelemetryError(processor, error, severity, metadata) {
+  var intermediate = null,
+    intermediate2 = null;
   try {
-    e = fk(b, c, d), f = rk(a.o, e)
-  } catch (g) {
-    return Ck(d, g, "apps_telemetry.processed"), null
+    {
+      intermediate = createErrorRecord(error, severity, metadata);
+      intermediate2 = runErrorClassification(processor.o, intermediate);
+    }
+  } catch (caughtError) {
+    return (recordTelemetryFailure(metadata, caughtError, "apps_telemetry.processed"), null);
   }
-  a.l.Oa(e, f);
-  return f
+  processor.l.Oa(intermediate, intermediate2);
+  return intermediate2;
 }
-yk.prototype.fa = function() {
-  var a = new Map;
+TelemetryProcessor.prototype.fa = function () {
+  var map = new Map();
   try {
-    var b = y(this.j),
-      c = b.next(),
-      d;
+    var iterator = getIterator(this.j),
+      iteration = iterator.next(),
+      intermediate;
     try {
-      for (; !c.done; c = b.next()) c.value.fa().forEach(function(e, f) {
-        a.set(f, e)
-      })
+      for (; !iteration.done; iteration = iterator.next())
+        iteration.value.fa().forEach(function (value, other) {
+          map.set(other, value);
+        });
     } finally {
-      c && !c.done && (d = b.return) && d.call(b)
+      iteration &&
+        !iteration.done &&
+        (intermediate = iterator.return) &&
+        intermediate.call(iterator);
     }
-  } catch (e) {
-    Ck(a, e, "apps_telemetry.annotated")
+  } catch (caughtError) {
+    recordTelemetryFailure(map, caughtError, "apps_telemetry.annotated");
   }
-  return a
+  return map;
 };
-
-function Bk(a, b) {
-  b.forEach(function(c, d) {
-    a.set(d, c)
-  })
+function copyMapEntries(target, source) {
+  source.forEach(function (value, other) {
+    target.set(other, value);
+  });
 }
-
-function Ck(a, b, c) {
-  a.set(c, "false");
-  a.set("apps_telemetry.handling_error", bk(b))
-};
-var Dk = new Set([1, 6, 7, 2, 0]);
-
-function Ek() {
-  var a = oj(sj(xd())),
-    b = sd(a, 1),
-    c = sd(a, 5);
-  return [b, c].every(function(d) {
-    return Dk.has(d)
-  })
-};
-
-function Fk(a) {
+function recordTelemetryFailure(metadata, error, key) {
+  metadata.set(key, "false");
+  metadata.set("apps_telemetry.handling_error", stringifyError(error));
+}
+var supportedCrashClassifications = new Set([1, 6, 7, 2, 0]);
+function supportsCrashClassification() {
+  var crashClassification = readCrashClassification(
+      readCrashClientState(readTelemetryBootstrapMessage()),
+    ),
+    numberField = readNumberField(crashClassification, 1),
+    numberField2 = readNumberField(crashClassification, 5);
+  return [numberField, numberField2].every(function (value) {
+    return supportedCrashClassifications.has(value);
+  });
+}
+function readBooleanFeatureFlag(flag) {
   try {
-    return de(be(), a)
-  } catch (b) {
-    return !1
+    return readFeatureFlag(getFeatureFlagStore(), flag);
+  } catch (caughtError) {
+    return false;
   }
-};
-
-function Gk(a, b) {
-  var c = a = a === void 0 ? {} : a;
-  a = c.Ga;
-  a = a === void 0 ? [] : a;
-  var d = c.va;
-  d = d === void 0 ? [] : d;
-  var e = c.wb;
-  e = e === void 0 ? [] : e;
-  var f = c.tb;
-  f = f === void 0 ? [] : f;
-  var g = c.Dc;
-  g = g === void 0 ? [] : g;
-  var h = c.Ec;
-  h = h === void 0 ? [] : h;
-  c = c.sessionId;
-  c = c === void 0 ? void 0 : c;
+}
+function createTelemetryProcessor(options, observer) {
+  var intermediate = (options = options === void 0 ? {} : options);
+  options = intermediate.Ga;
+  options = options === void 0 ? [] : options;
+  var intermediate2 = intermediate.va;
+  intermediate2 = intermediate2 === void 0 ? [] : intermediate2;
+  var intermediate3 = intermediate.wb;
+  intermediate3 = intermediate3 === void 0 ? [] : intermediate3;
+  var intermediate4 = intermediate.tb;
+  intermediate4 = intermediate4 === void 0 ? [] : intermediate4;
+  var intermediate5 = intermediate.Dc;
+  intermediate5 = intermediate5 === void 0 ? [] : intermediate5;
+  var intermediate6 = intermediate.Ec;
+  intermediate6 = intermediate6 === void 0 ? [] : intermediate6;
+  intermediate = intermediate.sessionId;
+  intermediate = intermediate === void 0 ? void 0 : intermediate;
   try {
-    var k = de(be(), fe),
-      l = void 0 === Kb ? 2 : 4,
-      m = void 0,
-      r = k.C,
-      t = r[G] | 0,
-      w = Ib(k, t) ? 1 : l;
-    m = !!m || w === 3;
-    w === 2 && Pc(k) && (r = k.C, t = r[G] | 0);
-    var u = $c(r, 1),
-      L = u === Db ? 7 : u[G] | 0,
-      E = ad(L, t);
-    if (k = 4 & E ? !1 : !0) {
-      4 & E && (u = Array.prototype.slice.call(u), L = 0, E = Zc(E, t), t = Wc(r, t, 1, u));
-      for (var ka =
-          l = 0; l < u.length; l++) {
-        var R = vc(u[l]);
-        R != null && (u[ka++] = R)
+    var featureFlag = readFeatureFlag(getFeatureFlagStore(), ignoredErrorsFlag),
+      index = void 0 === repeatedFieldModeToken ? 2 : 4,
+      intermediate7 = void 0,
+      backingOrStateValue = featureFlag.C,
+      intermediate8 = backingOrStateValue[arrayFlagsKey] | 0,
+      intermediate9 = isImmutableMessage(featureFlag, intermediate8) ? 1 : index;
+    intermediate7 = !!intermediate7 || intermediate9 === 3;
+    intermediate9 === 2 &&
+      detachCopyOnWriteArray(featureFlag) &&
+      ((backingOrStateValue = featureFlag.C),
+      (intermediate8 = backingOrStateValue[arrayFlagsKey] | 0));
+    var repeatedArray = getRepeatedArray(backingOrStateValue, 1),
+      intermediate10 = repeatedArray === emptyRepeatedField ? 7 : repeatedArray[arrayFlagsKey] | 0,
+      intermediate11 = inheritRepeatedArrayFlags(intermediate10, intermediate8);
+    if ((featureFlag = 4 & intermediate11 ? false : true)) {
+      4 & intermediate11 &&
+        ((repeatedArray = Array.prototype.slice.call(repeatedArray)),
+        (intermediate10 = 0),
+        (intermediate11 = copyRepeatedArrayFlags(intermediate11, intermediate8)),
+        (intermediate8 = setArrayField(backingOrStateValue, intermediate8, 1, repeatedArray)));
+      for (var index2 = (index = 0); index < repeatedArray.length; index++) {
+        var string = coerceString(repeatedArray[index]);
+        string != null && (repeatedArray[index2++] = string);
       }
-      ka < l && (u.length = ka);
-      R = E |= 4;
-      R &= -513;
-      E = R & -1025;
-      E &= -4097
+      index2 < index && (repeatedArray.length = index2);
+      string = intermediate11 |= 4;
+      string &= -513;
+      intermediate11 = string & -1025;
+      intermediate11 &= -4097;
     }
-    E !== L && (H(u, E), 2 & E && Object.freeze(u));
-    var Ja = u = Xc(u, E, r, t, 1, w, k, m)
-  } catch (Ci) {
-    Ja = []
+    intermediate11 !== intermediate10 &&
+      (setArrayFlags(repeatedArray, intermediate11),
+      2 & intermediate11 && Object.freeze(repeatedArray));
+    var intermediate12 = (repeatedArray = prepareRepeatedArray(
+      repeatedArray,
+      intermediate11,
+      backingOrStateValue,
+      intermediate8,
+      1,
+      intermediate9,
+      featureFlag,
+      intermediate7,
+    ));
+  } catch (caughtError) {
+    intermediate12 = [];
   }
-  r = Fk(he);
-  t = [];
-  w = t.concat;
-  u = [];
-  e.length > 0 && u.push(kk(e, [], 6));
-  f.length > 0 && u.push(new gk(f, [], 6, 0));
-  g.length > 0 && u.push(new ik(g, [], 6, 5, 0));
-  h.length > 0 && u.push(new ik(h, [], 6, 5, 1));
-  return new yk(b, {
-    va: w.call(t, oa(u), oa(d)),
-    sb: Ja,
-    Ga: [new tj].concat(oa(a)),
-    Bb: r,
-    sessionId: c,
-    xb: Ek
-  })
-};
-
-function Hk() {}
-Hk.prototype.Oa = n();
-Hk.prototype.qa = n();
-
-function Ik(a) {
-  a = a === void 0 ? {} : a;
-  return Gk(a, new Hk)
-};
-
-function Jk(a) {
-  return a ? a.split("\n").filter(function(b) {
-    return b.trim() && !b.includes("signal is aborted without reason")
-  }).length : 0
+  backingOrStateValue = readBooleanFeatureFlag(telemetryIntegrationFlag);
+  intermediate8 = [];
+  intermediate9 = intermediate8.concat;
+  repeatedArray = [];
+  intermediate3.length > 0 && repeatedArray.push(createTokenClassifier(intermediate3, [], 6));
+  intermediate4.length > 0 && repeatedArray.push(new RegexErrorClassifier(intermediate4, [], 6, 0));
+  intermediate5.length > 0 &&
+    repeatedArray.push(new TokenErrorClassifier(intermediate5, [], 6, 5, 0));
+  intermediate6.length > 0 &&
+    repeatedArray.push(new TokenErrorClassifier(intermediate6, [], 6, 5, 1));
+  return new TelemetryProcessor(observer, {
+    va: intermediate9.call(
+      intermediate8,
+      iterableToArray(repeatedArray),
+      iterableToArray(intermediate2),
+    ),
+    sb: intermediate12,
+    Ga: [new BootstrapConfigProvider()].concat(iterableToArray(options)),
+    Bb: backingOrStateValue,
+    sessionId: intermediate,
+    xb: supportsCrashClassification,
+  });
 }
-
-function Kk() {
-  Pj.call(this, 3, 0)
+function NoopTelemetryObserver() {}
+NoopTelemetryObserver.prototype.Oa = createNoopFunction();
+NoopTelemetryObserver.prototype.qa = createNoopFunction();
+function createDefaultTelemetryProcessor(options) {
+  options = options === void 0 ? {} : options;
+  return createTelemetryProcessor(options, new NoopTelemetryObserver());
 }
-x(Kk, Pj);
-Kk.prototype.j = function(a) {
+function countRelevantStackLines(stack) {
+  return stack
+    ? stack.split("\n").filter(function (value) {
+        return value.trim() && !value.includes("signal is aborted without reason");
+      }).length
+    : 0;
+}
+function AbortErrorClassifier() {
+  ErrorClassifier.call(this, 3, 0);
+}
+inheritCompiledClass(AbortErrorClassifier, ErrorClassifier);
+AbortErrorClassifier.prototype.j = function (value) {
   a: {
-    for (; a;) {
-      var b = a.message.includes("signal is aborted without reason"),
-        c = Jk(a.j) === 2;
-      if (!b || !c) {
-        a = !1;
-        break a
+    for (; value; ) {
+      var intermediate = value.message.includes("signal is aborted without reason"),
+        intermediate2 = countRelevantStackLines(value.j) === 2;
+      if (!intermediate || !intermediate2) {
+        value = false;
+        break a;
       }
-      a = a.cause
+      value = value.cause;
     }
-    a = !0
+    value = true;
   }
-  return a ? "warning" : null
+  return value ? "warning" : null;
 };
 try {
-  var Lk, Mk, Nk = (Mk = (Lk = window) == null ? void 0 : Lk.top) != null ? Mk : A;
-  Nk.U3bHHf != null || (Nk.U3bHHf = 0);
-  Nk.U3bHHf++
-} catch (a) {
-  A.U3bHHf != null || (A.U3bHHf = 0), A.U3bHHf++
-};
-var Ok;
-if (A == null ? 0 : (Ok = A.Symbol) == null ? 0 : Ok.for) {
-  var Pk = Symbol.for("google.goem");
-  A[Pk] || (A[Pk] = new WeakMap)
-};
+  var topWindowCandidate,
+    topWindowValue,
+    telemetryTopWindow =
+      (topWindowValue = (topWindowCandidate = window) == null ? void 0 : topWindowCandidate.top) !=
+      null
+        ? topWindowValue
+        : runtimeGlobal;
+  telemetryTopWindow.U3bHHf != null || (telemetryTopWindow.U3bHHf = 0);
+  telemetryTopWindow.U3bHHf++;
+} catch (caughtError) {
+  {
+    runtimeGlobal.U3bHHf != null || (runtimeGlobal.U3bHHf = 0);
+    runtimeGlobal.U3bHHf++;
+  }
+}
+var globalSymbolConstructor;
+if (
+  runtimeGlobal == null
+    ? 0
+    : (globalSymbolConstructor = runtimeGlobal.Symbol) == null
+      ? 0
+      : globalSymbolConstructor.for
+) {
+  var globalErrorMapSymbol = Symbol.for("google.goem");
+  runtimeGlobal[globalErrorMapSymbol] || (runtimeGlobal[globalErrorMapSymbol] = new WeakMap());
+}
 "#".replace(/([-()\[\]{}+?*.$\^|,:#<!\\])/g, "\\$1").replace(/\x08/g, "\\x08");
-
-function Qk(a, b) {
-  var c = a.__wiz;
-  c || (c = a.__wiz = {});
-  return c[b.toString()]
-};
-/*
+function getWizEventHandlers(element, eventType) {
+  var __wiz = element.__wiz;
+  __wiz || (__wiz = element.__wiz = {});
+  return __wiz[eventType.toString()];
+} /*
 
  Copyright 2024 Google, Inc
  SPDX-License-Identifier: MIT
 */
-var Rk = {};
-var Sk = {};
-
-function Tk(a) {
-  var b = document.body,
-    c = Ta(b.getAttribute("jsaction") || "");
-  var d = ["u0pjoe"];
-  var e = y(d),
-    f = e.next(),
-    g;
+var parsedActionCache = {};
+var actionPatternCache = {};
+function registerClientAction(callback) {
+  var body = document.body,
+    intermediate = trimString(body.getAttribute("jsaction") || "");
+  var values = ["u0pjoe"];
+  var iterator = getIterator(values),
+    iteration = iterator.next(),
+    intermediate2;
   try {
-    for (; !f.done; f = e.next()) {
-      var h = f.value;
-      var k = c;
-      if (k) {
-        var l = Rk[k];
-        if (l) var m = !!l[h.toString()];
+    for (; !iteration.done; iteration = iterator.next()) {
+      var value = iteration.value;
+      var intermediate3 = intermediate;
+      if (intermediate3) {
+        var intermediate4 = parsedActionCache[intermediate3];
+        if (intermediate4) var intermediate5 = !!intermediate4[value.toString()];
         else {
-          var r = Sk[h.toString()];
-          r || (r = new RegExp("(^\\s*" + h + "\\s*:|[\\s;]" + h + "\\s*:)"), Sk[h.toString()] = r);
-          m = r.test(k)
+          var intermediate6 = actionPatternCache[value.toString()];
+          intermediate6 ||
+            ((intermediate6 = new RegExp("(^\\s*" + value + "\\s*:|[\\s;]" + value + "\\s*:)")),
+            (actionPatternCache[value.toString()] = intermediate6));
+          intermediate5 = intermediate6.test(intermediate3);
         }
-      } else m = !1;
-      m || (c && !/;$/.test(c) && (c += ";"), c += h + ":.CLIENT", Uk(b, c));
-      var t = Qk(b, h);
-      t ? t.push(a) : b.__wiz[h.toString()] = [a]
+      } else intermediate5 = false;
+      intermediate5 ||
+        (intermediate && !/;$/.test(intermediate) && (intermediate += ";"),
+        (intermediate += value + ":.CLIENT"),
+        setJsAction(body, intermediate));
+      var wizEventHandlers = getWizEventHandlers(body, value);
+      wizEventHandlers
+        ? wizEventHandlers.push(callback)
+        : (body.__wiz[value.toString()] = [callback]);
     }
   } finally {
-    f && !f.done && (g = e.return) && g.call(e)
+    iteration &&
+      !iteration.done &&
+      (intermediate2 = iterator.return) &&
+      intermediate2.call(iterator);
   }
-  return {
-    et: d,
-    eb: a,
-    el: b
-  }
+  return { et: values, eb: callback, el: body };
 }
-
-function Uk(a, b) {
-  a.setAttribute("jsaction", b);
-  "__jsaction" in a && delete a.__jsaction
+function setJsAction(element, actions) {
+  element.setAttribute("jsaction", actions);
+  "__jsaction" in element && delete element.__jsaction;
+}
+/**
+ * 错误保护与网络传输：全局回调保护、XHR 状态机、错误报告。
+ */
+function EntryPointProtector(errorHandler) {
+  Disposable.call(this);
+  this.l = errorHandler;
+}
+inheritClosureClass(EntryPointProtector, Disposable);
+EntryPointProtector.prototype.j = function (value) {
+  return getProtectedFunction(this, value);
 };
-
-function Vk(a) {
-  X.call(this);
-  this.l = a
+function protectedFunctionKey(protector, wrapper) {
+  protector =
+    (Object.prototype.hasOwnProperty.call(protector, objectUidKey) && protector[objectUidKey]) ||
+    (protector[objectUidKey] = ++nextObjectUid);
+  return (wrapper ? "__wrapper_" : "__protected_") + protector + "__";
 }
-C(Vk, X);
-Vk.prototype.j = function(a) {
-  return Wk(this, a)
-};
-
-function Xk(a, b) {
-  a = Object.prototype.hasOwnProperty.call(a, La) && a[La] || (a[La] = ++Ma);
-  return (b ? "__wrapper_" : "__protected_") + a + "__"
+function getProtectedFunction(protector, callback) {
+  var intermediate = protectedFunctionKey(protector, true);
+  callback[intermediate] ||
+    ((callback[intermediate] = createProtectedFunction(protector, callback))[
+      protectedFunctionKey(protector, false)
+    ] = callback);
+  return callback[intermediate];
 }
-
-function Wk(a, b) {
-  var c = Xk(a, !0);
-  b[c] || ((b[c] = Yk(a, b))[Xk(a, !1)] = b);
-  return b[c]
-}
-
-function Yk(a, b) {
-  function c() {
-    if (a.na()) return b.apply(this, arguments);
+function createProtectedFunction(protector, callback) {
+  function helper() {
+    if (protector.na()) return callback.apply(this, arguments);
     try {
-      return b.apply(this, arguments)
-    } catch (d) {
-      Zk(a, d)
+      return callback.apply(this, arguments);
+    } catch (caughtError) {
+      handleProtectedError(protector, caughtError);
     }
   }
-  c[Xk(a, !1)] = b;
-  return c
+  helper[protectedFunctionKey(protector, false)] = callback;
+  return helper;
 }
-
-function Zk(a, b) {
-  if (!(b && typeof b === "object" && typeof b.message === "string" && b.message.indexOf(
-      "Error in protected function: ") == 0 || typeof b === "string" && b.indexOf(
-      "Error in protected function: ") == 0)) throw a.l(b), new $k(b);
+function handleProtectedError(protector, error) {
+  if (
+    !(
+      (error &&
+        typeof error === "object" &&
+        typeof error.message === "string" &&
+        error.message.indexOf("Error in protected function: ") == 0) ||
+      (typeof error === "string" && error.indexOf("Error in protected function: ") == 0)
+    )
+  )
+    throw (protector.l(error), new ProtectedFunctionError(error));
 }
-
-function al(a) {
-  var b = b || A.window || A.globalThis;
-  "onunhandledrejection" in b && (b.onunhandledrejection = function(c) {
-    Zk(a, c && c.reason ? c.reason : Error("uncaught error"))
-  })
+function protectUnhandledRejections(protector) {
+  var intermediate = intermediate || runtimeGlobal.window || runtimeGlobal.globalThis;
+  "onunhandledrejection" in intermediate &&
+    (intermediate.onunhandledrejection = function (value) {
+      handleProtectedError(
+        protector,
+        value && value.reason ? value.reason : Error("uncaught error"),
+      );
+    });
 }
-
-function bl(a, b) {
-  var c = A.window || A.globalThis,
-    d = c[b];
-  if (!d) throw Error(b + " not on global?");
-  c[b] = function(e, f) {
-    typeof e === "string" && (e = Pa(Qa, e));
-    e && (arguments[0] = e = Wk(a, e));
-    if (d.apply) return d.apply(this, arguments);
-    var g = e;
+function protectGlobalTimer(protector, name) {
+  var intermediate = runtimeGlobal.window || runtimeGlobal.globalThis,
+    callback = intermediate[name];
+  if (!callback) throw Error(name + " not on global?");
+  intermediate[name] = function (value, other) {
+    typeof value === "string" && (value = partialApply(evaluateGlobally, value));
+    value && (arguments[0] = value = getProtectedFunction(protector, value));
+    if (callback.apply) return callback.apply(this, arguments);
+    var value2 = value;
     if (arguments.length > 2) {
-      var h = Array.prototype.slice.call(arguments, 2);
-      g = function() {
-        e.apply(this, h)
-      }
+      var intermediate2 = Array.prototype.slice.call(arguments, 2);
+      value2 = function () {
+        value.apply(this, intermediate2);
+      };
     }
-    return d(g, f)
+    return callback(value2, other);
   };
-  c[b][Xk(a, !1)] = d
+  intermediate[name][protectedFunctionKey(protector, false)] = callback;
 }
-Vk.prototype.N = function() {
-  var a = A.window || A.globalThis;
-  var b = a.setTimeout;
-  b = b[Xk(this, !1)] || b;
-  a.setTimeout = b;
-  b = a.setInterval;
-  b = b[Xk(this, !1)] || b;
-  a.setInterval = b;
-  Vk.W.N.call(this)
+EntryPointProtector.prototype.N = function () {
+  var intermediate = runtimeGlobal.window || runtimeGlobal.globalThis;
+  var setTimeout2 = intermediate.setTimeout;
+  setTimeout2 = setTimeout2[protectedFunctionKey(this, false)] || setTimeout2;
+  intermediate.setTimeout = setTimeout2;
+  setTimeout2 = intermediate.setInterval;
+  setTimeout2 = setTimeout2[protectedFunctionKey(this, false)] || setTimeout2;
+  intermediate.setInterval = setTimeout2;
+  EntryPointProtector.W.N.call(this);
 };
-
-function $k(a) {
-  D.call(this, "Error in protected function: " + (a && a.message ? String(a.message) : String(a)), a);
-  (a = a && a.stack) && typeof a === "string" && (this.stack = a)
+function ProtectedFunctionError(error) {
+  ClosureError.call(
+    this,
+    "Error in protected function: " +
+      (error && error.message ? String(error.message) : String(error)),
+    error,
+  );
+  (error = error && error.stack) && typeof error === "string" && (this.stack = error);
 }
-C($k, D);
-
-function cl() {
-  Z.call(this);
-  this.headers = new Map;
-  this.o = !1;
+inheritClosureClass(ProtectedFunctionError, ClosureError);
+function XhrIo() {
+  EventTarget.call(this);
+  this.headers = new Map();
+  this.o = false;
   this.j = null;
   this.M = "";
   this.B = 0;
-  this.A = this.L = this.F = this.J = !1;
+  this.A = this.L = this.F = this.J = false;
   this.O = 0;
   this.v = null;
   this.P = "";
-  this.S = !1
+  this.S = false;
 }
-C(cl, Z);
-var dl = /^https?$/i,
-  el = ["POST", "PUT"],
-  fl = [];
-q = cl.prototype;
-q.fb = function() {
+inheritClosureClass(XhrIo, EventTarget);
+var httpSchemePattern = /^https?$/i,
+  methodsWithRequestBody = ["POST", "PUT"],
+  activeXhrRequests = [];
+prototypeAlias = XhrIo.prototype;
+prototypeAlias.fb = function () {
   this.dispose();
-  ab(fl, this)
+  removeArrayValue(activeXhrRequests, this);
 };
-q.send = function(a, b, c, d) {
-  if (this.j) throw Error("[goog.net.XhrIo] Object is active with another request=" + this.M + "; newUri=" +
-    a);
-  b = b ? b.toUpperCase() : "GET";
-  this.M = a;
+prototypeAlias.send = function (value, iterator, options, context) {
+  if (this.j)
+    throw Error(
+      "[goog.net.XhrIo] Object is active with another request=" + this.M + "; newUri=" + value,
+    );
+  iterator = iterator ? iterator.toUpperCase() : "GET";
+  this.M = value;
   this.B = 0;
-  this.J = !1;
-  this.o = !0;
-  this.j = new XMLHttpRequest;
-  this.j.onreadystatechange = eg(B(this.Pa, this));
+  this.J = false;
+  this.o = true;
+  this.j = new XMLHttpRequest();
+  this.j.onreadystatechange = wrapAsyncContext(bindFunction(this.Pa, this));
   try {
-    this.L = !0, this.j.open(b, String(a), !0), this.L = !1
-  } catch (t) {
-    gl(this);
-    return
-  }
-  a = c || "";
-  c = new Map(this.headers);
-  if (d)
-    if (Object.getPrototypeOf(d) === Object.prototype)
-      for (var e in d) c.set(e, d[e]);
-    else if (typeof d.keys === "function" && typeof d.get ===
-    "function") {
-    e = y(d.keys());
-    var f = e.next(),
-      g;
-    try {
-      for (; !f.done; f = e.next()) {
-        var h = f.value;
-        c.set(h, d.get(h))
-      }
-    } finally {
-      f && !f.done && (g = e.return) && g.call(e)
+    {
+      this.L = true;
+      this.j.open(iterator, String(value), true);
+      this.L = false;
     }
-  } else throw Error("Unknown input type for opt_headers: " + String(d));
-  d = Array.from(c.keys()).find(function(t) {
-    return "content-type" == t.toLowerCase()
+  } catch (caughtError) {
+    timeoutXhr(this);
+    return;
+  }
+  value = options || "";
+  options = new Map(this.headers);
+  if (context)
+    if (Object.getPrototypeOf(context) === Object.prototype)
+      for (var iterator2 in context) options.set(iterator2, context[iterator2]);
+    else if (typeof context.keys === "function" && typeof context.get === "function") {
+      iterator2 = getIterator(context.keys());
+      var iteration = iterator2.next(),
+        intermediate;
+      try {
+        for (; !iteration.done; iteration = iterator2.next()) {
+          var value2 = iteration.value;
+          options.set(value2, context.get(value2));
+        }
+      } finally {
+        iteration &&
+          !iteration.done &&
+          (intermediate = iterator2.return) &&
+          intermediate.call(iterator2);
+      }
+    } else throw Error("Unknown input type for opt_headers: " + String(context));
+  context = Array.from(options.keys()).find(function (value5) {
+    return "content-type" == value5.toLowerCase();
   });
-  g = A.FormData && a instanceof A.FormData;
-  !(Array.prototype.indexOf.call(el, b, void 0) >= 0) || d || g || c.set("Content-Type",
-    "application/x-www-form-urlencoded;charset=utf-8");
-  b = y(c);
-  d = b.next();
-  var k;
+  intermediate = runtimeGlobal.FormData && value instanceof runtimeGlobal.FormData;
+  !(Array.prototype.indexOf.call(methodsWithRequestBody, iterator, void 0) >= 0) ||
+    context ||
+    intermediate ||
+    options.set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
+  iterator = getIterator(options);
+  context = iterator.next();
+  var intermediate2;
   try {
-    for (; !d.done; d =
-      b.next()) {
-      var l = y(d.value),
-        m = l.next().value,
-        r = l.next().value;
-      this.j.setRequestHeader(m, r)
+    for (; !context.done; context = iterator.next()) {
+      var iterator3 = getIterator(context.value),
+        value3 = iterator3.next().value,
+        value4 = iterator3.next().value;
+      this.j.setRequestHeader(value3, value4);
     }
   } finally {
-    d && !d.done && (k = b.return) && k.call(b)
+    context && !context.done && (intermediate2 = iterator.return) && intermediate2.call(iterator);
   }
   this.P && (this.j.responseType = this.P);
-  "withCredentials" in this.j && this.j.withCredentials !== this.S && (this.j.withCredentials = this.S);
+  "withCredentials" in this.j &&
+    this.j.withCredentials !== this.S &&
+    (this.j.withCredentials = this.S);
   try {
-    this.v && (clearTimeout(this.v), this.v = null), this.O > 0 && (this.v = setTimeout(this.yb.bind(this),
-      this.O)), this.F = !0, this.j.send(a), this.F = !1
-  } catch (t) {
-    gl(this)
-  }
-};
-q.yb = function() {
-  typeof Ea != "undefined" && this.j && (this.B = 8, this.dispatchEvent("timeout"), this.abort(8))
-};
-
-function gl(a) {
-  a.o = !1;
-  a.j && (a.A = !0, a.j.abort(), a.A = !1);
-  a.B = 5;
-  hl(a);
-  il(a)
-}
-
-function hl(a) {
-  a.J || (a.J = !0, a.dispatchEvent("complete"), a.dispatchEvent("error"))
-}
-q.abort = function(a) {
-  this.j && this.o && (this.o = !1, this.A = !0, this.j.abort(), this.A = !1, this.B = a || 7, this
-    .dispatchEvent("complete"), this.dispatchEvent("abort"), il(this))
-};
-q.N = function() {
-  this.j && (this.o && (this.o = !1, this.A = !0, this.j.abort(), this.A = !1), il(this, !0));
-  cl.W.N.call(this)
-};
-q.Pa = function() {
-  this.na() || (this.L || this.F || this.A ? jl(this) : this.Aa())
-};
-q.Aa = function() {
-  jl(this)
-};
-
-function jl(a) {
-  if (a.o && typeof Ea != "undefined")
-    if (a.F && (a.j ? a.j.readyState : 0) == 4) setTimeout(a.Pa.bind(a), 0);
-    else if (a.dispatchEvent("readystatechange"), (a.j ? a.j.readyState : 0) == 4) {
-    a.o = !1;
-    try {
-      ej(a) ? (a.dispatchEvent("complete"), a.dispatchEvent("success")) : (a.B = 6, hl(a))
-    } finally {
-      il(a)
+    {
+      this.v && (clearTimeout(this.v), (this.v = null));
+      this.O > 0 && (this.v = setTimeout(this.yb.bind(this), this.O));
+      this.F = true;
+      this.j.send(value);
+      this.F = false;
     }
+  } catch (caughtError) {
+    timeoutXhr(this);
   }
-}
-
-function il(a, b) {
-  if (a.j) {
-    a.v && (clearTimeout(a.v), a.v = null);
-    var c = a.j;
-    a.j = null;
-    b || a.dispatchEvent("ready");
-    try {
-      c.onreadystatechange = null
-    } catch (d) {}
-  }
-}
-q.isActive = function() {
-  return !!this.j
 };
-
-function ej(a) {
-  var b = dj(a);
-  a: switch (b) {
+prototypeAlias.yb = function () {
+  typeof closureNamespace != "undefined" &&
+    this.j &&
+    ((this.B = 8), this.dispatchEvent("timeout"), this.abort(8));
+};
+function timeoutXhr(request) {
+  request.o = false;
+  request.j && ((request.A = true), request.j.abort(), (request.A = false));
+  request.B = 5;
+  dispatchXhrError(request);
+  cleanupXhr(request);
+}
+function dispatchXhrError(request) {
+  request.J ||
+    ((request.J = true), request.dispatchEvent("complete"), request.dispatchEvent("error"));
+}
+prototypeAlias.abort = function (value) {
+  this.j &&
+    this.o &&
+    ((this.o = false),
+    (this.A = true),
+    this.j.abort(),
+    (this.A = false),
+    (this.B = value || 7),
+    this.dispatchEvent("complete"),
+    this.dispatchEvent("abort"),
+    cleanupXhr(this));
+};
+prototypeAlias.N = function () {
+  this.j &&
+    (this.o && ((this.o = false), (this.A = true), this.j.abort(), (this.A = false)),
+    cleanupXhr(this, true));
+  XhrIo.W.N.call(this);
+};
+prototypeAlias.Pa = function () {
+  this.na() || (this.L || this.F || this.A ? processXhrReadyState(this) : this.Aa());
+};
+prototypeAlias.Aa = function () {
+  processXhrReadyState(this);
+};
+function processXhrReadyState(request) {
+  if (request.o && typeof closureNamespace != "undefined")
+    if (request.F && (request.j ? request.j.readyState : 0) == 4)
+      setTimeout(request.Pa.bind(request), 0);
+    else if (
+      (request.dispatchEvent("readystatechange"), (request.j ? request.j.readyState : 0) == 4)
+    ) {
+      request.o = false;
+      try {
+        isSuccessfulXhr(request)
+          ? (request.dispatchEvent("complete"), request.dispatchEvent("success"))
+          : ((request.B = 6), dispatchXhrError(request));
+      } finally {
+        cleanupXhr(request);
+      }
+    }
+}
+function cleanupXhr(request, disposing) {
+  if (request.j) {
+    request.v && (clearTimeout(request.v), (request.v = null));
+    var intermediate = request.j;
+    request.j = null;
+    disposing || request.dispatchEvent("ready");
+    try {
+      intermediate.onreadystatechange = null;
+    } catch (caughtError) {}
+  }
+}
+prototypeAlias.isActive = function () {
+  return !!this.j;
+};
+function isSuccessfulXhr(request) {
+  var xhrStatus = readXhrStatus(request);
+  a: switch (xhrStatus) {
     case 200:
     case 201:
     case 202:
@@ -6476,520 +7770,623 @@ function ej(a) {
     case 206:
     case 304:
     case 1223:
-      var c = !0;
+      var intermediate = true;
       break a;
     default:
-      c = !1
+      intermediate = false;
   }
-  if (!c) {
-    if (b = b === 0) a = String(a.M).match(Vf)[1] || null, !a && A.self && A.self.location && (a = A.self
-      .location.protocol.slice(0, -1)), b = !dl.test(a ? a.toLowerCase() : "");
-    c = b
-  }
-  return c
-}
-
-function dj(a) {
-  try {
-    return (a.j ? a.j.readyState : 0) > 2 ? a.j.status : -1
-  } catch (b) {
-    return -1
-  }
-}
-kg(function(a) {
-  cl.prototype.Aa = a(cl.prototype.Aa)
-});
-
-function kl(a, b, c) {
-  Z.call(this);
-  this.A = b || null;
-  this.v = {};
-  this.B = ll;
-  this.J = a;
-  if (!c) {
-    this.j = null;
-    this.j = new Vk(B(this.o, this));
-    bl(this.j, "setTimeout");
-    bl(this.j, "setInterval");
-    a = this.j;
-    b = A.window || A.globalThis;
-    c = ["requestAnimationFrame", "mozRequestAnimationFrame", "webkitAnimationFrame",
-      "msRequestAnimationFrame"
-    ];
-    for (var d = 0; d < c.length; d++) {
-      var e = c[d];
-      c[d] in b && bl(a, e)
+  if (!intermediate) {
+    if ((xhrStatus = xhrStatus === 0)) {
+      request = String(request.M).match(urlPartsPattern)[1] || null;
+      !request &&
+        runtimeGlobal.self &&
+        runtimeGlobal.self.location &&
+        (request = runtimeGlobal.self.location.protocol.slice(0, -1));
+      xhrStatus = !httpSchemePattern.test(request ? request.toLowerCase() : "");
     }
-    a = this.j;
-    jg = !0;
-    b = B(a.j, a);
-    for (c = 0; c < hg.length; c++) hg[c](b);
-    ig.push(a)
+    intermediate = xhrStatus;
+  }
+  return intermediate;
+}
+function readXhrStatus(request) {
+  try {
+    return (request.j ? request.j.readyState : 0) > 2 ? request.j.status : -1;
+  } catch (caughtError) {
+    return -1;
   }
 }
-C(kl, Z);
-
-function ml(a, b) {
-  li.call(this, "c");
-  this.error = a;
-  this.Z = b
+registerEntryPoint(function (callback) {
+  XhrIo.prototype.Aa = callback(XhrIo.prototype.Aa);
+});
+function GlobalErrorHandler(reportUrl, context, disabled) {
+  EventTarget.call(this);
+  this.A = context || null;
+  this.v = {};
+  this.B = sendErrorReport;
+  this.J = reportUrl;
+  if (!disabled) {
+    this.j = null;
+    this.j = new EntryPointProtector(bindFunction(this.o, this));
+    protectGlobalTimer(this.j, "setTimeout");
+    protectGlobalTimer(this.j, "setInterval");
+    reportUrl = this.j;
+    context = runtimeGlobal.window || runtimeGlobal.globalThis;
+    disabled = [
+      "requestAnimationFrame",
+      "mozRequestAnimationFrame",
+      "webkitAnimationFrame",
+      "msRequestAnimationFrame",
+    ];
+    for (var index = 0; index < disabled.length; index++) {
+      var intermediate = disabled[index];
+      disabled[index] in context && protectGlobalTimer(reportUrl, intermediate);
+    }
+    reportUrl = this.j;
+    entryPointsMonitored = true;
+    context = bindFunction(reportUrl.j, reportUrl);
+    for (disabled = 0; disabled < entryPointCallbacks.length; disabled++)
+      entryPointCallbacks[disabled](context);
+    entryPointMonitors.push(reportUrl);
+  }
 }
-C(ml, li);
-
-function nl(a, b) {
-  return new kl(a, b, void 0)
+inheritClosureClass(GlobalErrorHandler, EventTarget);
+function GlobalErrorEvent(error, context) {
+  BaseEvent.call(this, "c");
+  this.error = error;
+  this.Z = context;
 }
-
-function ll(a, b, c, d) {
-  if (d instanceof Map) {
-    var e = {};
-    d = y(d);
-    var f = d.next(),
-      g;
+inheritClosureClass(GlobalErrorEvent, BaseEvent);
+function createGlobalErrorHandler(reportUrl, context) {
+  return new GlobalErrorHandler(reportUrl, context, void 0);
+}
+function sendErrorReport(url, payload, method, context) {
+  if (context instanceof Map) {
+    var record = {};
+    context = getIterator(context);
+    var iteration = context.next(),
+      intermediate;
     try {
-      for (; !f.done; f = d.next()) {
-        var h = y(f.value),
-          k = h.next().value,
-          l = h.next().value;
-        e[k] = l
+      for (; !iteration.done; iteration = context.next()) {
+        var iterator = getIterator(iteration.value),
+          value = iterator.next().value,
+          value2 = iterator.next().value;
+        record[value] = value2;
       }
     } finally {
-      f && !f.done && (g = d.return) && g.call(d)
+      iteration && !iteration.done && (intermediate = context.return) && intermediate.call(context);
     }
-  } else e = d;
-  g = new cl;
-  fl.push(g);
-  g.l.add("ready", g.fb, !0, void 0, void 0);
-  g.send(a, b, c, e)
+  } else record = context;
+  intermediate = new XhrIo();
+  activeXhrRequests.push(intermediate);
+  intermediate.l.add("ready", intermediate.fb, true, void 0, void 0);
+  intermediate.send(url, payload, method, record);
 }
-
-function ol(a, b) {
-  a.B = b
+function setErrorTransport(handler, transport) {
+  handler.B = transport;
 }
-kl.prototype.o = function(a, b) {
-  a = a.error || a;
-  b = b ? Ph(b) : {};
-  a instanceof Error && Rh(b, ob(a));
-  var c = Df(a);
-  if (this.A) try {
-    this.A(c, b, a)
-  } catch (t) {}
-  var d = c.message.substring(0, 1900);
-  if (!(a instanceof D) || a.j) {
-    var e = c.fileName,
-      f = c.lineNumber;
-    a = c.stack;
+GlobalErrorHandler.prototype.o = function (value, other) {
+  value = value.error || value;
+  other = other ? shallowCloneObject(other) : {};
+  value instanceof Error && extendObject(other, readErrorContext(value));
+  var errorDetails = normalizeErrorDetails(value);
+  if (this.A)
     try {
-      var g = W(this.J, "script", e, "error", d, "line", f);
+      this.A(errorDetails, other, value);
+    } catch (caughtError) {}
+  var intermediate = errorDetails.message.substring(0, 1900);
+  if (!(value instanceof ClosureError) || value.j) {
+    var fileName = errorDetails.fileName,
+      lineNumber = errorDetails.lineNumber;
+    value = errorDetails.stack;
+    try {
+      var intermediate2 = appendQueryParameters(
+        this.J,
+        "script",
+        fileName,
+        "error",
+        intermediate,
+        "line",
+        lineNumber,
+      );
       a: {
-        for (var h in this.v) {
-          var k = !1;
-          break a
+        for (var intermediate3 in this.v) {
+          var intermediate4 = false;
+          break a;
         }
-        k = !0
+        intermediate4 = true;
       }
-      if (!k) {
-        k = g;
-        var l = $f(this.v);
-        g = Xf(k, l)
+      if (!intermediate4) {
+        intermediate4 = intermediate2;
+        var intermediate5 = encodeQueryObject(this.v);
+        intermediate2 = appendEncodedQuery(intermediate4, intermediate5);
       }
-      l = {};
-      l.trace = a;
-      if (b)
-        for (var m in b) l["context." + m] = b[m];
-      var r = $f(l);
-      this.B(g, "POST", r, this.F)
-    } catch (t) {}
+      intermediate5 = {};
+      intermediate5.trace = value;
+      if (other)
+        for (var intermediate6 in other)
+          intermediate5["context." + intermediate6] = other[intermediate6];
+      var intermediate7 = encodeQueryObject(intermediate5);
+      this.B(intermediate2, "POST", intermediate7, this.F);
+    } catch (caughtError) {}
   }
   try {
-    this.dispatchEvent(new ml(c,
-      b))
-  } catch (t) {}
+    this.dispatchEvent(new GlobalErrorEvent(errorDetails, other));
+  } catch (caughtError) {}
 };
-kl.prototype.N = function() {
-  bg(this.j);
-  kl.W.N.call(this)
+GlobalErrorHandler.prototype.N = function () {
+  disposeIfPossible(this.j);
+  GlobalErrorHandler.W.N.call(this);
 };
-
-function pl() {
-  this.j = Date.now()
+function LogTimeOrigin() {
+  this.j = Date.now();
 }
-var ql = null;
-pl.prototype.set = function(a) {
-  this.j = a
+var logTimeOrigin = null;
+LogTimeOrigin.prototype.set = function (value) {
+  this.j = value;
 };
-pl.prototype.reset = function() {
-  this.set(Date.now())
+LogTimeOrigin.prototype.reset = function () {
+  this.set(Date.now());
 };
-pl.prototype.get = p("j");
-
-function rl(a) {
-  this.v = a || "";
-  ql || (ql = new pl);
-  this.A = ql
+LogTimeOrigin.prototype.get = createPropertyGetter("j");
+function LogFormatter(prefix) {
+  this.v = prefix || "";
+  logTimeOrigin || (logTimeOrigin = new LogTimeOrigin());
+  this.A = logTimeOrigin;
 }
-rl.prototype.j = !0;
-rl.prototype.l = !0;
-rl.prototype.o = !1;
-
-function sl(a) {
-  return a < 10 ? "0" + a : String(a)
+LogFormatter.prototype.j = true;
+LogFormatter.prototype.l = true;
+LogFormatter.prototype.o = false;
+function padTwoDigits(value) {
+  return value < 10 ? "0" + value : String(value);
 }
-
-function tl(a) {
-  rl.call(this, a)
+function TextLogFormatter(prefix) {
+  LogFormatter.call(this, prefix);
 }
-C(tl, rl);
-
-function ul(a, b) {
-  var c = [];
-  c.push(a.v, " ");
-  if (a.l) {
-    var d = c.push,
-      e = new Date(b.o());
-    d.call(c, "[", sl(e.getFullYear() - 2E3) + sl(e.getMonth() + 1) + sl(e.getDate()) + " " + sl(e
-    .getHours()) + ":" + sl(e.getMinutes()) + ":" + sl(e.getSeconds()) + "." + sl(Math.floor(e
-        .getMilliseconds() / 10)), "] ")
+inheritClosureClass(TextLogFormatter, LogFormatter);
+function formatLogRecord(formatter, record) {
+  var values = [];
+  values.push(formatter.v, " ");
+  if (formatter.l) {
+    var push = values.push,
+      date = new Date(record.o());
+    push.call(
+      values,
+      "[",
+      padTwoDigits(date.getFullYear() - 2e3) +
+        padTwoDigits(date.getMonth() + 1) +
+        padTwoDigits(date.getDate()) +
+        " " +
+        padTwoDigits(date.getHours()) +
+        ":" +
+        padTwoDigits(date.getMinutes()) +
+        ":" +
+        padTwoDigits(date.getSeconds()) +
+        "." +
+        padTwoDigits(Math.floor(date.getMilliseconds() / 10)),
+      "] ",
+    );
   }
-  d = c.push;
-  e = a.A.get();
-  e = (b.o() - e) / 1E3;
-  var f = e.toFixed(3),
-    g = 0;
-  if (e < 1) g = 2;
+  push = values.push;
+  date = formatter.A.get();
+  date = (record.o() - date) / 1e3;
+  var intermediate = date.toFixed(3),
+    index = 0;
+  if (date < 1) index = 2;
   else
-    for (; e < 100;) g++, e *= 10;
-  for (; g-- > 0;) f = " " + f;
-  d.call(c, "[", f, "s] ");
-  c.push("[", b.l(), "] ");
-  c.push(b.getMessage());
-  a.o && (b = b.j(), b !== void 0 && c.push("\n", b instanceof Error ? b.message : String(b)));
-  a.j && c.push("\n");
-  return c.join("")
-};
-
-function vl(a) {
-  a = a === void 0 ? new wl : a;
-  Z.call(this);
-  var b = this;
+    for (; date < 100; ) {
+      index++;
+      date *= 10;
+    }
+  for (; index-- > 0; ) intermediate = " " + intermediate;
+  push.call(values, "[", intermediate, "s] ");
+  values.push("[", record.l(), "] ");
+  values.push(record.getMessage());
+  formatter.o &&
+    ((record = record.j()),
+    record !== void 0 &&
+      values.push("\n", record instanceof Error ? record.message : String(record)));
+  formatter.j && values.push("\n");
+  return values.join("");
+}
+/**
+ * 错误报告编排：上下文、实验信息、采样、受保护回调及 crash storage。
+ */
+function ErrorReporter(options) {
+  options = options === void 0 ? new ErrorReporterOptions() : options;
+  EventTarget.call(this);
+  var instance = this;
   this.P = {};
   this.j = null;
   this.o = {};
-  this.M = new Wi(this);
-  this.ib = a.I;
-  this.S = a.L;
-  this.Wa = a.J;
-  this.gb = a.G;
-  this.Xa = a.M;
-  var c = a.l;
-  this.Ua = (a.v || Ik)({
-    wb: kj,
-    tb: lj,
-    va: [new Kk]
+  this.M = new EventHandler(this);
+  this.ib = options.I;
+  this.S = options.L;
+  this.Wa = options.J;
+  this.gb = options.G;
+  this.Xa = options.M;
+  var intermediate = options.l;
+  this.Ua = (options.v || createDefaultTelemetryProcessor)({
+    wb: knownInjectedErrorMessages,
+    tb: knownInjectedErrorPatterns,
+    va: [new AbortErrorClassifier()],
   });
-  this.cb = a.R;
-  this.U = new ki;
-  var d = new cl;
-  xl(this, c);
-  this.B = new fj(d, c, void 0, void 0, void 0);
-  dg(this, this.B);
-  this.v = a.j ? a.j : th(c, "docs-sup") + th(c, "docs-jepp") + "/jserror";
-  if (d = th(c, "jobset")) this.v = W(this.v, "jobset", d);
-  if (d = th(c, "docs-ci")) this.v = W(this.v, "id", d);
-  d = th(c, "docs-pid");
-  ph(c.get("docs-eaotx")) && d && (this.v = W(this.v, "ouid", d));
-  this.ea = sh(c, "docs-srmoe") || 0;
-  this.ab = ph(c.get("docs-oesf"));
-  this.Fa = sh(c, "docs-srmour") || 0;
-  this.bb = ph(c.get("docs-oursf"));
-  d = a.A || this.Fa > 0 && Math.random() < this.Fa;
-  this.Ya = ph(c.get("docs-wesf"));
-  yl(this);
-  Sg = function(g) {
-    return zl(b, g, "promise rejection")
+  this.cb = options.R;
+  this.U = new ReloadPrompt();
+  var xhrIo = new XhrIo();
+  addExperimentMetadata(this, intermediate);
+  this.B = new BufferedLogTransport(xhrIo, intermediate, void 0, void 0, void 0);
+  ownDisposable(this, this.B);
+  this.v = options.j
+    ? options.j
+    : readStringClientFlag(intermediate, "docs-sup") +
+      readStringClientFlag(intermediate, "docs-jepp") +
+      "/jserror";
+  if ((xhrIo = readStringClientFlag(intermediate, "jobset")))
+    this.v = appendQueryParameters(this.v, "jobset", xhrIo);
+  if ((xhrIo = readStringClientFlag(intermediate, "docs-ci")))
+    this.v = appendQueryParameters(this.v, "id", xhrIo);
+  xhrIo = readStringClientFlag(intermediate, "docs-pid");
+  parseBooleanFlag(intermediate.get("docs-eaotx")) &&
+    xhrIo &&
+    (this.v = appendQueryParameters(this.v, "ouid", xhrIo));
+  this.ea = readNumericClientFlag(intermediate, "docs-srmoe") || 0;
+  this.ab = parseBooleanFlag(intermediate.get("docs-oesf"));
+  this.Fa = readNumericClientFlag(intermediate, "docs-srmour") || 0;
+  this.bb = parseBooleanFlag(intermediate.get("docs-oursf"));
+  xhrIo = options.A || (this.Fa > 0 && Math.random() < this.Fa);
+  this.Ya = parseBooleanFlag(intermediate.get("docs-wesf"));
+  installErrorReporter(this);
+  unhandledRejectionHandler = function (value) {
+    return handleReportedEvent(instance, value, "promise rejection");
   };
-  var e = sh(c, "docs-srmdue") || 0;
-  if (e > 0 && Math.random() < e) {
-    var f = ph(c.get("docs-duesf"));
-    Zg = function(g) {
-      zl(b, g, "deferred error", f, "isDeferredUnhandledErrback")
-    }
-  } else Zg = n();
-  e = sh(c, "docs-srmxue") ||
-    0;
-  e = e > 0 && Math.random() < e;
-  c.get("docs-xduesf");
-  e && uf();
-  d && (d = new Vk(function(g) {
-    g = Al(g, "native promise rejection");
-    var h = {};
-    h = (h.isUnhandledRejection = "true", h);
-    b.bb ? Bl(b, g, h) : b.info(g, h)
-  }), al(d), dg(this, d));
+  var intermediate2 = readNumericClientFlag(intermediate, "docs-srmdue") || 0;
+  if (intermediate2 > 0 && Math.random() < intermediate2) {
+    var booleanFlag = parseBooleanFlag(intermediate.get("docs-duesf"));
+    rethrowError = function (value) {
+      handleReportedEvent(
+        instance,
+        value,
+        "deferred error",
+        booleanFlag,
+        "isDeferredUnhandledErrback",
+      );
+    };
+  } else rethrowError = createNoopFunction();
+  intermediate2 = readNumericClientFlag(intermediate, "docs-srmxue") || 0;
+  intermediate2 = intermediate2 > 0 && Math.random() < intermediate2;
+  intermediate.get("docs-xduesf");
+  intermediate2 && initializeDisposableChildren();
+  xhrIo &&
+    ((xhrIo = new EntryPointProtector(function (value) {
+      value = normalizeReportedEvent(value, "native promise rejection");
+      var record = {};
+      record = ((record.isUnhandledRejection = "true"), record);
+      instance.bb ? reportFatalError(instance, value, record) : instance.info(value, record);
+    })),
+    protectUnhandledRejections(xhrIo),
+    ownDisposable(this, xhrIo));
   this.L = null;
-  typeof document !== "undefined" && document.body && (this.L = Tk(function(g) {
-    var h = {};
-    h = (h.isWizError = "true", h);
-    g = y(g.data.errors);
-    var k = g.next(),
-      l;
-    try {
-      for (; !k.done; k = g.next()) {
-        var m = k.value.error;
-        b.Ya ? Bl(b, m, h) : b.info(m, h)
+  typeof document !== "undefined" &&
+    document.body &&
+    (this.L = registerClientAction(function (iterator) {
+      var record = {};
+      record = ((record.isWizError = "true"), record);
+      iterator = getIterator(iterator.data.errors);
+      var iteration = iterator.next(),
+        intermediate3;
+      try {
+        for (; !iteration.done; iteration = iterator.next()) {
+          var error = iteration.value.error;
+          instance.Ya ? reportFatalError(instance, error, record) : instance.info(error, record);
+        }
+      } finally {
+        iteration &&
+          !iteration.done &&
+          (intermediate3 = iterator.return) &&
+          intermediate3.call(iterator);
       }
-    } finally {
-      k && !k.done && (l = g.return) && l.call(g)
-    }
-  }));
-  this.O = a.o;
-  this.F = !1;
-  this.J = !0;
-  this.A = !1;
-  this.da = th(c, "docs-jern");
-  this.Va = a.F;
-  this.Ta = a.B.concat(Object.values(rf))
+    }));
+  this.O = options.o;
+  this.F = false;
+  this.J = true;
+  this.A = false;
+  this.da = readStringClientFlag(intermediate, "docs-jern");
+  this.Va = options.F;
+  this.Ta = options.B.concat(Object.values(telemetryContextKeys));
 }
-x(vl, Z);
-
-function yl(a) {
-  var b = b === void 0 ? !1 : b;
-  if (Cl) {
-    if (Dl != null) throw Error('ErrorReporter already installed. at "' + Dl.stack + '"');
+inheritCompiledClass(ErrorReporter, EventTarget);
+function installErrorReporter(reporter) {
+  var intermediate = intermediate === void 0 ? false : intermediate;
+  if (errorReporterInstalled) {
+    if (errorReporterInstallStack != null)
+      throw Error('ErrorReporter already installed. at "' + errorReporterInstallStack.stack + '"');
     throw Error("ErrorReporter already installed.");
   }
-  Cl = !0;
-  Dl = Error();
-  a.j = nl(a.v, function(e, f, g) {
-    return El(a, e, f, g)
+  errorReporterInstalled = true;
+  errorReporterInstallStack = Error();
+  reporter.j = createGlobalErrorHandler(reporter.v, function (value, other, options) {
+    return enrichReportContext(reporter, value, other, options);
   });
-  var c = {};
-  a.Wa && (c["X-No-Abort"] = "1");
-  a.j.F = c;
-  ol(a.j, function(e, f, g, h) {
-    a.J && a.B.send(e, f, g, h)
+  var record = {};
+  reporter.Wa && (record["X-No-Abort"] = "1");
+  reporter.j.F = record;
+  setErrorTransport(reporter.j, function (value, other, options, context) {
+    reporter.J && reporter.B.send(value, other, options, context);
   });
-  if (a.ea > 0 && Math.random() < a.ea) {
-    c = {};
-    var d = (c.isWindowOnError = "true", c);
-    a.ab ? Cf(function(e) {
-      Bl(a, e.error instanceof Error ? e.error : Error(e.message), d)
-    }) : Cf(function(e) {
-      a.log(e.error instanceof Error ? e.error : Error(e.message), d)
-    })
+  if (reporter.ea > 0 && Math.random() < reporter.ea) {
+    record = {};
+    var intermediate2 = ((record.isWindowOnError = "true"), record);
+    reporter.ab
+      ? installGlobalErrorListener(function (value) {
+          reportFatalError(
+            reporter,
+            value.error instanceof Error ? value.error : Error(value.message),
+            intermediate2,
+          );
+        })
+      : installGlobalErrorListener(function (value) {
+          reporter.log(
+            value.error instanceof Error ? value.error : Error(value.message),
+            intermediate2,
+          );
+        });
   }
-  a.M.listen(a.j, "c", function(e) {
-    var f = b;
-    f = f === void 0 ? !1 : f;
-    e.Z.severity = e.Z["severity-unprefixed"] || e.Z.severity;
-    var g = e.Z.severity;
-    (g = g == "fatal" || g == "postmortem") && !a.gb && (a.ib && !f ? a.U.notify(e, e.Z) : a.U.notify(
-      void 0, e.Z));
-    a.dispatchEvent(new Ki(g ? "a" : "b", e.error, e.Z))
-  })
+  reporter.M.listen(reporter.j, "c", function (value) {
+    var intermediate3 = intermediate;
+    intermediate3 = intermediate3 === void 0 ? false : intermediate3;
+    value.Z.severity = value.Z["severity-unprefixed"] || value.Z.severity;
+    var severity = value.Z.severity;
+    (severity = severity == "fatal" || severity == "postmortem") &&
+      !reporter.gb &&
+      (reporter.ib && !intermediate3
+        ? reporter.U.notify(value, value.Z)
+        : reporter.U.notify(void 0, value.Z));
+    reporter.dispatchEvent(new ErrorEvent(severity ? "a" : "b", value.error, value.Z));
+  });
 }
-
-function xl(a, b) {
-  b = new ij(b);
-  var c = b.j,
-    d;
-  for (d in c) {
-    var e = c[d];
-    e && (a.o["expflag-" + d] = e.toString())
+function addExperimentMetadata(reporter, values) {
+  values = new ExperimentMetadata(values);
+  var intermediate = values.j,
+    intermediate2;
+  for (intermediate2 in intermediate) {
+    var intermediate3 = intermediate[intermediate2];
+    intermediate3 && (reporter.o["expflag-" + intermediate2] = intermediate3.toString());
   }
-  a.o.experimentIds = b.l.join(",")
+  reporter.o.experimentIds = values.l.join(",");
 }
-
-function Bl(a, b, c) {
-  a.A = !1;
-  Fl(b, "fatal");
-  if (!a.j) {
-    if (b instanceof gf) throw b.j;
-    throw Jf(b);
+function reportFatalError(reporter, error, context) {
+  reporter.A = false;
+  setErrorSeverity(error, "fatal");
+  if (!reporter.j) {
+    if (error instanceof XplatException) throw error.j;
+    throw normalizeErrorWithContext(error);
   }
-  a.j.o(b, Gl(a, b, c));
-  if (a.Xa) {
-    c = Gl(a, b, c);
-    c.is_forceFatal = 1;
-    var d = b instanceof gf ? b.j : b;
-    El(a, d, c);
-    b = Jf(d);
-    a = ", context:" + JSON.stringify(Gl(a, d, c));
-    b.message += a;
-    throw b;
+  reporter.j.o(error, buildReportContext(reporter, error, context));
+  if (reporter.Xa) {
+    context = buildReportContext(reporter, error, context);
+    context.is_forceFatal = 1;
+    var intermediate = error instanceof XplatException ? error.j : error;
+    enrichReportContext(reporter, intermediate, context);
+    error = normalizeErrorWithContext(intermediate);
+    reporter = ", context:" + JSON.stringify(buildReportContext(reporter, intermediate, context));
+    error.message += reporter;
+    throw error;
   }
 }
-
-function Hl(a, b, c) {
-  a.A = !1;
-  Fl(b, "warning");
-  a.j && a.j.o(b, Gl(a, b, c))
+function reportError(reporter, error, context) {
+  reporter.A = false;
+  setErrorSeverity(error, "warning");
+  reporter.j && reporter.j.o(error, buildReportContext(reporter, error, context));
 }
-vl.prototype.info = function(a, b, c) {
-  this.A = c || !1;
-  Fl(a, "incident");
-  this.j && this.j.o(a, Gl(this, a, b))
+ErrorReporter.prototype.info = function (value, other, options) {
+  this.A = options || false;
+  setErrorSeverity(value, "incident");
+  this.j && this.j.o(value, buildReportContext(this, value, other));
 };
-vl.prototype.log = function(a, b, c) {
-  this.A = !!c;
-  Fl(a, "incident");
-  this.j && this.j.o(a, Gl(this, a, b))
+ErrorReporter.prototype.log = function (value, other, options) {
+  this.A = !!options;
+  setErrorSeverity(value, "incident");
+  this.j && this.j.o(value, buildReportContext(this, value, other));
 };
-
-function Al(a, b) {
-  if (a && typeof a === "object" && a.type === "error") {
-    var c = a.error;
-    a = JSON.stringify({
-      error: c && c.message ? c.message : "Missing error cause.",
-      stack: c && c.stack ? c.stack : "Missing error cause.",
-      message: a.message,
-      filename: a.filename,
-      lineno: a.lineno,
-      colno: a.colno,
-      type: a.type
+function normalizeReportedEvent(event, context) {
+  if (event && typeof event === "object" && event.type === "error") {
+    var error = event.error;
+    event = JSON.stringify({
+      error: error && error.message ? error.message : "Missing error cause.",
+      stack: error && error.stack ? error.stack : "Missing error cause.",
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+      type: event.type,
     });
-    b = Error("Unhandled " + b + " with ErrorEvent: " + a)
-  } else b = typeof a === "string" ? Error("Unhandled " + b + " with: " + a) : typeof a === "number" ? Error(
-    "Unhandled " + b + " with number: " + a) : a == null ? Error("Unhandled " + b +
-    ' with "null/undefined"') : a;
-  return b
+    context = Error("Unhandled " + context + " with ErrorEvent: " + event);
+  } else
+    context =
+      typeof event === "string"
+        ? Error("Unhandled " + context + " with: " + event)
+        : typeof event === "number"
+          ? Error("Unhandled " + context + " with number: " + event)
+          : event == null
+            ? Error("Unhandled " + context + ' with "null/undefined"')
+            : event;
+  return context;
 }
-
-function zl(a, b, c, d, e) {
-  d = d === void 0 ? !0 : d;
-  b = Al(b, c);
-  c = {};
-  e && (c[e] = "true");
-  d ? Sa(b) : a.info(b, c)
+function handleReportedEvent(reporter, event, context, rethrow, contextKey) {
+  rethrow = rethrow === void 0 ? true : rethrow;
+  event = normalizeReportedEvent(event, context);
+  context = {};
+  contextKey && (context[contextKey] = "true");
+  rethrow ? throwAsynchronously(event) : reporter.info(event, context);
 }
-
-function Gl(a, b, c) {
-  b instanceof gf && (b = b.j);
-  c = c ? Ph(c) : {};
-  c.severity = ob(b).severity;
-  (b = b && b.reportSeverity) && (c.reportSeverity = b);
-  a.S && (c.errorGroupId = a.S);
-  return c
+function buildReportContext(reporter, error, context) {
+  error instanceof XplatException && (error = error.j);
+  context = context ? shallowCloneObject(context) : {};
+  context.severity = readErrorContext(error).severity;
+  (error = error && error.reportSeverity) && (context.reportSeverity = error);
+  reporter.S && (context.errorGroupId = reporter.S);
+  return context;
 }
-
-function Il(a, b) {
-  if (a && typeof a === "object" && !a.message && a.constructor && a.constructor instanceof Function && (a
-      .constructor.name ? a.constructor.name : Ff(a.constructor)) === "Object") {
-    b.unknownErrorToStringResult = Object.prototype.toString.call(a);
-    for (var c = JSON, d = c.stringify, e = {}, f = Object.keys(a), g = 0, h = 0; h < f.length && g <
-      10; h++) {
-      var k = f[h];
+function inferErrorMessage(error, context) {
+  if (
+    error &&
+    typeof error === "object" &&
+    !error.message &&
+    error.constructor &&
+    error.constructor instanceof Function &&
+    (error.constructor.name ? error.constructor.name : getFunctionName(error.constructor)) ===
+      "Object"
+  ) {
+    context.unknownErrorToStringResult = Object.prototype.toString.call(error);
+    for (
+      var JSON2 = JSON,
+        stringify = JSON2.stringify,
+        record = {},
+        intermediate = Object.keys(error),
+        index = 0,
+        index2 = 0;
+      index2 < intermediate.length && index < 10;
+      index2++
+    ) {
+      var intermediate2 = intermediate[index2];
       try {
-        typeof a[k] !== "function" && (e[k] = String(a[k]).substring(0, 100), g++)
-      } catch (l) {}
+        typeof error[intermediate2] !== "function" &&
+          ((record[intermediate2] = String(error[intermediate2]).substring(0, 100)), index++);
+      } catch (caughtError) {}
     }
-    b.unknownErrorContent = d.call(c, e)
+    context.unknownErrorContent = stringify.call(JSON2, record);
   }
 }
-
-function El(a, b, c, d) {
-  var e = a.F;
+function enrichReportContext(reporter, error, context, fatal) {
+  var intermediate = reporter.F;
   try {
-    a.V(b, c, d)
-  } catch (g) {
-    throw e && !a.O && (a.J = !1), a.F = !0, c.provideLogDataError = g.message, c.severity || (c.severity =
-      "fatal"), Jf(g);
+    reporter.V(error, context, fatal);
+  } catch (caughtError) {
+    throw (
+      intermediate && !reporter.O && (reporter.J = false),
+      (reporter.F = true),
+      (context.provideLogDataError = caughtError.message),
+      context.severity || (context.severity = "fatal"),
+      normalizeErrorWithContext(caughtError)
+    );
   } finally {
-    if (c["severity-unprefixed"] = c.severity || "fatal", c.severity = "" + c["severity-unprefixed"], !a.Va)
-      for (var f in c) typeof c[f] === "number" || c[f] instanceof Number || typeof c[f] === "boolean" || c[
-        f] instanceof Boolean || a.Ta.includes(f) || f in c && delete c[f]
+    if (
+      ((context["severity-unprefixed"] = context.severity || "fatal"),
+      (context.severity = "" + context["severity-unprefixed"]),
+      !reporter.Va)
+    )
+      for (var intermediate2 in context)
+        typeof context[intermediate2] === "number" ||
+          context[intermediate2] instanceof Number ||
+          typeof context[intermediate2] === "boolean" ||
+          context[intermediate2] instanceof Boolean ||
+          reporter.Ta.includes(intermediate2) ||
+          (intermediate2 in context && delete context[intermediate2]);
   }
 }
-vl.prototype.V = function(a, b, c) {
-  Il(c || a, b);
-  for (var d in this.P) try {
-    b[d] = this.P[d](a)
-  } catch (h) {}
-  b.errorReportTimeMs || (b.errorReportTimeMs = Date.now().toString());
-  Object.assign(b, this.o);
-  if ((Tf(), 0) > 0) {
-    var e = new tl,
-      f = "";
-    Sf(function(h) {
-      f += ul(e, h)
+ErrorReporter.prototype.V = function (value, other, options) {
+  inferErrorMessage(options || value, other);
+  for (var intermediate in this.P)
+    try {
+      other[intermediate] = this.P[intermediate](value);
+    } catch (caughtError) {}
+  other.errorReportTimeMs || (other.errorReportTimeMs = Date.now().toString());
+  Object.assign(other, this.o);
+  if ((getLogBuffer(), 0) > 0) {
+    var textLogFormatter = new TextLogFormatter(),
+      intermediate2 = "";
+    forEachBufferedLog(function (value2) {
+      intermediate2 += formatLogRecord(textLogFormatter, value2);
     });
-    b.clientLog = f
+    other.clientLog = intermediate2;
   }
-  c = b.severity || "fatal";
-  (d = b.reportSeverity || a && a.reportSeverity) && (d = Jl(d.toLowerCase())) && (c = d);
-  this.cb || (c = zk(this.Ua, a, c, b));
-  this.da && (b.reportName = this.da + "_" + c);
-  b.isArrayPrototypeIntact = jj().toString();
-  if (!("WorkerGlobalScope" in A && self instanceof A.WorkerGlobalScope)) {
+  options = other.severity || "fatal";
+  (intermediate = other.reportSeverity || (value && value.reportSeverity)) &&
+    (intermediate = normalizeSeverity(intermediate.toLowerCase())) &&
+    (options = intermediate);
+  this.cb || (options = addTelemetrySessionMetadata(this.Ua, value, options, other));
+  this.da && (other.reportName = this.da + "_" + options);
+  other.isArrayPrototypeIntact = isArrayPrototypeIntact().toString();
+  if (!("WorkerGlobalScope" in runtimeGlobal && self instanceof runtimeGlobal.WorkerGlobalScope)) {
     try {
-      var g = !!document.getElementById("docs-editor")
-    } catch (h) {
-      g = !1
+      var intermediate3 = !!document.getElementById("docs-editor");
+    } catch (caughtError) {
+      intermediate3 = false;
     }
-    b.isEditorElementAttached = g.toString()
+    other.isEditorElementAttached = intermediate3.toString();
   }
-  b.documentCharacterSet = document.characterSet;
-  b.origin = String(A.origin);
-  g = a.stack || "";
-  if (g.trim().length == 0 || g == "Not available") b["stacklessError-reportingStack"] = If(vl.prototype.V),
-    [a.message].concat(oa(Object.keys(b)), oa(Object.values(b))).some(function(h) {
-      return h && h.includes("<eye3")
-    }) || (b.eye3Hint = "<eye3-stackless title='Stackless JS Error - " + a.name + "'/>");
-  this.F && !this.O ?
-    (this.J = this.A, c == "fatal" ? c = "postmortem" : c == "incident" && (c = "warningafterdeath")) : c ==
-    "fatal" && (this.F = !0);
-  this.A = !1;
-  b.severity = c
+  other.documentCharacterSet = document.characterSet;
+  other.origin = String(runtimeGlobal.origin);
+  intermediate3 = value.stack || "";
+  if (intermediate3.trim().length == 0 || intermediate3 == "Not available") {
+    other["stacklessError-reportingStack"] = captureStackTrace(ErrorReporter.prototype.V);
+    [value.message]
+      .concat(iterableToArray(Object.keys(other)), iterableToArray(Object.values(other)))
+      .some(function (value2) {
+        return value2 && value2.includes("<eye3");
+      }) || (other.eye3Hint = "<eye3-stackless title='Stackless JS Error - " + value.name + "'/>");
+  }
+  this.F && !this.O
+    ? ((this.J = this.A),
+      options == "fatal"
+        ? (options = "postmortem")
+        : options == "incident" && (options = "warningafterdeath"))
+    : options == "fatal" && (this.F = true);
+  this.A = false;
+  other.severity = options;
 };
-vl.prototype.N = function() {
-  Cl = !1;
+ErrorReporter.prototype.N = function () {
+  errorReporterInstalled = false;
   if (this.L) {
-    var a = this.L,
-      b = y(a.et),
-      c = b.next(),
-      d;
+    var intermediate = this.L,
+      iterator = getIterator(intermediate.et),
+      iteration = iterator.next(),
+      intermediate2;
     try {
-      for (; !c.done; c = b.next()) {
-        var e = c.value,
-          f = Qk(a.el, e);
-        if (f && (ab(f, a.eb), !f.length)) {
-          var g = a.el,
-            h = Ta(g.getAttribute("jsaction") || ""),
-            k = e + ":.CLIENT";
-          h = h.replace(k + ";", "");
-          h = h.replace(k, "");
-          Uk(g, h)
+      for (; !iteration.done; iteration = iterator.next()) {
+        var value = iteration.value,
+          wizEventHandlers = getWizEventHandlers(intermediate.el, value);
+        if (
+          wizEventHandlers &&
+          (removeArrayValue(wizEventHandlers, intermediate.eb), !wizEventHandlers.length)
+        ) {
+          var intermediate3 = intermediate.el,
+            intermediate4 = trimString(intermediate3.getAttribute("jsaction") || ""),
+            intermediate5 = value + ":.CLIENT";
+          intermediate4 = intermediate4.replace(intermediate5 + ";", "");
+          intermediate4 = intermediate4.replace(intermediate5, "");
+          setJsAction(intermediate3, intermediate4);
         }
       }
     } finally {
-      c && !c.done && (d = b.return) && d.call(b)
+      iteration &&
+        !iteration.done &&
+        (intermediate2 = iterator.return) &&
+        intermediate2.call(iterator);
     }
   }
-  cg(this.M, this.j, this.B);
-  Z.prototype.N.call(this)
+  disposeAll(this.M, this.j, this.B);
+  EventTarget.prototype.N.call(this);
 };
-var Cl = !1,
-  Dl = null;
-
-function wl() {
+var errorReporterInstalled = false,
+  errorReporterInstallStack = null;
+function ErrorReporterOptions() {
   this.L = this.l = void 0;
-  this.G = this.M = this.I = !1;
+  this.G = this.M = this.I = false;
   this.j = void 0;
-  this.J = this.o = !1;
-  this.F = !0;
+  this.J = this.o = false;
+  this.F = true;
   this.B = [];
-  this.R = this.A = !1;
-  this.v = void 0
+  this.R = this.A = false;
+  this.v = void 0;
 }
-
-function Fl(a, b) {
-  a instanceof gf && (a = a.j);
-  nb(a, "severity", b)
+function setErrorSeverity(error, severity) {
+  error instanceof XplatException && (error = error.j);
+  attachErrorContext(error, "severity", severity);
 }
-
-function Jl(a) {
-  if (!a) return null;
-  switch (a) {
+function normalizeSeverity(severity) {
+  if (!severity) return null;
+  switch (severity) {
     case "severe":
     case "fatal":
       return "fatal";
@@ -7004,416 +8401,527 @@ function Jl(a) {
     case "warningafterdeath":
       return "warningafterdeath";
     default:
-      return null
+      return null;
   }
-};
-
-function Kl() {
-  var a = this;
-  this.promise = new Promise(function(b, c) {
-    a.resolve = b;
-    a.reject = c
-  })
-};
-
-function Ll() {
+}
+function NativePromiseResolver() {
+  var instance = this;
+  this.promise = new Promise(function (value, other) {
+    instance.resolve = value;
+    instance.reject = other;
+  });
+}
+/**
+ * 等待原生 crashReport 初始化期间暂存少量元数据；这不是文档正文数据库。
+ */
+function NativeCrashStorage() {
   this.o = window.crashReport;
-  this.v = new Kl;
+  this.v = new NativePromiseResolver();
   this.j = 0;
-  this.l = new Map
+  this.l = new Map();
 }
-Ll.prototype.initialize = function(a) {
-  a = a === void 0 ? 10240 : a;
-  var b = this,
-    c, d, e, f, g, h, k, l, m, r, t, w;
-  return ya(new xa(new ta(function(u) {
-    switch (u.j) {
-      case 1:
-        if (b.j !== 0) return u.return(b.v.promise);
-        b.j = 1;
-        u.O(2, 3);
-        return u.F(b.o.initialize(a), 5);
-      case 5:
-        b.v.resolve();
-        b.j = 2;
-        c = y(b.l);
-        d = c.next();
-        try {
-          for (; !d.done; d = c.next()) f = d.value, g = y(f), h = g.next().value, k = g.next()
-            .value, l = h, m = k, r = void 0, b.set(l, (r = m) != null ? r : "")
-        } finally {
-          d && !d.done && (e = c.return) && e.call(c)
+NativeCrashStorage.prototype.initialize = function (value) {
+  value = value === void 0 ? 10240 : value;
+  var instance = this,
+    iterator,
+    intermediate,
+    intermediate2,
+    intermediate3,
+    iterator2,
+    intermediate4,
+    intermediate5,
+    intermediate6,
+    intermediate7,
+    intermediate8,
+    intermediate9,
+    intermediate10;
+  return runAsyncGenerator(
+    new GeneratorIterator(
+      new GeneratorEngine(function (iterator3) {
+        switch (iterator3.j) {
+          case 1:
+            if (instance.j !== 0) return iterator3.return(instance.v.promise);
+            instance.j = 1;
+            iterator3.O(2, 3);
+            return iterator3.F(instance.o.initialize(value), 5);
+          case 5:
+            instance.v.resolve();
+            instance.j = 2;
+            iterator = getIterator(instance.l);
+            intermediate = iterator.next();
+            try {
+              for (; !intermediate.done; intermediate = iterator.next()) {
+                intermediate3 = intermediate.value;
+                iterator2 = getIterator(intermediate3);
+                intermediate4 = iterator2.next().value;
+                intermediate5 = iterator2.next().value;
+                intermediate6 = intermediate4;
+                intermediate7 = intermediate5;
+                intermediate8 = void 0;
+                instance.set(
+                  intermediate6,
+                  (intermediate8 = intermediate7) != null ? intermediate8 : "",
+                );
+              }
+            } finally {
+              intermediate &&
+                !intermediate.done &&
+                (intermediate2 = iterator.return) &&
+                intermediate2.call(iterator);
+            }
+          case 3:
+            iterator3.M();
+            instance.l.clear();
+            iterator3.R(4);
+            break;
+          case 2:
+            intermediate9 = iterator3.L();
+            instance.j = 3;
+            intermediate10 = Error("Failed to initialize crash storage", { cause: intermediate9 });
+            intermediate10.reportSeverity = "warning";
+            instance.v.reject(intermediate10);
+            iterator3.ga(3);
+            break;
+          case 4:
+            return iterator3.return(instance.v.promise);
         }
-      case 3:
-        u.M();
-        b.l.clear();
-        u.R(4);
-        break;
-      case 2:
-        t = u.L();
-        b.j =
-          3;
-        w = Error("Failed to initialize crash storage", {
-          cause: t
-        });
-        w.reportSeverity = "warning";
-        b.v.reject(w);
-        u.ga(3);
-        break;
-      case 4:
-        return u.return(b.v.promise)
-    }
-  })))
+      }),
+    ),
+  );
 };
-Ll.prototype.Ma = function() {
-  return this.j !== 0
+NativeCrashStorage.prototype.Ma = function () {
+  return this.j !== 0;
 };
-Ll.prototype.set = function(a, b) {
+NativeCrashStorage.prototype.set = function (value, other) {
   if (this.j !== 3)
-    if (this.j !== 2) this.l.size < 100 || this.l.has(a) ? this.l.set(a, b) : this.l.set("cache_full",
-      "true");
-    else try {
-      this.o.set(a, b)
-    } catch (c) {}
+    if (this.j !== 2)
+      this.l.size < 100 || this.l.has(value)
+        ? this.l.set(value, other)
+        : this.l.set("cache_full", "true");
+    else
+      try {
+        this.o.set(value, other);
+      } catch (caughtError) {}
 };
-Ll.prototype.delete = function(a) {
+NativeCrashStorage.prototype.delete = function (value) {
   if (this.j !== 3)
-    if (this.j !== 2) this.l.delete(a);
-    else try {
-      typeof this.o.delete === "function" ? this.o.delete(a) : this.o.remove(a)
-    } catch (b) {}
+    if (this.j !== 2) this.l.delete(value);
+    else
+      try {
+        typeof this.o.delete === "function" ? this.o.delete(value) : this.o.remove(value);
+      } catch (caughtError) {}
 };
-
-function Ml() {
-  this.j = !1
+function NoopCrashStorage() {
+  this.j = false;
 }
-Ml.prototype.initialize = function() {
-  this.j = !0;
-  return Promise.resolve()
+NoopCrashStorage.prototype.initialize = function () {
+  this.j = true;
+  return Promise.resolve();
 };
-Ml.prototype.Ma = p("j");
-Ml.prototype.set = n();
-Ml.prototype.delete = n();
-var Nl = new Ml;
-var Ol = ["SEVERE", "FATAL"];
-
-function Pl() {
+NoopCrashStorage.prototype.Ma = createPropertyGetter("j");
+NoopCrashStorage.prototype.set = createNoopFunction();
+NoopCrashStorage.prototype.delete = createNoopFunction();
+var crashStorage = new NoopCrashStorage();
+var severeSeverityNames = ["SEVERE", "FATAL"];
+function CrashTelemetryObserver() {
   this.l = this.o = 1;
-  this.j = new Ad
+  this.j = new TelemetryBootstrapMessage();
 }
-Pl.prototype.Oa = function(a, b) {
-  var c = b == null ? void 0 : b.wa.get("apps_telemetry.outgoing_severity");
-  a = c != null ? c : a.o;
-  if (a = this.o === 1 && !!a && Ol.includes(a.toUpperCase())) this.o = 2;
-  b = b == null ? void 0 : b.wa.get("apps_telemetry.incoming_severity");
-  if (c = this.l === 1 && !!b && !!c && b.toUpperCase() !== c.toUpperCase()) this.l = 2;
-  if (a || c) c = id(this.j, rj, 3), b = new qj, b = vd(b, 1, this.o), b = vd(b, 2, this.l), nd(c, qj, 5,
-    b), Ql(this)
+CrashTelemetryObserver.prototype.Oa = function (value, other) {
+  var intermediate = other == null ? void 0 : other.wa.get("apps_telemetry.outgoing_severity");
+  value = intermediate != null ? intermediate : value.o;
+  if ((value = this.o === 1 && !!value && severeSeverityNames.includes(value.toUpperCase())))
+    this.o = 2;
+  other = other == null ? void 0 : other.wa.get("apps_telemetry.incoming_severity");
+  if (
+    (intermediate =
+      this.l === 1 &&
+      !!other &&
+      !!intermediate &&
+      other.toUpperCase() !== intermediate.toUpperCase())
+  )
+    this.l = 2;
+  if (value || intermediate) {
+    intermediate = getMutableNestedMessage(this.j, CrashMetadataMessage, 3);
+    other = new CrashSeverityMessage();
+    other = setNumberField(other, 1, this.o);
+    other = setNumberField(other, 2, this.l);
+    setNestedMessage(intermediate, CrashSeverityMessage, 5, other);
+    persistCrashTelemetry(this);
+  }
 };
-Pl.prototype.qa = function(a) {
+CrashTelemetryObserver.prototype.qa = function (value) {
   a: {
-    var b = id(this.j, nj, 1);
-    var c = pj;Qc(b);
-    if (void 0 === Lb) {
-      if (ed(b, c, 4) !== 4) {
-        b = void 0;
-        break a
+    var mutableNestedMessage = getMutableNestedMessage(this.j, CrashClientStateMessage, 1);
+    var crashStateOneofFields2 = crashStateOneofFields;
+    assertMessageMutable(mutableNestedMessage);
+    if (void 0 === nestedFieldModeToken) {
+      if (getActiveOneofField(mutableNestedMessage, crashStateOneofFields2, 4) !== 4) {
+        mutableNestedMessage = void 0;
+        break a;
       }
-    } else dd(b.C, void 0, c, 4);b = id(b, mj, 4)
+    } else setOneofCase(mutableNestedMessage.C, void 0, crashStateOneofFields2, 4);
+    mutableNestedMessage = getMutableNestedMessage(
+      mutableNestedMessage,
+      CrashClassificationMessage,
+      4,
+    );
   }
-  b.qa(a);Ql(this)
+  mutableNestedMessage.qa(value);
+  persistCrashTelemetry(this);
 };
-
-function Ql(a) {
-  var b = Nl,
-    c = b.set;
-  a = JSON.stringify(Gc(a.j));
-  c.call(b, "appsTelemetryCrashReportData", a)
-};
-
-function Rl(a) {
-  a = a === void 0 ? {} : a;
-  if (!Nl.Ma()) {
+function persistCrashTelemetry(observer) {
+  var crashStorage2 = crashStorage,
+    set = crashStorage2.set;
+  observer = JSON.stringify(serializeMessage(observer.j));
+  set.call(crashStorage2, "appsTelemetryCrashReportData", observer);
+}
+function createCrashTelemetryProcessor(options) {
+  options = options === void 0 ? {} : options;
+  if (!crashStorage.Ma()) {
     try {
-      var b = Fk(ge)
-    } catch (c) {
-      b = !1
+      var booleanFeatureFlag = readBooleanFeatureFlag(crashStorageFlag);
+    } catch (caughtError) {
+      booleanFeatureFlag = false;
     }
-    Nl = b && window.crashReport ? new Ll : new Ml;
-    Nl.initialize()
+    crashStorage =
+      booleanFeatureFlag && window.crashReport ? new NativeCrashStorage() : new NoopCrashStorage();
+    crashStorage.initialize();
   }
-  return Gk(a, new Pl)
-};
-
-function Sl(a, b) {
-  Z.call(this);
-  this.V = a;
-  this.O = b;
+  return createTelemetryProcessor(options, new CrashTelemetryObserver());
+}
+function FetchXmlHttpRequest(fetchScope, streamBinaryChunks) {
+  EventTarget.call(this);
+  this.V = fetchScope;
+  this.O = streamBinaryChunks;
   this.L = void 0;
   this.status = this.readyState = 0;
   this.responseType = this.v = this.o = this.statusText = "";
   this.onreadystatechange = null;
-  this.M = new Headers;
+  this.M = new Headers();
   this.A = null;
   this.S = "GET";
   this.U = "";
-  this.j = !1;
+  this.j = false;
   this.P = this.B = this.F = null;
-  this.J = new AbortController
+  this.J = new AbortController();
 }
-C(Sl, Z);
-q = Sl.prototype;
-q.open = function(a, b) {
-  if (this.readyState != 0) throw this.abort(), Error("Error reopening a connection");
-  this.S = a;
-  this.U = b;
+inheritClosureClass(FetchXmlHttpRequest, EventTarget);
+prototypeAlias = FetchXmlHttpRequest.prototype;
+prototypeAlias.open = function (value, other) {
+  if (this.readyState != 0) throw (this.abort(), Error("Error reopening a connection"));
+  this.S = value;
+  this.U = other;
   this.readyState = 1;
-  Tl(this)
+  notifyReadyStateChange(this);
 };
-q.send = function(a) {
-  if (this.readyState != 1) throw this.abort(), Error("need to call open() first. ");
-  if (this.J.signal.aborted) throw this.abort(), Error("Request was aborted.");
-  this.j = !0;
-  var b = {
+prototypeAlias.send = function (value) {
+  if (this.readyState != 1) throw (this.abort(), Error("need to call open() first. "));
+  if (this.J.signal.aborted) throw (this.abort(), Error("Request was aborted."));
+  this.j = true;
+  var record = {
     headers: this.M,
     method: this.S,
     credentials: this.L,
     cache: void 0,
-    signal: this.J.signal
+    signal: this.J.signal,
   };
-  a && (b.body = a);
-  (this.V || A).fetch(new Request(this.U, b)).then(this.ob.bind(this), this.ma.bind(this))
+  value && (record.body = value);
+  (this.V || runtimeGlobal)
+    .fetch(new Request(this.U, record))
+    .then(this.ob.bind(this), this.ma.bind(this));
 };
-q.abort = function() {
+prototypeAlias.abort = function () {
   this.o = this.v = "";
-  this.M = new Headers;
+  this.M = new Headers();
   this.status = 0;
   this.J.abort("Request was aborted.");
-  this.B && this.B.cancel("Request was aborted.").catch(n());
-  this.readyState >= 1 && this.j && this.readyState != 4 && (this.j = !1, Ul(this));
-  this.readyState = 0
+  this.B && this.B.cancel("Request was aborted.").catch(createNoopFunction());
+  this.readyState >= 1 &&
+    this.j &&
+    this.readyState != 4 &&
+    ((this.j = false), completeFetchRequest(this));
+  this.readyState = 0;
 };
-q.ob = function(a) {
-  if (this.j && (this.F = a, this.A || (this.status = this.F.status, this.statusText = this.F.statusText,
-      this.A = a.headers, this.readyState = 2, Tl(this)), this.j && (this.readyState = 3, Tl(this), this
-      .j)))
-    if (this.responseType === "arraybuffer") a.arrayBuffer().then(this.mb.bind(this), this.ma.bind(this));
-    else if (a.body && A.ReadableStream) {
-    this.B = a.body.getReader();
-    if (this.O) {
-      if (this.responseType) throw Error(
-        'responseType must be empty for "streamBinaryChunks" mode responses.');
-      this.o = []
-    } else this.o = this.v = "",
-      this.P = new TextDecoder;
-    Vl(this)
-  } else a.text().then(this.nb.bind(this), this.ma.bind(this))
+prototypeAlias.ob = function (value) {
+  if (
+    this.j &&
+    ((this.F = value),
+    this.A ||
+      ((this.status = this.F.status),
+      (this.statusText = this.F.statusText),
+      (this.A = value.headers),
+      (this.readyState = 2),
+      notifyReadyStateChange(this)),
+    this.j && ((this.readyState = 3), notifyReadyStateChange(this), this.j))
+  )
+    if (this.responseType === "arraybuffer")
+      value.arrayBuffer().then(this.mb.bind(this), this.ma.bind(this));
+    else if (value.body && runtimeGlobal.ReadableStream) {
+      this.B = value.body.getReader();
+      if (this.O) {
+        if (this.responseType)
+          throw Error('responseType must be empty for "streamBinaryChunks" mode responses.');
+        this.o = [];
+      } else {
+        this.o = this.v = "";
+        this.P = new TextDecoder();
+      }
+      readNextResponseChunk(this);
+    } else value.text().then(this.nb.bind(this), this.ma.bind(this));
 };
-
-function Vl(a) {
-  a.B.read().then(a.lb.bind(a)).catch(a.ma.bind(a))
+function readNextResponseChunk(request) {
+  request.B.read().then(request.lb.bind(request)).catch(request.ma.bind(request));
 }
-q.lb = function(a) {
+prototypeAlias.lb = function (value) {
   if (this.j) {
-    if (this.O && a.value) this.o.push(a.value);
+    if (this.O && value.value) this.o.push(value.value);
     else if (!this.O) {
-      var b = a.value ? a.value : new Uint8Array(0);
-      if (b = this.P.decode(b, {
-          stream: !a.done
-        })) this.o = this.v += b
+      var intermediate = value.value ? value.value : new Uint8Array(0);
+      if ((intermediate = this.P.decode(intermediate, { stream: !value.done })))
+        this.o = this.v += intermediate;
     }
-    a.done ? Ul(this) : Tl(this);
-    this.readyState == 3 && Vl(this)
+    value.done ? completeFetchRequest(this) : notifyReadyStateChange(this);
+    this.readyState == 3 && readNextResponseChunk(this);
   }
 };
-q.nb = function(a) {
-  this.j && (this.o = this.v = a, Ul(this))
+prototypeAlias.nb = function (value) {
+  this.j && ((this.o = this.v = value), completeFetchRequest(this));
 };
-q.mb = function(a) {
-  this.j && (this.o = a, Ul(this))
+prototypeAlias.mb = function (value) {
+  this.j && ((this.o = value), completeFetchRequest(this));
 };
-q.ma = function() {
-  this.j && Ul(this)
+prototypeAlias.ma = function () {
+  this.j && completeFetchRequest(this);
 };
-
-function Ul(a) {
-  a.readyState = 4;
-  a.F = null;
-  a.B = null;
-  a.P = null;
-  Tl(a)
+function completeFetchRequest(request) {
+  request.readyState = 4;
+  request.F = null;
+  request.B = null;
+  request.P = null;
+  notifyReadyStateChange(request);
 }
-q.setRequestHeader = function(a, b) {
-  this.M.append(a, b)
+prototypeAlias.setRequestHeader = function (value, other) {
+  this.M.append(value, other);
 };
-q.getResponseHeader = function(a) {
-  return this.A ? this.A.get(a.toLowerCase()) || "" : ""
+prototypeAlias.getResponseHeader = function (value) {
+  return this.A ? this.A.get(value.toLowerCase()) || "" : "";
 };
-q.getAllResponseHeaders = function() {
+prototypeAlias.getAllResponseHeaders = function () {
   if (!this.A) return "";
-  for (var a = [], b = this.A.entries(), c = b.next(); !c.done;) c = c.value, a.push(c[0] + ": " + c[1]),
-    c = b.next();
-  return a.join("\r\n")
-};
+  for (
+    var values = [], iterator = this.A.entries(), iteration = iterator.next();
+    !iteration.done;
 
-function Tl(a) {
-  a.onreadystatechange && a.onreadystatechange.call(a)
+  ) {
+    iteration = iteration.value;
+    values.push(iteration[0] + ": " + iteration[1]);
+    iteration = iterator.next();
+  }
+  return values.join("\r\n");
+};
+function notifyReadyStateChange(request) {
+  request.onreadystatechange && request.onreadystatechange.call(request);
 }
-Object.defineProperty(Sl.prototype, "withCredentials", {
-  get: function() {
-    return this.L === "include"
+Object.defineProperty(FetchXmlHttpRequest.prototype, "withCredentials", {
+  get: function () {
+    return this.L === "include";
   },
-  set: function(a) {
-    this.L = a ? "include" : "same-origin"
-  }
+  set: function (value) {
+    this.L = value ? "include" : "same-origin";
+  },
 });
-
-function Wl(a) {
+/**
+ * 扩展专用运行库：采样日志、跨上下文数组消息和控制台输出。
+ * 保留字段 ABI：j=ErrorReporter，l=错误采样命中，o=信息采样命中。
+ */
+function SampledLogger(samplePercentage) {
   this.j = null;
-  this.l = a < 1;
-  this.o = a < .01
+  this.l = samplePercentage < 1;
+  this.o = samplePercentage < 0.01;
 }
-
-function Xl(a, b) {
-  var c = c === void 0 ? {} : c;
-  a.o && (c.sampling_samplePercentage = (.01).toString(), a.j.info(b, c))
+/**
+ * 采样阈值来自原实现（0.01），不是按百分数再除以 100；保持调用条件与上下文字段。
+ */
+function logSampledInfo(logger, error) {
+  var intermediate = intermediate === void 0 ? {} : intermediate;
+  logger.o &&
+    ((intermediate.sampling_samplePercentage = (0.01).toString()),
+    logger.j.info(error, intermediate));
 }
-
-function Yl(a, b, c) {
-  c = c === void 0 ? {} : c;
-  a.l && (c.sampling_samplePercentage = (1).toString(), Hl(a.j, b, c))
+/**
+ * 采样阈值来自原实现（1）；报告通道是 telemetry，不是文档上传通道。
+ */
+function logSampledError(logger, error, context) {
+  context = context === void 0 ? {} : context;
+  logger.l &&
+    ((context.sampling_samplePercentage = (1).toString()), reportError(logger.j, error, context));
+}
+function ErrorMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(ErrorMessage, ArrayMessage);
+ErrorMessage.prototype.getMessage = function () {
+  return readStringOrDefault(this, 1);
+};
+function FrameConnectionMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FrameConnectionMessage, ArrayMessage);
+function createTimestampedFrameConnection() {
+  var frameConnectionMessage = new FrameConnectionMessage();
+  return setStringField(frameConnectionMessage, 2, Date.now().toString());
+}
+function FrameRequestMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FrameRequestMessage, ArrayMessage);
+function UserChangeMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(UserChangeMessage, ArrayMessage);
+function WebsiteRequestMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(WebsiteRequestMessage, ArrayMessage);
+var parseWebsiteRequest = createMessageJsonParser(WebsiteRequestMessage);
+function FrameResponseMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(FrameResponseMessage, ArrayMessage);
+function WebsiteResponseMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(WebsiteResponseMessage, ArrayMessage);
+function setWebsiteResponseType(message, type) {
+  return setNumberField(message, 1, type);
+}
+WebsiteResponseMessage.prototype.xa = function () {
+  return readNestedMessage(this, ErrorMessage, 5);
+};
+function OffscreenResponseMessage(array) {
+  this.C = initializeMessageArray(array);
+}
+inheritCompiledClass(OffscreenResponseMessage, ArrayMessage);
+function setOffscreenResponseType(message, type) {
+  return setNumberField(message, 1, type);
+}
+OffscreenResponseMessage.prototype.xa = function () {
+  return readNestedMessage(this, ErrorMessage, 3);
 };
 
-function Zl(a) {
-  this.C = J(a)
+/**
+ * URL 包装沿用原 Trusted Types 分支，不额外扩大可嵌入来源。
+ */
+function createTrustedFrameUrl(url) {
+  url = url === null ? "null" : url === void 0 ? "undefined" : url;
+  var intermediate;
+  trustedTypesPolicy === void 0 && (trustedTypesPolicy = createTrustedTypesPolicy());
+  url = (intermediate = trustedTypesPolicy) ? intermediate.createScriptURL(url) : url;
+  return new TrustedScriptUrl(url);
 }
-x(Zl, M);
-Zl.prototype.getMessage = function() {
-  return rd(this, 1)
-};
-
-function $l(a) {
-  this.C = J(a)
+function FrameConfigurationMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x($l, M);
-
-function am() {
-  var a = new $l;
-  return ud(a, 2, Date.now().toString())
-};
-
-function bm(a) {
-  this.C = J(a)
+inheritCompiledClass(FrameConfigurationMessage, ArrayMessage);
+function OffscreenRequestMessage(array) {
+  this.C = initializeMessageArray(array);
 }
-x(bm, M);
-
-function cm(a) {
-  this.C = J(a)
+inheritCompiledClass(OffscreenRequestMessage, ArrayMessage);
+function createOffscreenRequest(type) {
+  var offscreenRequestMessage = new OffscreenRequestMessage();
+  return setNumberField(offscreenRequestMessage, 1, type);
 }
-x(cm, M);
-
-function dm(a) {
-  this.C = J(a)
+function createFrameConnectedRequest(connection) {
+  var offscreenRequest = createOffscreenRequest(3);
+  return setNestedMessage(offscreenRequest, FrameConnectionMessage, 4, connection);
 }
-x(dm, M);
-var em = Dd(dm);
-
-function fm(a) {
-  this.C = J(a)
+function setUserChange(message, change) {
+  return setNestedMessage(message, UserChangeMessage, 6, change);
 }
-x(fm, M);
-
-function gm(a) {
-  this.C = J(a)
+function ConsoleLogger() {
+  bindFunction(this.o, this);
+  this.j = new TextLogFormatter();
+  this.j.l = false;
+  this.j.o = false;
+  this.l = this.j.j = false;
+  this.v = {};
 }
-x(gm, M);
-
-function hm(a, b) {
-  return vd(a, 1, b)
+function enableConsoleLogger(logger) {
+  1 != logger.l && (logger.l = true);
 }
-gm.prototype.xa = function() {
-  return ld(this, Zl, 5)
-};
-
-function lm(a) {
-  this.C = J(a)
-}
-x(lm, M);
-
-function mm(a, b) {
-  return vd(a, 1, b)
-}
-lm.prototype.xa = function() {
-  return ld(this, Zl, 3)
-};
-
-function pm(a) {
-  a = a === null ? "null" : a === void 0 ? "undefined" : a;
-  var b;
-  xf === void 0 && (xf = zf());
-  a = (b = xf) ? b.createScriptURL(a) : a;
-  return new Af(a)
-};
-
-function wm(a) {
-  this.C = J(a)
-}
-x(wm, M);
-
-function xm(a) {
-  this.C = J(a)
-}
-x(xm, M);
-
-function ym(a) {
-  var b = new xm;
-  return vd(b, 1, a)
-}
-
-function zm(a) {
-  var b = ym(3);
-  return nd(b, $l, 4, a)
-}
-
-function Am(a, b) {
-  return nd(a, cm, 6, b)
-};
-
-function Fm() {
-  B(this.o, this);
-  this.j = new tl;
-  this.j.l = !1;
-  this.j.o = !1;
-  this.l = this.j.j = !1;
-  this.v = {}
-}
-
-function Gm(a) {
-  1 != a.l && (a.l = !0)
-}
-Fm.prototype.o = function(a) {
-  function b(f) {
-    if (f) {
-      if (f.value >= Nf.value) return "error";
-      if (f.value >= Of.value) return "warn";
-      if (f.value >= Pf.value) return "log"
+ConsoleLogger.prototype.o = function (value) {
+  function helper(helper2) {
+    if (helper2) {
+      if (helper2.value >= SEVERE_LOG_LEVEL.value) return "error";
+      if (helper2.value >= WARNING_LOG_LEVEL.value) return "warn";
+      if (helper2.value >= CONFIG_LOG_LEVEL.value) return "log";
     }
-    return "debug"
+    return "debug";
   }
-  if (!this.v[a.l()]) {
-    var c = ul(this.j, a),
-      d = Hm;
-    if (d) {
-      var e = b(a.v());
-      Im(d, e, c, a.j())
+  if (!this.v[value.l()]) {
+    var intermediate = formatLogRecord(this.j, value),
+      runtimeConsole2 = runtimeConsole;
+    if (runtimeConsole2) {
+      var intermediate2 = helper(value.v());
+      writeConsoleLog(runtimeConsole2, intermediate2, intermediate, value.j());
     }
   }
 };
-var Hm = A.console;
-
-function Im(a, b, c, d) {
-  if (a[b]) a[b](c, d === void 0 ? "" : d);
-  else a.log(c, d === void 0 ? "" : d)
+var runtimeConsole = runtimeGlobal.console;
+function writeConsoleLog(consoleObject, method, message, context) {
+  if (consoleObject[method]) consoleObject[method](message, context === void 0 ? "" : context);
+  else consoleObject.log(message, context === void 0 ? "" : context);
+}
+export {
+  Disposable,
+  createDeferred,
+  resolvedLegacyPromise,
+  raceLegacyPromises,
+  normalizeError,
+  attachErrorContext,
+  ownDisposable,
+  MutableUrl,
+  setUrlPath,
+  EventHandler,
+  createSessionId,
+  schedule,
+  waitForFrameTimeout,
+  flushBufferedLogs,
+  createDomElement,
+  setTrustedIframeSource,
+  createTrustedFrameUrl,
+  SampledLogger,
+  logSampledInfo,
+  logSampledError,
+  ErrorMessage,
+  FrameConnectionMessage,
+  FrameRequestMessage,
+  UserChangeMessage,
+  WebsiteRequestMessage,
+  parseWebsiteRequest,
+  FrameResponseMessage,
+  WebsiteResponseMessage,
+  OffscreenResponseMessage,
+  FrameConfigurationMessage,
+  OffscreenRequestMessage,
+  serializeMessage,
+  readNestedMessage,
+  getMessageField,
+  coerceInt32,
+  coerceString,
+  preserveNullFieldToken,
+  readStringField,
+  readStringOrDefault,
+  readNumberField,
+  setStringField,
+  setNumberField,
+  setNestedMessage,
+  ErrorReporterOptions,
+  ErrorReporter,
+  getFlagService,
+  createCrashTelemetryProcessor,
+  reportError,
+  ConsoleLogger,
+  enableConsoleLogger,
 };
-
-export { X, Gg, Bg, Eg, Hf, nb, dg, Sh, Vh, Wi, kf, Qi, Ri, $i, vj, Bf, pm, Wl, Xl, Yl, Zl, $l, bm, cm, dm, em, fm, gm, lm, wm, xm, Gc, ld, K, pc, vc, Tc, td, rd, sd, ud, vd, nd, wl, vl, mh, Rl, Hl, Fm, Gm };

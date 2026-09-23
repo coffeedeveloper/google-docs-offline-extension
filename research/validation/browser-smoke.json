@@ -1,5 +1,5 @@
 {
-  "completedAt": "2026-09-20T14:51:37.477Z",
+  "completedAt": "2026-09-23T00:10:55.249Z",
   "scope": "Native Chrome extension API comparison in separate synthetic profiles. Google traffic blocked; no Google backend or real document sync tested.",
   "results": [
     {
@@ -45,15 +45,15 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-BaivIc",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-drb8wZ",
       "passed": true
     },
     {
       "variant": "readable",
       "testedJavaScript": {
         "page_embed_script.js": "b446c3c48415c3fde67b0e558179090c91a8f8a660b85669e24595c32042d43f",
-        "service_worker_bin_prod.js": "4739ef32eb0780f6ce79db656fb5707b3ce4a12dffdc7364f6d6ccb14d6f26f8",
-        "offscreendocument_main.js": "c78e52623614de33bb1d6cad6804899fc77d29bd72345161f28be9ec87a019a9"
+        "service_worker_bin_prod.js": "f9a3f109b2ba468513038cf4887129893905993083ffa2a26030190c5ba76ca5",
+        "offscreendocument_main.js": "6c1d2cf13587cef7b873b9a12bbed837942120a64ffead840e2b7b8cf3f05f6e"
       },
       "browser": "153.0.8010.12",
       "extensionId": "ghbmnnjooekpmoecnnnilnnbdlolhkhi",
@@ -91,7 +91,7 @@
         "heartbeat": null,
         "offscreenCount": 0
       },
-      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-wcsbx3",
+      "profile": "/var/folders/0h/r1j4_jys6n1c_kr396wl_k2m0000gn/T/docs-offline-investigation-UkqhKr",
       "passed": true
     }
   ]

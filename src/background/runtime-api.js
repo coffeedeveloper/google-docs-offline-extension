@@ -1,98 +1,99 @@
-/** Compatibility boundary: opaque Closure/protobuf/telemetry internals stay here. */
-import * as legacy from "../vendor/background-runtime.js";
+/** 业务与运行库的兼容边界：语义 API 对外，编译属性 ABI 的访问集中在这里。 */
+import * as runtime from "../vendor/background-runtime.js";
 
-export const LegacyPromise = legacy.X;
-export const Disposable = legacy.W;
-export const createDeferred = legacy.Hg;
-export const asLegacyPromise = legacy.Ag;
-export const rejectOptedOut = legacy.Bg;
-export const normalizeError = legacy.T;
-export const attachErrorContext = legacy.rb;
-export const ownDisposable = legacy.dg;
-export const EventHandler = legacy.Yi;
-export const createSessionId = legacy.qf;
-export const schedule = legacy.Ri;
-export const waitForOffscreenStartup = legacy.Si;
-export const serialize = legacy.Mc;
-export const readType = legacy.zd;
-export const readNumber = legacy.xd;
-export const readString = legacy.yd;
-export const readOptionalString = legacy.wd;
-export const readBoolean = (message) => !!legacy.td(message, 2);
-export const readNested = legacy.I;
-export const setString = legacy.Ad;
-export const setNumber = legacy.Bd;
-export const setNested = legacy.sd;
+export const LegacyPromise = runtime.LegacyPromise;
+export const Disposable = runtime.Disposable;
+export const createDeferred = runtime.createDeferred;
+export const asLegacyPromise = runtime.asLegacyPromise;
+export const rejectOptedOut = runtime.rejectOptedOut;
+export const normalizeError = runtime.normalizeError;
+export const attachErrorContext = runtime.attachErrorContext;
+export const ownDisposable = runtime.ownDisposable;
+export const EventHandler = runtime.EventHandler;
+export const createSessionId = runtime.createSessionId;
+export const schedule = runtime.schedule;
+export const waitForOffscreenStartup = runtime.waitForOffscreenStartup;
+export const serialize = runtime.serializeMessage;
+export const readType = runtime.readMessageType;
+export const readNumber = runtime.readNumberField;
+export const readString = runtime.readStringField;
+export const readOptionalString = runtime.readStringOrDefault;
+export const readBoolean = (message) => !!runtime.readBooleanField(message, 2);
+export const readNested = runtime.readNestedMessage;
+export const setString = runtime.setStringField;
+export const setNumber = runtime.setNumberField;
+export const setNested = runtime.setNestedMessage;
 export const setBoolean = (message, field, value) =>
-  legacy.ad(message, field, legacy.sc(value));
-export const readEchoType = (message) => legacy.vc(legacy.H(message, 1));
+  runtime.setMessageField(message, field, runtime.requireBoolean(value));
+export const readEchoType = (message) =>
+  runtime.coerceInt32(runtime.getMessageField(message, 1));
 export const hasStringField = (message, field) =>
-  legacy.Bc(legacy.H(message, field)) != null;
+  runtime.coerceString(runtime.getMessageField(message, field)) != null;
 
 export const Messages = Object.freeze({
-  Error: legacy.em,
-  FrameResponse: legacy.fm,
-  DomainPolicyResponse: legacy.gm,
-  WebsiteResponse: legacy.hm,
-  OffscreenResponse: legacy.jm,
-  FrameConfiguration: legacy.vm,
-  FrameConnection: legacy.wm,
-  Alarm: legacy.xm,
-  FrameRequest: legacy.ym,
-  UserChange: legacy.zm,
-  OffscreenRequest: legacy.Am,
-  EnableOffline: legacy.Wm,
-  DomainPolicyRequest: legacy.Xm,
-  WebsiteRequest: legacy.Ym,
+  Error: runtime.ErrorMessage,
+  FrameResponse: runtime.FrameResponseMessage,
+  DomainPolicyResponse: runtime.DomainPolicyResponseMessage,
+  WebsiteResponse: runtime.WebsiteResponseMessage,
+  OffscreenResponse: runtime.OffscreenResponseMessage,
+  FrameConfiguration: runtime.FrameConfigurationMessage,
+  FrameConnection: runtime.FrameConnectionMessage,
+  Alarm: runtime.AlarmMessage,
+  FrameRequest: runtime.FrameRequestMessage,
+  UserChange: runtime.UserChangeMessage,
+  OffscreenRequest: runtime.OffscreenRequestMessage,
+  EnableOffline: runtime.EnableOfflineMessage,
+  DomainPolicyRequest: runtime.DomainPolicyRequestMessage,
+  WebsiteRequest: runtime.WebsiteRequestMessage,
 });
 export const getOffscreenError = (response) => response.wa();
 export const getFrameResponse = (response) => response.Ma();
 
 export function createUrl(value) {
-  return new legacy.Th(value);
+  return new runtime.MutableUrl(value);
 }
-export const setPath = legacy.Wh;
-export const setQuery = legacy.gi;
-export const setScheme = legacy.Uh;
+export const setPath = runtime.setUrlPath;
+export const setQuery = runtime.setUrlQueryParameter;
+export const setScheme = runtime.setUrlScheme;
 
 export class SampledLogger {
   constructor(samplePercentage) {
-    this.raw = new legacy.bm(samplePercentage);
+    this.raw = new runtime.SampledLogger(samplePercentage);
   }
   bind(reporter) {
     this.raw.j = reporter;
   }
   info(error, context) {
-    return legacy.cm(this.raw, error, context);
+    return runtime.logSampledInfo(this.raw, error, context);
   }
   error(error, context) {
-    return legacy.dm(this.raw, error, context);
+    return runtime.logSampledError(this.raw, error, context);
   }
 }
 
 export function initializeConsoleLogging() {
-  const logger = new legacy.Zm();
-  legacy.$m(logger);
+  const logger = new runtime.ConsoleLogger();
+  runtime.enableConsoleLogger(logger);
   return logger;
 }
 
 export function createErrorReporter(errorUrl, reportNonFatalErrors, sessionId) {
-  const options = new legacy.zl();
+  const options = new runtime.ErrorReporterOptions();
   options.J = false;
   options.A = true;
   options.j = errorUrl;
   options.o = true;
-  options.l = legacy.nh();
+  options.l = runtime.getFlagService();
   options.D = false;
-  options.v = legacy.Wl;
-  const reporter = new legacy.yl(options);
+  options.v = runtime.createCrashTelemetryProcessor;
+  const reporter = new runtime.ErrorReporter(options);
   reporter.o.sessionTypeName = "offline-event-page";
   reporter.o.reportsNonFatalErrors = String(reportNonFatalErrors);
   reporter.o.sid = String(sessionId);
   return reporter;
 }
 export const reporterContext = (reporter) => reporter.o;
-export const reportError = legacy.Kl;
-export const protectCallback = legacy.Ll;
-export const monitorPromise = legacy.Ml;
+export const reportError = runtime.reportError;
+export const protectCallback = runtime.protectCallback;
+export const monitorPromise = runtime.monitorPromise;
 export const unwrapMessageEvent = (event) => event.j;

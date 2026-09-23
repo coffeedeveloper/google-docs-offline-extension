@@ -1,7 +1,7 @@
 import {
   asLegacyPromise,
   unwrapMessageEvent,
-  parseFrameRequest,
+  parseWebsiteRequest,
   Messages,
   serialize,
   setNested,
@@ -24,7 +24,7 @@ export class FrameMessageRouter {
       return;
     }
     const request = event.data
-      ? parseFrameRequest(JSON.stringify(event.data))
+      ? parseWebsiteRequest(JSON.stringify(event.data))
       : new Messages.WebsiteRequest();
     this.dispatchSafely(
       request,

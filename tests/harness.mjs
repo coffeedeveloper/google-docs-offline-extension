@@ -30,7 +30,13 @@ export async function flush() {
   for (let i = 0; i < 12; i++)
     await new Promise((resolve) => setImmediate(resolve));
 }
-export async function harness(variant, file, initial = {}, testHooks = false) {
+export async function harness(
+  variant,
+  file,
+  initial = {},
+  testHooks = false,
+  sourceOverride,
+) {
   const trace = [],
     errors = [],
     listeners = {},
@@ -243,9 +249,10 @@ export async function harness(variant, file, initial = {}, testHooks = false) {
   });
   vm.runInContext("self = globalThis; window = globalThis;", context);
   const code =
-    variant === "original"
+    sourceOverride ??
+    (variant === "original"
       ? await readFile(path.join(baseline, file), "utf8")
-      : await readableSource(file, testHooks);
+      : await readableSource(file, testHooks));
   vm.runInContext(code, context, { filename: file, timeout: 2000 });
   await flush();
   return {
