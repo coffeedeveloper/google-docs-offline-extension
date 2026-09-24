@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 2,
+  "archivedAt": "2026-09-24T01:26:34.364Z",
+  "entry": {
+    "path": "docs.google.com-offline-extension-frame.html",
+    "bytes": 11115,
+    "sha256": "b579e2a326c5499cbb37d52599873e1c17334b3488ed125dab7391f7ac3c4820",
+    "sourceUrlTemplate": "https://docs.google.com/offline/extension/frame?ouid=<redacted>",
+    "acquisition": "User-provided HTML, subsequently sanitized for repository publication. Response headers and exact request URL not captured.",
+    "privacy": "Sanitized: account identity, email, startup token, client keys, telemetry identifiers/timestamps, nonce and input preferences replaced. Not a live authenticated fixture.",
+    "sanitized": true
+  },
+  "entryFunction": "_loadSchedulerFrame",
+  "dependencies": [
+    {
+      "path": "dependencies/912208950-frame_bin.js",
+      "bytes": 1371188,
+      "sha256": "a8a23a42f888ffbae13298f271db9842663bbae030764a13cae545e3e26e4d5b",
+      "sourceUrl": "https://docs.google.com/static/offline/client/js/912208950-frame_bin.js",
+      "relationship": "HTML script src (numeric HTML entities decoded)",
+      "acquisition": "Anonymous HTTPS download from the exact script URL in the provided HTML.",
+      "formatted": {
+        "path": "formatted/912208950-frame_bin.js",
+        "bytes": 2833711,
+        "sha256": "5115f40a6d010edb6745cfc38ca919234d057f441918d287948f51e7b978d033"
+      }
+    }
+  ],
+  "otherScriptReferences": [
+    {
+      "url": "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/page_embed_script.js",
+      "relationship": "Already represented by the extension sample in this repository; not newly fetched."
+    }
+  ],
+  "formatting": {
+    "tool": "prettier",
+    "version": "3.6.2",
+    "options": {
+      "parser": "babel",
+      "printWidth": 100
+    },
+    "semanticReconstruction": false
+  },
+  "safeConfiguration": {
+    "buildLabel": "docs.docs-offline_20260907.00_p0",
+    "docs-offline-odpswutpim": 180,
+    "docs-offline-esdcst": true,
+    "docs-offline-sostpim": 120,
+    "docs-offline-wstpim": 1440,
+    "docs-offline-ddtpim": 1440,
+    "docs-offline-istpim": 360,
+    "docs-offline-ctpim": 1440,
+    "docs-offline-esost": true,
+    "docs-offline-eshcst": true,
+    "docs-offline-swutpim": 300,
+    "docs-offline-rtpim": 1440,
+    "docs-offline-astpim": 60,
+    "docs-offline-iteits": 30,
+    "docs-offline-mstpim": 480,
+    "docs-offline-hcstpim": 360,
+    "docs-offline-dswutpim": 180,
+    "docs-offline-dcstpim": 360,
+    "docs-offline-uuctpim": 10,
+    "docs-offline-lcstpim": 5,
+    "docs-offline-eodpswut": false,
+    "docs-offline-esql": false,
+    "docs-iirhmt": false,
+    "docs-offline-eswha": false,
+    "docs-offline-esbst": true,
+    "docs-offline-esmst": true,
+    "docs-offline-eslcst": true,
+    "docs-offline-esast": true,
+    "docs-offline-esist": true,
+    "docs-offline-eswst": true,
+    "docs-offline-esddt": true,
+    "docs-offline-esuuct": true,
+    "docs-offline-esct": true,
+    "docs-offline-esrt": true,
+    "docs-offline-edswut": true,
+    "lssv": 7,
+    "docs-extension-id": "ghbmnnjooekpmoecnnnilnnbdlolhkhi"
+  },
+  "scope": "Main scheduler frame bundle only. Worker/iframe executor entry responses and their downstream implementation bundles have not yet been captured.",
+  "runtimeValidation": false,
+  "privacy": {
+    "sanitizedAt": "2026-09-24T01:58:07.631Z",
+    "hashesDescribe": "Current sanitized HTML bytes; unchanged public JS bytes.",
+    "originalPersonalizedCopiesRetainedInRepository": false
+  }
+}

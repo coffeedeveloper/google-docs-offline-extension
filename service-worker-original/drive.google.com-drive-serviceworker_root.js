@@ -1,0 +1,5 @@
+__startTimeMs = (+new Date());__initData = ["/drive",["drive.web-frontend_20260910.12_p2",["/_/drive_fe/_/js/k\u003ddrive_fe.cacheproxy.en.Hkp-TMScpIk.2021.O/am\u003dBECAAQ/d\u003d1/rs\u003dAFB8gszAzoJcB-s4XFpO-cbkyIdNyeW7Ew/m\u003dcore?"],null,"dfersw-REDACTED_OUID-"],["",1,"",0],["drive.web-frontend_20260910.12_p2",1]];__jsErrorUri = '\/drive\/jserror';self.document = self; self.window = self;
+    _DumpException = function(e) {
+      throw e;
+    };
+  if (self.trustedTypes && self.trustedTypes.createPolicy) {var policy = self.trustedTypes.createPolicy('drive#sw', {createScriptURL: function(unused) { return '\/_\/drive_fe\/_\/js\/k\x3ddrive_fe.serviceworker_root.en.lIE44OKTnOo.2021.O\/am\x3dBECAAQ\/d\x3d1\/rs\x3dAFB8gsx8Vc22FySAkOEsV78sVKV-uwd19w\/m\x3dcore'; }}); importScripts(policy.createScriptURL(''));} else {importScripts('\/_\/drive_fe\/_\/js\/k\x3ddrive_fe.serviceworker_root.en.lIE44OKTnOo.2021.O\/am\x3dBECAAQ\/d\x3d1\/rs\x3dAFB8gsx8Vc22FySAkOEsV78sVKV-uwd19w\/m\x3dcore');}drive.sw.main();'0\/66d00541\/72b30ee9\/ffffffff9f8120cd';

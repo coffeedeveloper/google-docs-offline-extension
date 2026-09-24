@@ -14,6 +14,12 @@
 
 阅读导航：第 3–6 节解释实现；第 7、11 节说明验证边界；第 8 节给出实施建议；第 12 节回答无 Service Worker 的可行性；第 13–14 节连接 Demo 实践与后续验收。
 
+后续专题（2026-09-23）：[Google Docs / Drive 网页 Service Worker 调查](GOOGLE-SERVICE-WORKERS.md)。基于另行取得的 5 个启动脚本及其引用实现，梳理入口路由、版本化缓存与文档离线启动；原始依赖与来源记录见 [样本归档](../service-worker-original/README.md)。这是静态分析补充，不改变本文已有运行验证的边界。
+
+继续研究（2026-09-24）：[设计缺口与实验路线](OFFLINE-RESEARCH-ROADMAP.md)、[extension frame 连接侧与公共 API 分析](EXTENSION-FRAME.md)。后者新增公共 pin 流程、任务状态与事件总线证据；后台 frame 自身实现仍待补充，不表示同步端到端已验证。
+
+同日后续：用户提供了真实 frame HTML，[Scheduler frame 主实现调查](SCHEDULER-FRAME.md) 已补齐请求分发、周期调度、任务执行器和状态记录；具体同步任务 worker、上传 ACK 与运行回归仍未完成。
+
 本文件是仓库内的主研究报告。迁移保留原报告的来源、哈希与调查结论，原 Obsidian 文件作为历史副本保留；本文使用“自研文档系统”指代后续产品方案，使用“Offline Docs Demo”指代独立本地实验。
 
 ## 1. 核心结论

@@ -1,0 +1,1025 @@
+[
+  {
+    "archive": "offscreen-original",
+    "file": "912208950-frame_bin.js",
+    "title": "Scheduler frame 调度与执行",
+    "source": "offscreen-original/formatted/912208950-frame_bin.js",
+    "sourceSha256": "5115f40a6d010edb6745cfc38ca919234d057f441918d287948f51e7b978d033",
+    "readable": "offscreen-original/readable/912208950-frame_bin.js",
+    "readableSha256": "07d118a12f24ec10660a48dad743ee681b87d1a7395f3c4f03fffd16df7ad38f",
+    "semanticSymbols": [
+      {
+        "original": "$N",
+        "readable": "TaskStatsStore",
+        "sourceLine": 28927,
+        "note": "读取 docs-tasksStats_default；损坏时清空并报告。字段 5 表示曾经成功，不是最近结果。",
+        "readableLine": 29241
+      },
+      {
+        "original": "Vva",
+        "readable": "getOrCreateTaskStats",
+        "sourceLine": 28947,
+        "note": "返回统计记录的 clone，避免调用方未保存就污染存储状态。",
+        "readableLine": 29266
+      },
+      {
+        "original": "Wva",
+        "readable": "saveTaskStats",
+        "sourceLine": 28957,
+        "note": "写入 clone 后序列化全部任务统计到 localStorage。",
+        "readableLine": 29279
+      },
+      {
+        "original": "p$",
+        "readable": "TaskExecutionSpec",
+        "sourceLine": 89018,
+        "note": "执行描述。A=context(1 Worker/2 iframe), j=URL, o=taskType, D=timeout, J=网络要求, F=认证要求, G=额外资格, B=参数。",
+        "readableLine": 89847
+      },
+      {
+        "original": "D$a",
+        "readable": "PeriodicTaskDefinition",
+        "sourceLine": 89045,
+        "note": "周期定义。B=任务 ID,o=遥测类型,J=优先级,D=分钟周期,j=执行描述,A=标记,F=首次成功前加速。",
+        "readableLine": 89886
+      },
+      {
+        "original": "G$a",
+        "readable": "buildPeriodicTaskCatalog",
+        "sourceLine": 89079,
+        "note": "按功能开关及周期创建任务目录，不是每次 heartbeat 都执行所有任务。",
+        "readableLine": 89937
+      },
+      {
+        "original": "r$",
+        "readable": "createPeriodicTaskDefinition",
+        "sourceLine": 89275,
+        "note": "从配置读取分钟周期，再组合任务执行描述。",
+        "readableLine": 90151
+      },
+      {
+        "original": "s$",
+        "readable": "isPeriodicTaskEnabled",
+        "sourceLine": 89272,
+        "note": "同时要求功能开关开启且周期大于零。",
+        "readableLine": 90145
+      },
+      {
+        "original": "E$a",
+        "readable": "createDocsSwUpdateTask",
+        "sourceLine": 89055,
+        "note": "公共 Docs SW 资源更新任务；在 iframe 上下文执行。",
+        "readableLine": 89907
+      },
+      {
+        "original": "F$a",
+        "readable": "createLocalChangesSyncTask",
+        "sourceLine": 89067,
+        "note": "本地改动同步任务描述；真正上传实现位于未采集的执行器。",
+        "readableLine": 89922
+      },
+      {
+        "original": "H$a",
+        "readable": "OfflinePolicyCoordinator",
+        "sourceLine": 89278,
+        "note": "调度后检查企业策略及宽限期，不等同于网络状态。",
+        "readableLine": 90174
+      },
+      {
+        "original": "I$a",
+        "readable": "enforceOfflinePolicyAfterBatch",
+        "sourceLine": 89285,
+        "note": "策略失效需考虑上次允许时间与宽限期；不能立即清空离线文档。",
+        "readableLine": 90184
+      },
+      {
+        "original": "K$a",
+        "readable": "syncBeforePolicyOptOut",
+        "sourceLine": 89316,
+        "note": "若可执行则先尝试本地改动任务，再进入退出流程；不是上传 ACK 证明。",
+        "readableLine": 90218
+      },
+      {
+        "original": "L$a",
+        "readable": "LocalOfflineUserState",
+        "sourceLine": 89335,
+        "note": "查询当前离线启用状态、账号和 opt-in 时间。",
+        "readableLine": 90240
+      },
+      {
+        "original": "I$",
+        "readable": "TaskExecutorBase",
+        "sourceLine": 89513,
+        "note": "检查资格、创建运行器并跟踪进行中的任务；析构时停止任务。",
+        "readableLine": 90421
+      },
+      {
+        "original": "Z$a",
+        "readable": "getTaskIneligibilityReason",
+        "sourceLine": 89547,
+        "note": "网络、认证或额外资格不足返回原因码；null 才可执行。",
+        "readableLine": 90458
+      },
+      {
+        "original": "J$",
+        "readable": "TaskRunner",
+        "sourceLine": 89567,
+        "note": "单任务生命周期：超时、取消、消息、成功/失败收口；o.promise 是完成结果。",
+        "readableLine": 90487
+      },
+      {
+        "original": "t$",
+        "readable": "getTaskCompletionCode",
+        "sourceLine": 89602,
+        "note": "从运行器结果中读取状态码，不代表服务端已确认全部修改。",
+        "readableLine": 90525
+      },
+      {
+        "original": "$$a",
+        "readable": "sendTaskRunnerRequest",
+        "sourceLine": 89619,
+        "note": "每次请求使用 MessageChannel；运行器完成时关闭回复端口。",
+        "readableLine": 90545
+      },
+      {
+        "original": "N$",
+        "readable": "IframeTaskExecutor",
+        "sourceLine": 89832,
+        "note": "创建 iframe 任务运行器。",
+        "readableLine": 90762
+      },
+      {
+        "original": "O$",
+        "readable": "IframeTaskRunner",
+        "sourceLine": 89841,
+        "note": "等待子 iframe 握手，完成或取消后释放子页面。",
+        "readableLine": 90784
+      },
+      {
+        "original": "P$",
+        "readable": "WorkerTaskExecutor",
+        "sourceLine": 89931,
+        "note": "创建专用 Worker 任务运行器。",
+        "readableLine": 90877
+      },
+      {
+        "original": "Q$",
+        "readable": "WorkerTaskRunner",
+        "sourceLine": 89939,
+        "note": "创建 Worker，传递请求并在结束时 terminate。",
+        "readableLine": 90888
+      },
+      {
+        "original": "S$",
+        "readable": "TaskExecutorDispatcher",
+        "sourceLine": 90043,
+        "note": "context 1 分派 Worker，context 2 分派 iframe；属性 F/D 保留内部 ABI。",
+        "readableLine": 90995
+      },
+      {
+        "original": "kab",
+        "readable": "selectExecutorForContext",
+        "sourceLine": 90055,
+        "note": "不支持的 context 直接抛错，不能默默改用另一种执行器。",
+        "readableLine": 91010
+      },
+      {
+        "original": "T$",
+        "readable": "UserTaskEventChannel",
+        "sourceLine": 90105,
+        "note": "按账号命名的事件通道，用于广播任务结果。",
+        "readableLine": 91066
+      },
+      {
+        "original": "V$",
+        "readable": "PeriodicTaskScheduler",
+        "sourceLine": 90149,
+        "note": "D=任务目录，B=统计存储，G=分派器，A=当前运行器，j=运行标记，o=事件通道。",
+        "readableLine": 91113
+      },
+      {
+        "original": "oab",
+        "readable": "runNextDueTask",
+        "sourceLine": 90186,
+        "note": "周期批次串行执行；先记录开始，再执行、保存结果、广播，然后递归选择。",
+        "readableLine": 91153
+      },
+      {
+        "original": "pab",
+        "readable": "selectNextDueTask",
+        "sourceLine": 90218,
+        "note": "按资格、分钟周期、曾成功标记及失败次数筛选；排序后只取一个，不与按文档即时任务互斥。",
+        "readableLine": 91192
+      },
+      {
+        "original": "qab",
+        "readable": "DueTaskCandidate",
+        "sourceLine": 90237,
+        "note": "保存任务、统计和逾期分钟数供优先级排序。",
+        "readableLine": 91230
+      },
+      {
+        "original": "Z$",
+        "readable": "SchedulerFrameController",
+        "sourceLine": 90644,
+        "note": "与扩展握手并处理 FrameRequest；D=周期调度器,M=即时任务分派器,F=认证追踪器,B=用户状态。",
+        "readableLine": 91640
+      },
+      {
+        "original": "Wab",
+        "readable": "installPeriodicTaskCatalog",
+        "sourceLine": 90677,
+        "note": "把启用的任务加入周期调度目录。",
+        "readableLine": 91676
+      },
+      {
+        "original": "Xab",
+        "readable": "connectForLocalOfflineUser",
+        "sourceLine": 90680,
+        "note": "根据本地离线状态决定发送连接或未启用通知。",
+        "readableLine": 91683
+      },
+      {
+        "original": "Yab",
+        "readable": "connectEnabledOfflineUser",
+        "sourceLine": 90692,
+        "note": "先启动认证追踪，再发送 WebsiteRequest type 1 和业务端口；不是启动周期调度。",
+        "readableLine": 91698
+      },
+      {
+        "original": "Zab",
+        "readable": "notifyOfflineUserUnavailable",
+        "sourceLine": 90712,
+        "note": "发送 WebsiteRequest type 3，可携带其他本地账号。",
+        "readableLine": 91721
+      },
+      {
+        "original": "$ab",
+        "readable": "sendExtensionRequest",
+        "sourceLine": 90722,
+        "note": "回复端口与业务端口用途不同；目标 origin 和协议数组保持不变。",
+        "readableLine": 91734
+      },
+      {
+        "original": "abb",
+        "readable": "dispatchFrameRequest",
+        "sourceLine": 90759,
+        "note": "type 0 命名事件，type 2 多文档同步，type 3 条件触发周期批次。",
+        "readableLine": 91774
+      },
+      {
+        "original": "cbb",
+        "readable": "handleNamedFrameEvent",
+        "sourceLine": 90796,
+        "note": "heartbeat 先处理宽限等待并核实启用状态，再启动批次。",
+        "readableLine": 91814
+      },
+      {
+        "original": "ebb",
+        "readable": "getRemainingOptInDelay",
+        "sourceLine": 90816,
+        "note": "根据本地 opt-in 时间与条件计算尚需等待的毫秒数。",
+        "readableLine": 91839
+      },
+      {
+        "original": "fbb",
+        "readable": "startPeriodicBatchIfIdle",
+        "sourceLine": 90824,
+        "note": "批次已运行就返回；新批次完成后调用策略检查。",
+        "readableLine": 91850
+      },
+      {
+        "original": "dbb",
+        "readable": "runImmediateMultiDocumentSync",
+        "sourceLine": 90830,
+        "note": "独立即时任务；超时 min(文档数×120秒,600秒)，不是周期目录中的一项。",
+        "readableLine": 91861
+      },
+      {
+        "original": "$$",
+        "readable": "holdExtensionConnectionDuring",
+        "sourceLine": 90841,
+        "note": "任务 Promise 生命周期内连接扩展，完成后断开；另有最长连接计时。",
+        "readableLine": 91884
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 1,
+        "original": "$N",
+        "readable": "TaskStatsStore"
+      },
+      {
+        "scope": 1,
+        "original": "Vva",
+        "readable": "getOrCreateTaskStats"
+      },
+      {
+        "scope": 1,
+        "original": "Wva",
+        "readable": "saveTaskStats"
+      },
+      {
+        "scope": 1,
+        "original": "p$",
+        "readable": "TaskExecutionSpec"
+      },
+      {
+        "scope": 1,
+        "original": "D$a",
+        "readable": "PeriodicTaskDefinition"
+      },
+      {
+        "scope": 1,
+        "original": "G$a",
+        "readable": "buildPeriodicTaskCatalog"
+      },
+      {
+        "scope": 1,
+        "original": "r$",
+        "readable": "createPeriodicTaskDefinition"
+      },
+      {
+        "scope": 1,
+        "original": "s$",
+        "readable": "isPeriodicTaskEnabled"
+      },
+      {
+        "scope": 1,
+        "original": "E$a",
+        "readable": "createDocsSwUpdateTask"
+      },
+      {
+        "scope": 1,
+        "original": "F$a",
+        "readable": "createLocalChangesSyncTask"
+      },
+      {
+        "scope": 1,
+        "original": "H$a",
+        "readable": "OfflinePolicyCoordinator"
+      },
+      {
+        "scope": 1,
+        "original": "I$a",
+        "readable": "enforceOfflinePolicyAfterBatch"
+      },
+      {
+        "scope": 1,
+        "original": "K$a",
+        "readable": "syncBeforePolicyOptOut"
+      },
+      {
+        "scope": 1,
+        "original": "L$a",
+        "readable": "LocalOfflineUserState"
+      },
+      {
+        "scope": 1,
+        "original": "I$",
+        "readable": "TaskExecutorBase"
+      },
+      {
+        "scope": 1,
+        "original": "Z$a",
+        "readable": "getTaskIneligibilityReason"
+      },
+      {
+        "scope": 1,
+        "original": "J$",
+        "readable": "TaskRunner"
+      },
+      {
+        "scope": 1,
+        "original": "t$",
+        "readable": "getTaskCompletionCode"
+      },
+      {
+        "scope": 1,
+        "original": "$$a",
+        "readable": "sendTaskRunnerRequest"
+      },
+      {
+        "scope": 1,
+        "original": "N$",
+        "readable": "IframeTaskExecutor"
+      },
+      {
+        "scope": 1,
+        "original": "O$",
+        "readable": "IframeTaskRunner"
+      },
+      {
+        "scope": 1,
+        "original": "P$",
+        "readable": "WorkerTaskExecutor"
+      },
+      {
+        "scope": 1,
+        "original": "Q$",
+        "readable": "WorkerTaskRunner"
+      },
+      {
+        "scope": 1,
+        "original": "S$",
+        "readable": "TaskExecutorDispatcher"
+      },
+      {
+        "scope": 1,
+        "original": "kab",
+        "readable": "selectExecutorForContext"
+      },
+      {
+        "scope": 1,
+        "original": "T$",
+        "readable": "UserTaskEventChannel"
+      },
+      {
+        "scope": 1,
+        "original": "V$",
+        "readable": "PeriodicTaskScheduler"
+      },
+      {
+        "scope": 1,
+        "original": "oab",
+        "readable": "runNextDueTask"
+      },
+      {
+        "scope": 1,
+        "original": "pab",
+        "readable": "selectNextDueTask"
+      },
+      {
+        "scope": 1,
+        "original": "qab",
+        "readable": "DueTaskCandidate"
+      },
+      {
+        "scope": 1,
+        "original": "Z$",
+        "readable": "SchedulerFrameController"
+      },
+      {
+        "scope": 1,
+        "original": "Wab",
+        "readable": "installPeriodicTaskCatalog"
+      },
+      {
+        "scope": 1,
+        "original": "Xab",
+        "readable": "connectForLocalOfflineUser"
+      },
+      {
+        "scope": 1,
+        "original": "Yab",
+        "readable": "connectEnabledOfflineUser"
+      },
+      {
+        "scope": 1,
+        "original": "Zab",
+        "readable": "notifyOfflineUserUnavailable"
+      },
+      {
+        "scope": 1,
+        "original": "$ab",
+        "readable": "sendExtensionRequest"
+      },
+      {
+        "scope": 1,
+        "original": "abb",
+        "readable": "dispatchFrameRequest"
+      },
+      {
+        "scope": 1,
+        "original": "cbb",
+        "readable": "handleNamedFrameEvent"
+      },
+      {
+        "scope": 1,
+        "original": "ebb",
+        "readable": "getRemainingOptInDelay"
+      },
+      {
+        "scope": 1,
+        "original": "fbb",
+        "readable": "startPeriodicBatchIfIdle"
+      },
+      {
+        "scope": 1,
+        "original": "dbb",
+        "readable": "runImmediateMultiDocumentSync"
+      },
+      {
+        "scope": 1,
+        "original": "$$",
+        "readable": "holdExtensionConnectionDuring"
+      },
+      {
+        "scope": 6001,
+        "original": "a",
+        "readable": "logger"
+      },
+      {
+        "scope": 6008,
+        "original": "a",
+        "readable": "statsStore"
+      },
+      {
+        "scope": 6008,
+        "original": "c",
+        "readable": "taskId"
+      },
+      {
+        "scope": 6009,
+        "original": "a",
+        "readable": "statsStore"
+      },
+      {
+        "scope": 6009,
+        "original": "c",
+        "readable": "statsRecord"
+      },
+      {
+        "scope": 16953,
+        "original": "a",
+        "readable": "executionContext"
+      },
+      {
+        "scope": 16953,
+        "original": "c",
+        "readable": "executorUrl"
+      },
+      {
+        "scope": 16953,
+        "original": "e",
+        "readable": "taskType_2"
+      },
+      {
+        "scope": 16953,
+        "original": "f",
+        "readable": "timeoutMs"
+      },
+      {
+        "scope": 16953,
+        "original": "g",
+        "readable": "requiresNetwork"
+      },
+      {
+        "scope": 16953,
+        "original": "h",
+        "readable": "requiresAuth"
+      },
+      {
+        "scope": 16953,
+        "original": "k",
+        "readable": "requiresEligibility"
+      },
+      {
+        "scope": 16953,
+        "original": "l",
+        "readable": "taskParameters"
+      },
+      {
+        "scope": 16956,
+        "original": "a",
+        "readable": "taskId"
+      },
+      {
+        "scope": 16956,
+        "original": "c",
+        "readable": "reportType"
+      },
+      {
+        "scope": 16956,
+        "original": "e",
+        "readable": "priority"
+      },
+      {
+        "scope": 16956,
+        "original": "f",
+        "readable": "periodMinutes"
+      },
+      {
+        "scope": 16956,
+        "original": "g",
+        "readable": "taskFlag"
+      },
+      {
+        "scope": 16956,
+        "original": "h",
+        "readable": "accelerateBeforeSuccess"
+      },
+      {
+        "scope": 16956,
+        "original": "k",
+        "readable": "executionSpec"
+      },
+      {
+        "scope": 16959,
+        "original": "a",
+        "readable": "flags"
+      },
+      {
+        "scope": 16963,
+        "original": "a",
+        "readable": "taskId"
+      },
+      {
+        "scope": 16963,
+        "original": "c",
+        "readable": "reportType"
+      },
+      {
+        "scope": 16963,
+        "original": "e",
+        "readable": "priority"
+      },
+      {
+        "scope": 16963,
+        "original": "f",
+        "readable": "periodFlag"
+      },
+      {
+        "scope": 16963,
+        "original": "g",
+        "readable": "taskFlag"
+      },
+      {
+        "scope": 16963,
+        "original": "h",
+        "readable": "accelerateBeforeSuccess"
+      },
+      {
+        "scope": 16963,
+        "original": "k",
+        "readable": "executionSpec"
+      },
+      {
+        "scope": 16963,
+        "original": "l",
+        "readable": "flags"
+      },
+      {
+        "scope": 16962,
+        "original": "a",
+        "readable": "enabledFlag"
+      },
+      {
+        "scope": 16962,
+        "original": "c",
+        "readable": "periodFlag"
+      },
+      {
+        "scope": 16962,
+        "original": "e",
+        "readable": "flags"
+      },
+      {
+        "scope": 16957,
+        "original": "a",
+        "readable": "flags"
+      },
+      {
+        "scope": 16958,
+        "original": "a",
+        "readable": "flags"
+      },
+      {
+        "scope": 16965,
+        "original": "a",
+        "readable": "policyCoordinator"
+      },
+      {
+        "scope": 16969,
+        "original": "a",
+        "readable": "policyCoordinator"
+      },
+      {
+        "scope": 17029,
+        "original": "a",
+        "readable": "executor"
+      },
+      {
+        "scope": 17029,
+        "original": "c",
+        "readable": "executionSpec"
+      },
+      {
+        "scope": 17040,
+        "original": "a",
+        "readable": "taskRunner"
+      },
+      {
+        "scope": 17044,
+        "original": "a",
+        "readable": "taskRunner"
+      },
+      {
+        "scope": 17044,
+        "original": "c",
+        "readable": "taskRequest"
+      },
+      {
+        "scope": 17121,
+        "original": "a",
+        "readable": "dispatcher"
+      },
+      {
+        "scope": 17121,
+        "original": "c",
+        "readable": "executionContext"
+      },
+      {
+        "scope": 17136,
+        "original": "a",
+        "readable": "statsStore"
+      },
+      {
+        "scope": 17136,
+        "original": "c",
+        "readable": "dispatcher"
+      },
+      {
+        "scope": 17136,
+        "original": "e",
+        "readable": "unusedLogger"
+      },
+      {
+        "scope": 17136,
+        "original": "f",
+        "readable": "flags"
+      },
+      {
+        "scope": 17141,
+        "original": "a",
+        "readable": "scheduler"
+      },
+      {
+        "scope": 17141,
+        "original": "c",
+        "readable": "taskDefinition"
+      },
+      {
+        "scope": 17141,
+        "original": "e",
+        "readable": "statsRecord"
+      },
+      {
+        "scope": 17141,
+        "original": "f",
+        "readable": "reportContext"
+      },
+      {
+        "scope": 17144,
+        "original": "a",
+        "readable": "scheduler"
+      },
+      {
+        "scope": 17144,
+        "original": "c",
+        "readable": "nowMs"
+      },
+      {
+        "scope": 17144,
+        "original": "e",
+        "readable": "candidates"
+      },
+      {
+        "scope": 17144,
+        "original": "f",
+        "readable": "taskIndex"
+      },
+      {
+        "scope": 17144,
+        "original": "g",
+        "readable": "taskDefinition"
+      },
+      {
+        "scope": 17144,
+        "original": "h",
+        "readable": "statsRecord"
+      },
+      {
+        "scope": 17144,
+        "original": "k",
+        "readable": "failureCountOrLatestTime"
+      },
+      {
+        "scope": 17144,
+        "original": "l",
+        "readable": "periodOrOverdueMinutes"
+      },
+      {
+        "scope": 17149,
+        "original": "a",
+        "readable": "taskDefinition"
+      },
+      {
+        "scope": 17149,
+        "original": "c",
+        "readable": "statsRecord"
+      },
+      {
+        "scope": 17149,
+        "original": "e",
+        "readable": "overdueMinutes"
+      },
+      {
+        "scope": 17243,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17245,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17248,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17251,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17251,
+        "original": "c",
+        "readable": "otherAccount"
+      },
+      {
+        "scope": 17252,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17252,
+        "original": "c",
+        "readable": "extensionRequest"
+      },
+      {
+        "scope": 17252,
+        "original": "e",
+        "readable": "businessPort"
+      },
+      {
+        "scope": 17259,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17259,
+        "original": "c",
+        "readable": "frameRequest"
+      },
+      {
+        "scope": 17267,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17267,
+        "original": "c",
+        "readable": "eventName"
+      },
+      {
+        "scope": 17273,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17275,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17277,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17277,
+        "original": "c",
+        "readable": "documentIds_2"
+      },
+      {
+        "scope": 17279,
+        "original": "a",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17279,
+        "original": "c",
+        "readable": "operation"
+      },
+      {
+        "scope": 17123,
+        "original": "a",
+        "readable": "executionSpec"
+      },
+      {
+        "scope": 17123,
+        "original": "c",
+        "readable": "reportContext"
+      },
+      {
+        "scope": 17123,
+        "original": "e",
+        "readable": "dispatcher"
+      },
+      {
+        "scope": 17123,
+        "original": "f",
+        "readable": "reportSession"
+      },
+      {
+        "scope": 17123,
+        "original": "g",
+        "readable": "taskRunner"
+      },
+      {
+        "scope": 17126,
+        "original": "a",
+        "readable": "executionSpec"
+      },
+      {
+        "scope": 17137,
+        "original": "a",
+        "readable": "scheduler"
+      },
+      {
+        "scope": 17137,
+        "original": "c",
+        "readable": "eventBusProvider"
+      },
+      {
+        "scope": 17256,
+        "original": "a",
+        "readable": "messageEvent"
+      },
+      {
+        "scope": 17256,
+        "original": "c",
+        "readable": "frameController"
+      },
+      {
+        "scope": 17256,
+        "original": "e",
+        "readable": "frameRequest"
+      }
+    ],
+    "sections": [
+      {
+        "name": "task-stats",
+        "from": "$N",
+        "to": "Wva",
+        "description": "持久化任务统计",
+        "path": "sections/912208950-frame_bin/task-stats.js",
+        "completeFileLine": 29241
+      },
+      {
+        "name": "task-catalog",
+        "from": "p$",
+        "to": "r$",
+        "description": "任务执行描述、开关与周期目录",
+        "path": "sections/912208950-frame_bin/task-catalog.js",
+        "completeFileLine": 89847
+      },
+      {
+        "name": "policy",
+        "from": "H$a",
+        "to": "K$a",
+        "description": "策略宽限期与退出前同步",
+        "path": "sections/912208950-frame_bin/policy.js",
+        "completeFileLine": 90174
+      },
+      {
+        "name": "task-runner",
+        "from": "I$",
+        "to": "Q$",
+        "until": "jab",
+        "description": "执行资格、单任务生命周期、iframe 与 Worker 运行器",
+        "path": "sections/912208950-frame_bin/task-runner.js",
+        "completeFileLine": 90421
+      },
+      {
+        "name": "periodic-scheduler",
+        "from": "S$",
+        "to": "qab",
+        "description": "执行器分派、广播、周期任务选择与执行",
+        "path": "sections/912208950-frame_bin/periodic-scheduler.js",
+        "completeFileLine": 90995
+      },
+      {
+        "name": "frame-controller",
+        "from": "Z$",
+        "to": "$$",
+        "description": "扩展握手、heartbeat 与即时多文档同步",
+        "path": "sections/912208950-frame_bin/frame-controller.js",
+        "completeFileLine": 91640
+      }
+    ]
+  }
+]

@@ -1,0 +1,51 @@
+{
+  "date": "2026-09-24",
+  "timezone": "Asia/Singapore",
+  "kind": "read-only-dom-observation",
+  "runtimeValidation": false,
+  "pages": [
+    {
+      "role": "docs-editor",
+      "origin": "https://docs.google.com",
+      "extensionScriptReferencePresent": true,
+      "offlineIframe": {
+        "origin": "https://docs.google.com",
+        "path": "/offline/iframeapi",
+        "queryParameterNames": ["ouid", "sa"]
+      }
+    },
+    {
+      "role": "drive-home",
+      "origin": "https://drive.google.com",
+      "extensionScriptReferencePresent": true,
+      "offlineIframe": {
+        "origin": "https://docs.google.com",
+        "path": "/offline/iframeapi",
+        "queryParameterNames": ["ouid", "sa"]
+      }
+    }
+  ],
+  "extensionScript": "chrome-extension://ghbmnnjooekpmoecnnnilnnbdlolhkhi/page_embed_script.js",
+  "limitations": [
+    "DOM references do not prove successful initialization, loaded extension code identity, or server synchronization.",
+    "The debugger connector listed only about:blank, not the user's normal Chrome tabs; a separate documented browser connection was used for DOM inspection.",
+    "The browser security policy blocked source-view navigation. No workaround was attempted.",
+    "The hidden iframe DOM was inaccessible through the available inspection interface.",
+    "No extension frame HTML, main script URL, actual handshake, network payload, SW registrations or database contents were captured.",
+    "Local static analysis uses the previously archived 3035349842 public iframe API bundle, not a newly confirmed current-page version."
+  ],
+  "privacy": {
+    "documentIdsRecorded": false,
+    "documentContentsRecorded": false,
+    "accountParameterValuesRecorded": false,
+    "cookiesOrTokensRecorded": false,
+    "harExported": false
+  },
+  "mutations": {
+    "documentsEdited": false,
+    "offlineSettingsChanged": false,
+    "extensionSettingsChanged": false,
+    "networkEmulationChanged": false,
+    "syncOrCleanupMessagesSent": false
+  }
+}

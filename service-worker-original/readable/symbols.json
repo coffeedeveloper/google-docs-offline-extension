@@ -1,0 +1,1530 @@
+[
+  {
+    "archive": "service-worker-original",
+    "file": "docs-offline-root.js",
+    "title": "Docs 通用入口路由",
+    "source": "service-worker-original/formatted/docs-offline-root.js",
+    "sourceSha256": "46bcf6fa11f69b42786a7b15f261697223d534fa54a7889ae94064303cac8609",
+    "readable": "service-worker-original/readable/docs-offline-root.js",
+    "readableSha256": "9cdb055a4ef874a824bbf4ce684fce99f20eda17a5dacee27c405ba6f9f31dcb",
+    "semanticSymbols": [
+      {
+        "original": "OA",
+        "readable": "RootRequestParser",
+        "sourceLine": 15822,
+        "note": "通用入口请求解析器；本地路由与网络策略共享解析结果。",
+        "readableLine": 16041
+      },
+      {
+        "original": "HC",
+        "readable": "LocalEditorRedirectHandler",
+        "sourceLine": 16817,
+        "note": "读取本地文档类型并构造编辑器 302；不能处理时交给后续策略。",
+        "readableLine": 17045
+      },
+      {
+        "original": "IC",
+        "readable": "resolveRootRedirectUrl",
+        "sourceLine": 16840,
+        "note": "区分 /open、创建和产品入口；规范化后未变化则返回 null。",
+        "readableLine": 17071
+      },
+      {
+        "original": "JC",
+        "readable": "resolveEditorUrlFromLocalDocument",
+        "sourceLine": 16879,
+        "note": "本地文档类型决定编辑器；保留 resourcekey、usp、rswr 参数规则。",
+        "readableLine": 17121
+      },
+      {
+        "original": "LC",
+        "readable": "readLocalDocumentForRedirect",
+        "sourceLine": 16909,
+        "note": "通过本地数据库回调取得文档元信息，不请求服务端正文。",
+        "readableLine": 17154
+      },
+      {
+        "original": "KC",
+        "readable": "EDITOR_PATH_BY_TYPE",
+        "sourceLine": 16914,
+        "note": "编译快照中的 kix/ritz/punch/drawing 产品路由表。",
+        "readableLine": 17162
+      },
+      {
+        "original": "NC",
+        "readable": "RootFetchStrategyChain",
+        "sourceLine": 16921,
+        "note": "依次组合本地重定向与网络处理；失败分类沿用原逻辑。",
+        "readableLine": 17172
+      },
+      {
+        "original": "FD",
+        "readable": "rootWorkerServices",
+        "sourceLine": 17579,
+        "note": "根 SW 的最终服务装配；不代表实际注册 scope 已经确认。",
+        "readableLine": 17833
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "OA",
+        "readable": "RootRequestParser"
+      },
+      {
+        "scope": 0,
+        "original": "HC",
+        "readable": "LocalEditorRedirectHandler"
+      },
+      {
+        "scope": 0,
+        "original": "IC",
+        "readable": "resolveRootRedirectUrl"
+      },
+      {
+        "scope": 0,
+        "original": "JC",
+        "readable": "resolveEditorUrlFromLocalDocument"
+      },
+      {
+        "scope": 0,
+        "original": "LC",
+        "readable": "readLocalDocumentForRedirect"
+      },
+      {
+        "scope": 0,
+        "original": "KC",
+        "readable": "EDITOR_PATH_BY_TYPE"
+      },
+      {
+        "scope": 0,
+        "original": "NC",
+        "readable": "RootFetchStrategyChain"
+      },
+      {
+        "scope": 0,
+        "original": "FD",
+        "readable": "rootWorkerServices"
+      },
+      {
+        "scope": 3311,
+        "original": "a",
+        "readable": "editorCatalog"
+      },
+      {
+        "scope": 3311,
+        "original": "c",
+        "readable": "flags"
+      },
+      {
+        "scope": 3316,
+        "original": "a",
+        "readable": "redirectHandler"
+      },
+      {
+        "scope": 3316,
+        "original": "c",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 3319,
+        "original": "a",
+        "readable": "redirectHandler"
+      },
+      {
+        "scope": 3319,
+        "original": "c",
+        "readable": "documentId_2"
+      },
+      {
+        "scope": 3319,
+        "original": "e",
+        "readable": "entrySource"
+      },
+      {
+        "scope": 3322,
+        "original": "a",
+        "readable": "documentId_2"
+      },
+      {
+        "scope": 3322,
+        "original": "c",
+        "readable": "localStore"
+      }
+    ],
+    "sections": [
+      {
+        "name": "root-routing",
+        "from": "HC",
+        "to": "NC",
+        "description": "入口识别、本地文档查找与编辑器跳转",
+        "path": "sections/docs-offline-root/root-routing.js",
+        "completeFileLine": 17045
+      }
+    ]
+  },
+  {
+    "archive": "service-worker-original",
+    "file": "docs-offline-common.js",
+    "title": "Docs 公共离线资源",
+    "source": "service-worker-original/formatted/docs-offline-common.js",
+    "sourceSha256": "8df6cad3d978da15714b27dd5c22af0d329780e270854b867b0db168d3615a89",
+    "readable": "service-worker-original/readable/docs-offline-common.js",
+    "readableSha256": "1b546584ee172f35c4372ffcf2d61a76ac538f9c37d4a58aec1af50297ac0c1a",
+    "semanticSymbols": [
+      {
+        "original": "ED",
+        "readable": "CommonManifestUrlProvider",
+        "sourceLine": 17639,
+        "note": "读取本地用户信息及调试开关，为公共资源清单提供入口。",
+        "readableLine": 17893
+      },
+      {
+        "original": "FD",
+        "readable": "getCommonManifestUrls",
+        "sourceLine": 17652,
+        "note": "为当前账号构造 /offline/common/cachemanifest；无用户时返回空列表。",
+        "readableLine": 17909
+      },
+      {
+        "original": "JD",
+        "readable": "CommonCacheFetchHandler",
+        "sourceLine": 17677,
+        "note": "优先读取公共离线资源；extension/frame 有独立的后处理例外。",
+        "readableLine": 17937
+      },
+      {
+        "original": "KD",
+        "readable": "normalizeCommonCacheKey",
+        "sourceLine": 17697,
+        "note": "仅保留 ND 白名单参数；不能直接删除 ouid 或把账号缓存混用。",
+        "readableLine": 17960
+      },
+      {
+        "original": "ND",
+        "readable": "COMMON_CACHE_QUERY_ALLOWLIST",
+        "sourceLine": 17810,
+        "note": "动作资源缓存键允许保留的查询参数。",
+        "readableLine": 18079
+      },
+      {
+        "original": "LD",
+        "readable": "readCommonCachedResponse",
+        "sourceLine": 17711,
+        "note": "区分未缓存、资源损坏与有效响应，不把任何命中都当成功。",
+        "readableLine": 17977
+      },
+      {
+        "original": "JC",
+        "readable": "ManifestCacheUpdater",
+        "sourceLine": 16814,
+        "note": "准备单个版本缓存；成功写入完整标记后才可被完整版本选择器使用。",
+        "readableLine": 17035
+      },
+      {
+        "original": "KC",
+        "readable": "getManifestCacheName",
+        "sourceLine": 16827,
+        "note": "从缓存类型、构建和清单信息计算目标缓存名。",
+        "readableLine": 17051
+      },
+      {
+        "original": "LC",
+        "readable": "populateAndMarkManifestComplete",
+        "sourceLine": 16859,
+        "note": "先等待 NC 的资源准备链路成功，再写 //manifest_cache_is_complete；不是原生事务。",
+        "readableLine": 17086
+      },
+      {
+        "original": "OC",
+        "readable": "handleManifestUpdateFailure",
+        "sourceLine": 16875,
+        "note": "是否保留旧完整缓存受功能开关和旧状态影响，不是无条件保留。",
+        "readableLine": 17105
+      },
+      {
+        "original": "kD",
+        "readable": "checkCacheUpdateAccount",
+        "sourceLine": 17379,
+        "note": "更新前比对本地账号与启动配置，记录不一致状态。",
+        "readableLine": 17627
+      },
+      {
+        "original": "lD",
+        "readable": "updateManifestBatchAndCleanup",
+        "sourceLine": 17345,
+        "note": "先等待各更新结束，处理版本/资源清理，再传播更新 Promise 的失败。",
+        "readableLine": 17579
+      },
+      {
+        "original": "rD",
+        "readable": "deleteManagedCaches",
+        "sourceLine": 17418,
+        "note": "删除受管理缓存；这是破坏性控制面操作，不应在真实账号中随意调用。",
+        "readableLine": 17669
+      },
+      {
+        "original": "AF",
+        "readable": "registerCacheMessageHandler",
+        "sourceLine": 18648,
+        "note": "按协议类型登记唯一处理器。",
+        "readableLine": 18923
+      },
+      {
+        "original": "BF",
+        "readable": "handleCommonWorkerMessage",
+        "sourceLine": 18654,
+        "note": "验证数组消息和回复端口，将异步处理纳入 waitUntil。",
+        "readableLine": 18932
+      },
+      {
+        "original": "FF",
+        "readable": "dispatchCacheControlRequest",
+        "sourceLine": 18688,
+        "note": "根据固定数字协议派发；不重命名 wire 字段或改变返回结构。",
+        "readableLine": 18973
+      },
+      {
+        "original": "HF",
+        "readable": "CacheUpdateStatusHandler",
+        "sourceLine": 18697,
+        "note": "type 7：查询缓存更新状态。",
+        "readableLine": 18985
+      },
+      {
+        "original": "IF",
+        "readable": "DeleteCachesHandler",
+        "sourceLine": 18712,
+        "note": "type 1：删除缓存，不是普通缓存读取。",
+        "readableLine": 19003
+      },
+      {
+        "original": "JF",
+        "readable": "BuildLabelHandler",
+        "sourceLine": 18722,
+        "note": "type 8：返回当前构建标签。",
+        "readableLine": 19016
+      },
+      {
+        "original": "KF",
+        "readable": "CacheLivenessHandler",
+        "sourceLine": 18737,
+        "note": "type 2：返回存活响应；不证明缓存已完整。",
+        "readableLine": 19034
+      },
+      {
+        "original": "LF",
+        "readable": "UpdateCachesHandler",
+        "sourceLine": 18744,
+        "note": "type 0：触发 cache_only_update 并包装失败。",
+        "readableLine": 19044
+      },
+      {
+        "original": "PF",
+        "readable": "CommonWorkerEventBindings",
+        "sourceLine": 18836,
+        "note": "连接浏览器生命周期、fetch 与 message 事件。",
+        "readableLine": 19139
+      },
+      {
+        "original": "QF",
+        "readable": "commonWorkerServices",
+        "sourceLine": 19075,
+        "note": "最终装配缓存优先与网络兜底策略。",
+        "readableLine": 19390
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "ED",
+        "readable": "CommonManifestUrlProvider"
+      },
+      {
+        "scope": 0,
+        "original": "FD",
+        "readable": "getCommonManifestUrls"
+      },
+      {
+        "scope": 0,
+        "original": "JD",
+        "readable": "CommonCacheFetchHandler"
+      },
+      {
+        "scope": 0,
+        "original": "KD",
+        "readable": "normalizeCommonCacheKey"
+      },
+      {
+        "scope": 0,
+        "original": "ND",
+        "readable": "COMMON_CACHE_QUERY_ALLOWLIST"
+      },
+      {
+        "scope": 0,
+        "original": "LD",
+        "readable": "readCommonCachedResponse"
+      },
+      {
+        "scope": 0,
+        "original": "JC",
+        "readable": "ManifestCacheUpdater"
+      },
+      {
+        "scope": 0,
+        "original": "KC",
+        "readable": "getManifestCacheName"
+      },
+      {
+        "scope": 0,
+        "original": "LC",
+        "readable": "populateAndMarkManifestComplete"
+      },
+      {
+        "scope": 0,
+        "original": "OC",
+        "readable": "handleManifestUpdateFailure"
+      },
+      {
+        "scope": 0,
+        "original": "kD",
+        "readable": "checkCacheUpdateAccount"
+      },
+      {
+        "scope": 0,
+        "original": "lD",
+        "readable": "updateManifestBatchAndCleanup"
+      },
+      {
+        "scope": 0,
+        "original": "rD",
+        "readable": "deleteManagedCaches"
+      },
+      {
+        "scope": 0,
+        "original": "AF",
+        "readable": "registerCacheMessageHandler"
+      },
+      {
+        "scope": 0,
+        "original": "BF",
+        "readable": "handleCommonWorkerMessage"
+      },
+      {
+        "scope": 0,
+        "original": "FF",
+        "readable": "dispatchCacheControlRequest"
+      },
+      {
+        "scope": 0,
+        "original": "HF",
+        "readable": "CacheUpdateStatusHandler"
+      },
+      {
+        "scope": 0,
+        "original": "IF",
+        "readable": "DeleteCachesHandler"
+      },
+      {
+        "scope": 0,
+        "original": "JF",
+        "readable": "BuildLabelHandler"
+      },
+      {
+        "scope": 0,
+        "original": "KF",
+        "readable": "CacheLivenessHandler"
+      },
+      {
+        "scope": 0,
+        "original": "LF",
+        "readable": "UpdateCachesHandler"
+      },
+      {
+        "scope": 0,
+        "original": "PF",
+        "readable": "CommonWorkerEventBindings"
+      },
+      {
+        "scope": 0,
+        "original": "QF",
+        "readable": "commonWorkerServices"
+      },
+      {
+        "scope": 3567,
+        "original": "a",
+        "readable": "manifestProvider"
+      },
+      {
+        "scope": 3576,
+        "original": "a",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 3580,
+        "original": "a",
+        "readable": "cacheHandler"
+      },
+      {
+        "scope": 3580,
+        "original": "c",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 3580,
+        "original": "e",
+        "readable": "cacheKey"
+      },
+      {
+        "scope": 3371,
+        "original": "a",
+        "readable": "manifestUpdater"
+      },
+      {
+        "scope": 3381,
+        "original": "a",
+        "readable": "manifestUpdater"
+      },
+      {
+        "scope": 3381,
+        "original": "c",
+        "readable": "versionCache"
+      },
+      {
+        "scope": 3381,
+        "original": "e",
+        "readable": "previousState"
+      },
+      {
+        "scope": 3384,
+        "original": "a",
+        "readable": "manifestUpdater"
+      },
+      {
+        "scope": 3384,
+        "original": "c",
+        "readable": "updateError"
+      },
+      {
+        "scope": 3384,
+        "original": "e",
+        "readable": "diagnostics"
+      },
+      {
+        "scope": 3488,
+        "original": "a",
+        "readable": "cacheCoordinator"
+      },
+      {
+        "scope": 3488,
+        "original": "c",
+        "readable": "updateState"
+      },
+      {
+        "scope": 3479,
+        "original": "a",
+        "readable": "cacheCoordinator"
+      },
+      {
+        "scope": 3479,
+        "original": "c",
+        "readable": "manifestGroup"
+      },
+      {
+        "scope": 3479,
+        "original": "e",
+        "readable": "manifests"
+      },
+      {
+        "scope": 3479,
+        "original": "f",
+        "readable": "updateState"
+      },
+      {
+        "scope": 3499,
+        "original": "a",
+        "readable": "cacheCoordinator"
+      },
+      {
+        "scope": 3753,
+        "original": "a",
+        "readable": "messageRouter"
+      },
+      {
+        "scope": 3753,
+        "original": "c",
+        "readable": "handler_2"
+      },
+      {
+        "scope": 3754,
+        "original": "a",
+        "readable": "messageRouter"
+      },
+      {
+        "scope": 3754,
+        "original": "c",
+        "readable": "messageEvent"
+      },
+      {
+        "scope": 3761,
+        "original": "a",
+        "readable": "messageRouter"
+      },
+      {
+        "scope": 3761,
+        "original": "c",
+        "readable": "controlRequest"
+      }
+    ],
+    "sections": [
+      {
+        "name": "manifest-update",
+        "from": "JC",
+        "to": "OC",
+        "description": "版本准备、完成标记与失败处理入口",
+        "path": "sections/docs-offline-common/manifest-update.js",
+        "completeFileLine": 17035
+      },
+      {
+        "name": "common-cache-routing",
+        "from": "ED",
+        "to": "LD",
+        "description": "公共清单入口、缓存键与缓存读取",
+        "path": "sections/docs-offline-common/common-cache-routing.js",
+        "completeFileLine": 17893
+      },
+      {
+        "name": "cache-control-messages",
+        "from": "AF",
+        "to": "LF",
+        "description": "更新、删除、存活与版本查询控制面",
+        "path": "sections/docs-offline-common/cache-control-messages.js",
+        "completeFileLine": 18923
+      }
+    ]
+  },
+  {
+    "archive": "service-worker-original",
+    "file": "docs-editor.js",
+    "title": "Docs 编辑器离线启动",
+    "source": "service-worker-original/formatted/docs-editor.js",
+    "sourceSha256": "34dfd37d686b98e7971ec59e6e9ff3a8bef4f70a360c5c8a94ee49773d1927a7",
+    "readable": "service-worker-original/readable/docs-editor.js",
+    "readableSha256": "2ffcc6b0e5fe7ac359cd86a243786a9a846d62d6131461a9ba0cf73d32e17f03",
+    "semanticSymbols": [
+      {
+        "original": "ds",
+        "readable": "initializeOfflineDocumentRecords",
+        "sourceLine": 8807,
+        "note": "离线创建涉及 snapshot、ACL、pendingCreation 与待处理队列；不是全部协同算法。",
+        "readableLine": 8929
+      },
+      {
+        "original": "js",
+        "readable": "consumeReservedDocumentId",
+        "sourceLine": 8895,
+        "note": "消费预留未使用文档 ID，用于离线创建。",
+        "readableLine": 9027
+      },
+      {
+        "original": "yE",
+        "readable": "buildOfflineEditorUrl",
+        "sourceLine": 18086,
+        "note": "构造 edit/view/comment 等离线入口及启动参数；保留原 fragment 编码。",
+        "readableLine": 18337
+      },
+      {
+        "original": "GI",
+        "readable": "createOfflineRedirectResponse",
+        "sourceLine": 20055,
+        "note": "生成离线入口的 302 响应。",
+        "readableLine": 20314
+      },
+      {
+        "original": "lK",
+        "readable": "DelayedLocalFallback",
+        "sourceLine": 20941,
+        "note": "等待窗口与本地准备分离；cancel 不等于中断所有已启动操作。",
+        "readableLine": 21208
+      },
+      {
+        "original": "mK",
+        "readable": "waitForLocalFallbackWindow",
+        "sourceLine": 20977,
+        "note": "保留 4 秒及后续 18 秒分支和弱网检测，不能简单改为固定 timeout。",
+        "readableLine": 21253
+      },
+      {
+        "original": "nK",
+        "readable": "prepareDelayedLocalFallback",
+        "sourceLine": 20959,
+        "note": "按请求模式和开关决定是否提前准备本地响应。",
+        "readableLine": 21229
+      },
+      {
+        "original": "oK",
+        "readable": "getDelayedLocalFallback",
+        "sourceLine": 20964,
+        "note": "先检查取消状态；必要时创建并复用本地启动 Promise。",
+        "readableLine": 21237
+      },
+      {
+        "original": "tK",
+        "readable": "NetworkLocalRaceHandler",
+        "sourceLine": 20999,
+        "note": "网络与延迟本地分支竞争；最终仍检查结果是否可用。",
+        "readableLine": 21278
+      },
+      {
+        "original": "JK",
+        "readable": "createDocumentForOfflineLaunch",
+        "sourceLine": 21236,
+        "note": "创建分支取得文档信息后复用离线启动校验。",
+        "readableLine": 21522
+      },
+      {
+        "original": "KK",
+        "readable": "readDocumentForOfflineLaunch",
+        "sourceLine": 21252,
+        "note": "先读本地文档，再检查可启动的应用资源。",
+        "readableLine": 21541
+      },
+      {
+        "original": "QK",
+        "readable": "validateDocumentAndCachedShell",
+        "sourceLine": 21262,
+        "note": "拒绝 modelNeedsResync、缓存需更新等状态；shell 存在不等于文档可用。",
+        "readableLine": 21554
+      },
+      {
+        "original": "NK",
+        "readable": "findPrimaryOrAlternateShell",
+        "sourceLine": 21282,
+        "note": "按原顺序查两个入口候选，不并行改变优先级。",
+        "readableLine": 21591
+      },
+      {
+        "original": "XK",
+        "readable": "EditorNetworkFetchHandler",
+        "sourceLine": 21406,
+        "note": "先等待 navigation preload，再尝试网络；保留服务器状态和离线兜底条件。",
+        "readableLine": 21722
+      },
+      {
+        "original": "YK",
+        "readable": "classifyEditorNetworkResponse",
+        "sourceLine": 21448,
+        "note": "包装成功响应，区分 404/410、指定服务端错误及服务器建议兜底；不能一律改为本地成功。",
+        "readableLine": 21768
+      },
+      {
+        "original": "dL",
+        "readable": "buildEditorStaticRoutes",
+        "sourceLine": 21499,
+        "note": "受开关与浏览器能力约束的静态路由优化，不是离线成立的唯一前提。",
+        "readableLine": 21824
+      },
+      {
+        "original": "kL",
+        "readable": "handleEditorFetchEvent",
+        "sourceLine": 21630,
+        "note": "只处理匹配的 GET；区分禁用资源、动作入口、离线导航和普通资源。",
+        "readableLine": 21959
+      },
+      {
+        "original": "oL",
+        "readable": "chooseEditorActionStrategy",
+        "sourceLine": 21670,
+        "note": "依据请求模式、开关和客户端状态选择缓存/网络/竞争策略。",
+        "readableLine": 22004
+      },
+      {
+        "original": "nL",
+        "readable": "chooseOfflineNavigationStrategy",
+        "sourceLine": 21700,
+        "note": "已有离线入口仍需区分在线可恢复路径与本地状态。",
+        "readableLine": 22044
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "ds",
+        "readable": "initializeOfflineDocumentRecords"
+      },
+      {
+        "scope": 0,
+        "original": "js",
+        "readable": "consumeReservedDocumentId"
+      },
+      {
+        "scope": 0,
+        "original": "yE",
+        "readable": "buildOfflineEditorUrl"
+      },
+      {
+        "scope": 0,
+        "original": "GI",
+        "readable": "createOfflineRedirectResponse"
+      },
+      {
+        "scope": 0,
+        "original": "lK",
+        "readable": "DelayedLocalFallback"
+      },
+      {
+        "scope": 0,
+        "original": "mK",
+        "readable": "waitForLocalFallbackWindow"
+      },
+      {
+        "scope": 0,
+        "original": "nK",
+        "readable": "prepareDelayedLocalFallback"
+      },
+      {
+        "scope": 0,
+        "original": "oK",
+        "readable": "getDelayedLocalFallback"
+      },
+      {
+        "scope": 0,
+        "original": "tK",
+        "readable": "NetworkLocalRaceHandler"
+      },
+      {
+        "scope": 0,
+        "original": "JK",
+        "readable": "createDocumentForOfflineLaunch"
+      },
+      {
+        "scope": 0,
+        "original": "KK",
+        "readable": "readDocumentForOfflineLaunch"
+      },
+      {
+        "scope": 0,
+        "original": "QK",
+        "readable": "validateDocumentAndCachedShell"
+      },
+      {
+        "scope": 0,
+        "original": "NK",
+        "readable": "findPrimaryOrAlternateShell"
+      },
+      {
+        "scope": 0,
+        "original": "XK",
+        "readable": "EditorNetworkFetchHandler"
+      },
+      {
+        "scope": 0,
+        "original": "YK",
+        "readable": "classifyEditorNetworkResponse"
+      },
+      {
+        "scope": 0,
+        "original": "dL",
+        "readable": "buildEditorStaticRoutes"
+      },
+      {
+        "scope": 0,
+        "original": "kL",
+        "readable": "handleEditorFetchEvent"
+      },
+      {
+        "scope": 0,
+        "original": "oL",
+        "readable": "chooseEditorActionStrategy"
+      },
+      {
+        "scope": 0,
+        "original": "nL",
+        "readable": "chooseOfflineNavigationStrategy"
+      },
+      {
+        "scope": 4012,
+        "original": "a",
+        "readable": "offlineUrl"
+      },
+      {
+        "scope": 4171,
+        "original": "a",
+        "readable": "logger"
+      },
+      {
+        "scope": 4171,
+        "original": "c",
+        "readable": "localHandler"
+      },
+      {
+        "scope": 4171,
+        "original": "e",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 4171,
+        "original": "f",
+        "readable": "flags"
+      },
+      {
+        "scope": 4179,
+        "original": "a",
+        "readable": "fallback"
+      },
+      {
+        "scope": 4175,
+        "original": "a",
+        "readable": "fallback"
+      },
+      {
+        "scope": 4176,
+        "original": "a",
+        "readable": "fallback"
+      },
+      {
+        "scope": 4226,
+        "original": "a",
+        "readable": "launchHandler"
+      },
+      {
+        "scope": 4226,
+        "original": "c",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 4226,
+        "original": "e",
+        "readable": "userInfo"
+      },
+      {
+        "scope": 4226,
+        "original": "f",
+        "readable": "actionInfo"
+      },
+      {
+        "scope": 4226,
+        "original": "g",
+        "readable": "appInfo"
+      },
+      {
+        "scope": 4226,
+        "original": "h",
+        "readable": "documentRecord"
+      },
+      {
+        "scope": 4226,
+        "original": "k",
+        "readable": "variant"
+      },
+      {
+        "scope": 4229,
+        "original": "a",
+        "readable": "launchHandler"
+      },
+      {
+        "scope": 4229,
+        "original": "c",
+        "readable": "primaryUrl"
+      },
+      {
+        "scope": 4229,
+        "original": "e",
+        "readable": "alternateUrl"
+      },
+      {
+        "scope": 4255,
+        "original": "a",
+        "readable": "networkHandler"
+      },
+      {
+        "scope": 4255,
+        "original": "c",
+        "readable": "logger"
+      },
+      {
+        "scope": 4255,
+        "original": "e",
+        "readable": "flags"
+      },
+      {
+        "scope": 4261,
+        "original": "a",
+        "readable": "networkHandler"
+      },
+      {
+        "scope": 4261,
+        "original": "c",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 4261,
+        "original": "e",
+        "readable": "networkResponse"
+      },
+      {
+        "scope": 4299,
+        "original": "a",
+        "readable": "workerController"
+      },
+      {
+        "scope": 4299,
+        "original": "c",
+        "readable": "fetchEvent"
+      },
+      {
+        "scope": 4304,
+        "original": "a",
+        "readable": "workerController"
+      },
+      {
+        "scope": 4304,
+        "original": "c",
+        "readable": "requestContext_2"
+      },
+      {
+        "scope": 4304,
+        "original": "e",
+        "readable": "actionInfo"
+      },
+      {
+        "scope": 4309,
+        "original": "a",
+        "readable": "workerController"
+      },
+      {
+        "scope": 4309,
+        "original": "c",
+        "readable": "requestContext_2"
+      }
+    ],
+    "sections": [
+      {
+        "name": "network-local-race",
+        "from": "lK",
+        "to": "tK",
+        "description": "延迟本地兜底与网络竞争",
+        "path": "sections/docs-editor/network-local-race.js",
+        "completeFileLine": 21208
+      },
+      {
+        "name": "document-launch",
+        "from": "JK",
+        "to": "NK",
+        "description": "文档读取、模型状态与应用 shell 校验",
+        "path": "sections/docs-editor/document-launch.js",
+        "completeFileLine": 21522
+      },
+      {
+        "name": "editor-fetch-routing",
+        "from": "kL",
+        "to": "nL",
+        "description": "fetch 入口和策略选择",
+        "path": "sections/docs-editor/editor-fetch-routing.js",
+        "completeFileLine": 21959
+      }
+    ]
+  },
+  {
+    "archive": "service-worker-original",
+    "file": "drive-main.js",
+    "title": "Drive 列表页冷启动",
+    "source": "service-worker-original/formatted/drive-main.js",
+    "sourceSha256": "c5755b1b620d8428e2719035ba607582c9fa260421c8aa41c551581307ea2c2b",
+    "readable": "service-worker-original/readable/drive-main.js",
+    "readableSha256": "c2578771829da81d220e334771baf55c32c9aa4b59ccfde1f3e8c6b5405e16e7",
+    "semanticSymbols": [
+      {
+        "original": "Oo",
+        "readable": "CacheFetchService",
+        "sourceLine": 10834,
+        "note": "浏览器缓存策略适配器：安装准备、读取和清理委托给配置服务。",
+        "readableLine": 10951
+      },
+      {
+        "original": "Wo",
+        "readable": "DriveCacheConfig",
+        "sourceLine": 10918,
+        "note": "版本缓存名、预缓存组和资源匹配配置。",
+        "readableLine": 11038
+      },
+      {
+        "original": "Po",
+        "readable": "precacheResourceGroup",
+        "sourceLine": 10999,
+        "note": "保留 failFast、alwaysFetch、resolveImmediately 等每资源选项。",
+        "readableLine": 11122
+      },
+      {
+        "original": "or",
+        "readable": "ModuleSetFetchService",
+        "sourceLine": 12785,
+        "note": "读取模块版本并组装响应；不是文档正文缓存。",
+        "readableLine": 12922
+      },
+      {
+        "original": "hr",
+        "readable": "assembleCachedModuleResponse",
+        "sourceLine": 12520,
+        "note": "根据请求模块集合重组资源响应，保留模块协议顺序。",
+        "readableLine": 12653
+      },
+      {
+        "original": "ur",
+        "readable": "NavigationPreloadFetchService",
+        "sourceLine": 13009,
+        "note": "尝试浏览器 navigation preload 的响应。",
+        "readableLine": 13149
+      },
+      {
+        "original": "wr",
+        "readable": "NetworkFetchService",
+        "sourceLine": 13095,
+        "note": "普通网络请求处理器。",
+        "readableLine": 13238
+      },
+      {
+        "original": "xr",
+        "readable": "OrderedFetchServiceChain",
+        "sourceLine": 13127,
+        "note": "按顺序尝试适用的 fetch service；并非无条件执行全部处理器。",
+        "readableLine": 13273
+      },
+      {
+        "original": "zr",
+        "readable": "DriveWorkerController",
+        "sourceLine": 13148,
+        "note": "协调 install/activate/fetch 生命周期及处理器链。",
+        "readableLine": 13297
+      },
+      {
+        "original": "Kr",
+        "readable": "DriveListRouteMatcher",
+        "sourceLine": 13612,
+        "note": "保存允许离线 coldstart 的列表路由。",
+        "readableLine": 13771
+      },
+      {
+        "original": "Lr",
+        "readable": "matchesDriveListRoute",
+        "sourceLine": 13612,
+        "note": "归一化 /drive/u/{n}/ 与 mobile 前缀后匹配路由；第二参数按原实现复用为路径数组和路由段。",
+        "readableLine": 13771
+      },
+      {
+        "original": "Mr",
+        "readable": "DriveColdstartCacheConfig",
+        "sourceLine": 13626,
+        "note": "将多个列表入口映射到同账号的 coldstart 缓存键。",
+        "readableLine": 13791
+      },
+      {
+        "original": "Nr",
+        "readable": "getCriticalDriveBootRequests",
+        "sourceLine": 13648,
+        "note": "coldstart 与可选 cacheproxy 作为关键准备请求。",
+        "readableLine": 13816
+      },
+      {
+        "original": "Or",
+        "readable": "getDriveCacheProxyRequest",
+        "sourceLine": 13663,
+        "note": "为当前账号构造 cacheproxy 请求。",
+        "readableLine": 13844
+      },
+      {
+        "original": "Pr",
+        "readable": "matchesDriveCacheProxyRequest",
+        "sourceLine": 13663,
+        "note": "仅在配置允许时识别 cacheproxy 路径。",
+        "readableLine": 13844
+      },
+      {
+        "original": "Rr",
+        "readable": "DriveMainWorker",
+        "sourceLine": 13669,
+        "note": "主 SW 控制器，使用列表应用的策略装配。",
+        "readableLine": 13855
+      },
+      {
+        "original": "Qr",
+        "readable": "createDriveMainFetchChain",
+        "sourceLine": 13675,
+        "note": "preload → network → module set → cache；顺序不能随意调整。",
+        "readableLine": 13864
+      },
+      {
+        "original": "Sr",
+        "readable": "startDriveMainWorker",
+        "sourceLine": 13697,
+        "note": "读取 __initData，初始化日志、配置与浏览器事件绑定。",
+        "readableLine": 13894
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "Oo",
+        "readable": "CacheFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "Wo",
+        "readable": "DriveCacheConfig"
+      },
+      {
+        "scope": 0,
+        "original": "Po",
+        "readable": "precacheResourceGroup"
+      },
+      {
+        "scope": 0,
+        "original": "or",
+        "readable": "ModuleSetFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "hr",
+        "readable": "assembleCachedModuleResponse"
+      },
+      {
+        "scope": 0,
+        "original": "ur",
+        "readable": "NavigationPreloadFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "wr",
+        "readable": "NetworkFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "xr",
+        "readable": "OrderedFetchServiceChain"
+      },
+      {
+        "scope": 0,
+        "original": "zr",
+        "readable": "DriveWorkerController"
+      },
+      {
+        "scope": 0,
+        "original": "Kr",
+        "readable": "DriveListRouteMatcher"
+      },
+      {
+        "scope": 0,
+        "original": "Lr",
+        "readable": "matchesDriveListRoute"
+      },
+      {
+        "scope": 0,
+        "original": "Mr",
+        "readable": "DriveColdstartCacheConfig"
+      },
+      {
+        "scope": 0,
+        "original": "Nr",
+        "readable": "getCriticalDriveBootRequests"
+      },
+      {
+        "scope": 0,
+        "original": "Or",
+        "readable": "getDriveCacheProxyRequest"
+      },
+      {
+        "scope": 0,
+        "original": "Pr",
+        "readable": "matchesDriveCacheProxyRequest"
+      },
+      {
+        "scope": 0,
+        "original": "Rr",
+        "readable": "DriveMainWorker"
+      },
+      {
+        "scope": 0,
+        "original": "Qr",
+        "readable": "createDriveMainFetchChain"
+      },
+      {
+        "scope": 0,
+        "original": "Sr",
+        "readable": "startDriveMainWorker"
+      },
+      {
+        "scope": 1973,
+        "original": "a",
+        "readable": "cacheConfig"
+      },
+      {
+        "scope": 2563,
+        "original": "a",
+        "readable": "allowedRoutes"
+      },
+      {
+        "scope": 2564,
+        "original": "a",
+        "readable": "routeMatcher"
+      },
+      {
+        "scope": 2564,
+        "original": "b",
+        "readable": "urlOrRouteParts"
+      },
+      {
+        "scope": 2564,
+        "original": "c",
+        "readable": "driveSegmentIndex"
+      },
+      {
+        "scope": 2569,
+        "original": "a",
+        "readable": "coldstartConfig"
+      },
+      {
+        "scope": 2573,
+        "original": "a",
+        "readable": "coldstartConfig"
+      },
+      {
+        "scope": 2574,
+        "original": "a",
+        "readable": "coldstartConfig"
+      },
+      {
+        "scope": 2574,
+        "original": "b",
+        "readable": "request_2"
+      },
+      {
+        "scope": 2576,
+        "original": "a",
+        "readable": "logger"
+      },
+      {
+        "scope": 2576,
+        "original": "b",
+        "readable": "coldstartConfig"
+      },
+      {
+        "scope": 2576,
+        "original": "c",
+        "readable": "moduleConfig"
+      }
+    ],
+    "sections": [
+      {
+        "name": "drive-coldstart",
+        "from": "Kr",
+        "to": "Qr",
+        "description": "列表路由、coldstart/cacheproxy 与策略装配",
+        "path": "sections/drive-main/drive-coldstart.js",
+        "completeFileLine": 13771
+      },
+      {
+        "name": "drive-cache-service",
+        "from": "Oo",
+        "to": "Wo",
+        "description": "CacheFetchService 的资源准备与读取接口",
+        "path": "sections/drive-main/drive-cache-service.js",
+        "completeFileLine": 10951
+      }
+    ]
+  },
+  {
+    "archive": "service-worker-original",
+    "file": "drive-root.js",
+    "title": "Drive 根入口兜底",
+    "source": "service-worker-original/formatted/drive-root.js",
+    "sourceSha256": "7e3a9b8628202a8957c597c28c5f44cfe5c1c7cf73da42726bec38a3878008b3",
+    "readable": "service-worker-original/readable/drive-root.js",
+    "readableSha256": "254da814e5e02c2ed00fb5e737ec19fda0dedb5f27df32917a7b8cbb8c58f835",
+    "semanticSymbols": [
+      {
+        "original": "Ep",
+        "readable": "RootRedirectFetchService",
+        "sourceLine": 11836,
+        "note": "仅匹配 GET / 或 /drive，按配置生成重定向。",
+        "readableLine": 11958
+      },
+      {
+        "original": "Fp",
+        "readable": "DriveRootWorker",
+        "sourceLine": 11876,
+        "note": "根入口装配：preload → network → cache → redirect。",
+        "readableLine": 12001
+      },
+      {
+        "original": "Gp",
+        "readable": "startDriveRootWorker",
+        "sourceLine": 11903,
+        "note": "读取根 SW 启动配置并注册控制器。",
+        "readableLine": 12036
+      },
+      {
+        "original": "pp",
+        "readable": "NavigationPreloadFetchService",
+        "sourceLine": 11272,
+        "note": "根 SW 的 preload 处理器，与主 SW 属于不同编译快照。",
+        "readableLine": 11381
+      },
+      {
+        "original": "qp",
+        "readable": "NetworkFetchService",
+        "sourceLine": 11322,
+        "note": "网络兜底处理器。",
+        "readableLine": 11434
+      },
+      {
+        "original": "sn",
+        "readable": "CacheFetchService",
+        "sourceLine": 10071,
+        "note": "使用根 SW 配置管理和读取资源缓存。",
+        "readableLine": 10173
+      },
+      {
+        "original": "rp",
+        "readable": "OrderedFetchServiceChain",
+        "sourceLine": 11358,
+        "note": "保持各处理器顺序以及请求不适用的跳过规则。",
+        "readableLine": 11473
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "Ep",
+        "readable": "RootRedirectFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "Fp",
+        "readable": "DriveRootWorker"
+      },
+      {
+        "scope": 0,
+        "original": "Gp",
+        "readable": "startDriveRootWorker"
+      },
+      {
+        "scope": 0,
+        "original": "pp",
+        "readable": "NavigationPreloadFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "qp",
+        "readable": "NetworkFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "sn",
+        "readable": "CacheFetchService"
+      },
+      {
+        "scope": 0,
+        "original": "rp",
+        "readable": "OrderedFetchServiceChain"
+      },
+      {
+        "scope": 2155,
+        "original": "a",
+        "readable": "redirectPath"
+      }
+    ],
+    "sections": [
+      {
+        "name": "drive-root-routing",
+        "from": "Ep",
+        "to": "Fp",
+        "description": "根路径重定向与策略链",
+        "path": "sections/drive-root/drive-root-routing.js",
+        "completeFileLine": 11958
+      }
+    ]
+  },
+  {
+    "archive": "service-worker-original",
+    "file": "drive-cache-proxy.js",
+    "title": "Drive cache-proxy 启动边界",
+    "source": "service-worker-original/formatted/drive-cache-proxy.js",
+    "sourceSha256": "0a4a250142bbea1d52b411d943238499223753ebf2d1fbd4e0e1021b4c85a0b3",
+    "readable": "service-worker-original/readable/drive-cache-proxy.js",
+    "readableSha256": "21a7b1a76d72548f018d5c7c25f74a71f31c8050fc96da205909bd0b79e11209",
+    "semanticSymbols": [
+      {
+        "original": "hNa",
+        "readable": "startEmbeddedCacheProxy",
+        "sourceLine": 64792,
+        "note": "仅在嵌入页中启动；握手后优先 SharedWorker，否则 Worker，并连接消息桥。具体数据事务仍待研究。",
+        "readableLine": 65366
+      },
+      {
+        "original": "zha",
+        "readable": "initializeDedicatedDataWorker",
+        "sourceLine": 49,
+        "note": "专用 Worker 的服务初始化链；保留原 await 顺序。",
+        "readableLine": 61
+      },
+      {
+        "original": "Aha",
+        "readable": "initializeSharedDataWorker",
+        "sourceLine": 49,
+        "note": "监听 connect，为每个端口装配数据服务会话。",
+        "readableLine": 61
+      },
+      {
+        "original": "tza",
+        "readable": "isDedicatedWorkerContext",
+        "sourceLine": 43651,
+        "note": "检测 DedicatedWorkerGlobalScope。",
+        "readableLine": 44019
+      },
+      {
+        "original": "uza",
+        "readable": "isSharedWorkerContext",
+        "sourceLine": 43651,
+        "note": "检测 SharedWorkerGlobalScope。",
+        "readableLine": 44019
+      }
+    ],
+    "bindings": [
+      {
+        "scope": 0,
+        "original": "hNa",
+        "readable": "startEmbeddedCacheProxy"
+      },
+      {
+        "scope": 0,
+        "original": "zha",
+        "readable": "initializeDedicatedDataWorker"
+      },
+      {
+        "scope": 0,
+        "original": "Aha",
+        "readable": "initializeSharedDataWorker"
+      },
+      {
+        "scope": 0,
+        "original": "tza",
+        "readable": "isDedicatedWorkerContext"
+      },
+      {
+        "scope": 0,
+        "original": "uza",
+        "readable": "isSharedWorkerContext"
+      }
+    ],
+    "sections": [
+      {
+        "name": "cache-proxy-bootstrap",
+        "from": "hNa",
+        "to": "hNa",
+        "description": "嵌入页握手与 SharedWorker/Worker 选择；不声称还原全部数据层",
+        "path": "sections/drive-cache-proxy/cache-proxy-bootstrap.js",
+        "completeFileLine": 65366
+      }
+    ]
+  }
+]

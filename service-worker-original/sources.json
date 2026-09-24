@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "archivedAt": "2026-09-23T15:54:30.717Z",
+  "acquisition": "Versioned URLs referenced by user-supplied bootstrap samples; previously downloaded anonymously during investigation. No exact fetch timestamps recorded.",
+  "scope": "Five direct importScripts implementations and one configured precache resource; not a recursive offline mirror.",
+  "formatting": {
+    "tool": "prettier",
+    "version": "3.6.2",
+    "options": {
+      "parser": "babel",
+      "printWidth": 100
+    },
+    "semanticReconstruction": false
+  },
+  "bootstrapSamples": [
+    {
+      "path": "docs.google.com-document-offline-serviceworker.js",
+      "bytes": 2158,
+      "sha256": "d0834ad83dbfd94f6ccd180ce7cad3cbb7f41aeca9804d7fa9ea7e9b3f32155c",
+      "sanitized": true,
+      "privacyReviewed": true
+    },
+    {
+      "path": "docs.google.com-offline-common-serviceworker.js",
+      "bytes": 2187,
+      "sha256": "822ea15f4855fb502783d1918e3ac1fd56efb8b6d19c4c95a989ba72e344ecba",
+      "sanitized": true,
+      "privacyReviewed": true
+    },
+    {
+      "path": "docs.google.com-offline-root-serviceworker.js",
+      "bytes": 2078,
+      "sha256": "296b954025c38bed98a1302d1f63ec66a2a450aba7cd9b5b1fb255ed12a88e70",
+      "sanitized": true,
+      "privacyReviewed": true
+    },
+    {
+      "path": "drive.google.com-drive-serviceworker.js",
+      "bytes": 50356,
+      "sha256": "233869bff69b5ed1a88249bea1a066fc267b7f522240145e489a4579dcb061c1",
+      "sanitized": true,
+      "privacyReviewed": true
+    },
+    {
+      "path": "drive.google.com-drive-serviceworker_root.js",
+      "bytes": 1054,
+      "sha256": "6ecaba80a176a0e3942acdab731db2d6305954d0662f6f481e5a767ce422be17",
+      "sanitized": false,
+      "privacyReviewed": true
+    }
+  ],
+  "dependencies": [
+    {
+      "sourceUrl": "https://docs.google.com/static/document/client/js/2310535949-editor_sw_bin_editor_main.js",
+      "referencedBy": "docs.google.com-document-offline-serviceworker.js",
+      "relationship": "importScripts",
+      "original": {
+        "path": "dependencies/docs-editor.js",
+        "bytes": 375803,
+        "sha256": "55c4dee9483239a0dacb132599089790412f90c4faec48e810113a0eb3ff1c9c"
+      },
+      "formatted": {
+        "path": "formatted/docs-editor.js",
+        "bytes": 537591,
+        "sha256": "34dfd37d686b98e7971ec59e6e9ff3a8bef4f70a360c5c8a94ee49773d1927a7"
+      }
+    },
+    {
+      "sourceUrl": "https://docs.google.com/static/offline/client/js/966673862-offline_sw_bin_offline_main.js",
+      "referencedBy": "docs.google.com-offline-common-serviceworker.js",
+      "relationship": "importScripts",
+      "original": {
+        "path": "dependencies/docs-offline-common.js",
+        "bytes": 312943,
+        "sha256": "fa3ebc04c540041b17090208257136e5c4d0b909aa9ec827b5caee9caddd2b4d"
+      },
+      "formatted": {
+        "path": "formatted/docs-offline-common.js",
+        "bytes": 447410,
+        "sha256": "8df6cad3d978da15714b27dd5c22af0d329780e270854b867b0db168d3615a89"
+      }
+    },
+    {
+      "sourceUrl": "https://docs.google.com/static/offline/client/js/770658337-root_sw_bin_root_main.js",
+      "referencedBy": "docs.google.com-offline-root-serviceworker.js",
+      "relationship": "importScripts",
+      "original": {
+        "path": "dependencies/docs-offline-root.js",
+        "bytes": 289803,
+        "sha256": "61513b62047582c91d75dceeae9c23baf8d8b4ee9d09c36807bf111609818649"
+      },
+      "formatted": {
+        "path": "formatted/docs-offline-root.js",
+        "bytes": 412663,
+        "sha256": "46bcf6fa11f69b42786a7b15f261697223d534fa54a7889ae94064303cac8609"
+      }
+    },
+    {
+      "sourceUrl": "https://drive.google.com/_/drive_fe/_/js/k=drive_fe.serviceworker_mainpage.en.U-7PLsXrvYw.2021.O/am=CIAAAw/d=1/rs=AFB8gswl2BibTjMLZB1vSXtC4iAzmX9gXA/m=core",
+      "referencedBy": "drive.google.com-drive-serviceworker.js",
+      "relationship": "importScripts",
+      "original": {
+        "path": "dependencies/drive-main.js",
+        "bytes": 210125,
+        "sha256": "48318045742747b1dd87a07ed1b87ee80ae3e2e18204b6d83092f89de965bff6"
+      },
+      "formatted": {
+        "path": "formatted/drive-main.js",
+        "bytes": 345079,
+        "sha256": "c5755b1b620d8428e2719035ba607582c9fa260421c8aa41c551581307ea2c2b"
+      }
+    },
+    {
+      "sourceUrl": "https://drive.google.com/_/drive_fe/_/js/k=drive_fe.serviceworker_root.en.lIE44OKTnOo.2021.O/am=BECAAQ/d=1/rs=AFB8gsx8Vc22FySAkOEsV78sVKV-uwd19w/m=core",
+      "referencedBy": "drive.google.com-drive-serviceworker_root.js",
+      "relationship": "importScripts",
+      "original": {
+        "path": "dependencies/drive-root.js",
+        "bytes": 180359,
+        "sha256": "ed57dd1f08cc793f38148329423e8438e3ff5e869d521d563fcc2941ef081152"
+      },
+      "formatted": {
+        "path": "formatted/drive-root.js",
+        "bytes": 295120,
+        "sha256": "7e3a9b8628202a8957c597c28c5f44cfe5c1c7cf73da42726bec38a3878008b3"
+      }
+    },
+    {
+      "sourceUrl": "https://drive.google.com/_/drive_fe/_/js/k=drive_fe.cacheproxy.en.Hkp-TMScpIk.2021.O/am=BECAAQ/d=1/rs=AFB8gszAzoJcB-s4XFpO-cbkyIdNyeW7Ew/m=core?",
+      "referencedBy": "drive.google.com-drive-serviceworker_root.js",
+      "relationship": "precache-resource",
+      "original": {
+        "path": "dependencies/drive-cache-proxy.js",
+        "bytes": 1137500,
+        "sha256": "409c9f7574379556fde9ed964ee49de0cbf79be7c4fa53229424d7c6dc32d2d4"
+      },
+      "formatted": {
+        "path": "formatted/drive-cache-proxy.js",
+        "bytes": 2547431,
+        "sha256": "0a4a250142bbea1d52b411d943238499223753ebf2d1fbd4e0e1021b4c85a0b3"
+      }
+    }
+  ],
+  "privacy": {
+    "sanitizedAt": "2026-09-24T01:58:07.631Z",
+    "scope": "User-provided bootstrap samples. Personalized account identifiers, emails and avatars replaced; technical configuration and public bundle URLs retained.",
+    "hashesDescribe": "Current sanitized bootstrap bytes; unchanged public dependency bytes.",
+    "originalPersonalizedCopiesRetainedInRepository": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "verifiedAt": "2026-09-24T01:58:07.631Z",
+  "scope": "Untracked research files and added lines in tracked files relative to HEAD; no Git history audit.",
+  "reviewedBootstrapSamples": 6,
+  "samplesWithPersonalFieldsReplaced": 5,
+  "unchangedPublicBundleFiles": 14,
+  "parsedJavaScriptFiles": 19,
+  "parsedHtmlScriptBlocks": 5,
+  "verifiedFileHashes": 20,
+  "reproducibleFormattingPairs": 7,
+  "normalizedAstEqualPairs": 7,
+  "personalFieldAssertionsPassed": true,
+  "safeFrameConfigurationPreserved": true,
+  "checkedLocalLinks": 168,
+  "privacyPatternScanPassed": true,
+  "publicLibraryAuthorNoticesPreserved": 14,
+  "originalPrivateValuesRecorded": false,
+  "runtimeExecuted": false,
+  "browserRegression": false
+}

@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "generationCommand": "pnpm research:generate",
+  "verificationCommand": "pnpm research:check",
+  "scope": "Pinned public research bundles only; no HTML, account config or extension/demo runtime changes.",
+  "completeBundles": 7,
+  "semanticSymbols": 122,
+  "renamedBindings": 291,
+  "readingSections": 17,
+  "lexicalBindingNormalizedAstEqual": true,
+  "originalArchiveHashesVerified": true,
+  "reproducible": true,
+  "propertiesAndWireLiteralsUnchanged": true,
+  "runtimeEquivalenceClaimed": false,
+  "fullGoogleRuntimeExecuted": false,
+  "files": [
+    {
+      "path": "service-worker-original/readable/docs-offline-root.js",
+      "sha256": "9cdb055a4ef874a824bbf4ce684fce99f20eda17a5dacee27c405ba6f9f31dcb",
+      "bytes": 418299
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-offline-root/root-routing.js",
+      "sha256": "ea43b6b95949cb064529c2d37d412dab53370b1b07e9d9d13d3d5292fd7d2de3",
+      "bytes": 6167
+    },
+    {
+      "path": "service-worker-original/readable/docs-offline-common.js",
+      "sha256": "1b546584ee172f35c4372ffcf2d61a76ac538f9c37d4a58aec1af50297ac0c1a",
+      "bytes": 456809
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-offline-common/manifest-update.js",
+      "sha256": "607d17171b77f70a2cc0dd7b3f16d7d323a3b5a3d05adfc4ecff60305e59dbcc",
+      "bytes": 3739
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-offline-common/common-cache-routing.js",
+      "sha256": "0416b29a96d0f8d4f5ee7fad851996fcf8901f05ab3bf9242562f11641dc8103",
+      "bytes": 4013
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-offline-common/cache-control-messages.js",
+      "sha256": "98c34000230db6ff468f93874d5761140b8269aa9d713ff3a567cef5b53a91d8",
+      "bytes": 5121
+    },
+    {
+      "path": "service-worker-original/readable/docs-editor.js",
+      "sha256": "2ffcc6b0e5fe7ac359cd86a243786a9a846d62d6131461a9ba0cf73d32e17f03",
+      "bytes": 547300
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-editor/network-local-race.js",
+      "sha256": "5ef1be333026605570e47daaebf819a9a0c87f364ef2e6c68fd3dd76fc3f672d",
+      "bytes": 3833
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-editor/document-launch.js",
+      "sha256": "af237e8e50f8b20d1b1ba6a8ae9a975236bca2bada54a5b15cbe285a4afef544",
+      "bytes": 3083
+    },
+    {
+      "path": "service-worker-original/readable/sections/docs-editor/editor-fetch-routing.js",
+      "sha256": "a2afacfe767888aa2ae6d831952922b22f44533c674b91244a2cce2e4ea58ce0",
+      "bytes": 3866
+    },
+    {
+      "path": "service-worker-original/readable/drive-main.js",
+      "sha256": "c2578771829da81d220e334771baf55c32c9aa4b59ccfde1f3e8c6b5405e16e7",
+      "bytes": 351838
+    },
+    {
+      "path": "service-worker-original/readable/sections/drive-main/drive-coldstart.js",
+      "sha256": "cd77d5124b0c9b2dd4b003f5e6381cd3356bb3bd33cd3b0f39d74d090e9a3f9b",
+      "bytes": 5336
+    },
+    {
+      "path": "service-worker-original/readable/sections/drive-main/drive-cache-service.js",
+      "sha256": "ac35765f430c70d051b34bf26d30fd1876ddaabfaa3fa1a8fcbe22650eb7ba66",
+      "bytes": 3791
+    },
+    {
+      "path": "service-worker-original/readable/drive-root.js",
+      "sha256": "254da814e5e02c2ed00fb5e737ec19fda0dedb5f27df32917a7b8cbb8c58f835",
+      "bytes": 298640
+    },
+    {
+      "path": "service-worker-original/readable/sections/drive-root/drive-root-routing.js",
+      "sha256": "6d4e846ea7988608724f843ba23440dde392d52e46ae7eeb98ddb446d04df5a3",
+      "bytes": 2212
+    },
+    {
+      "path": "service-worker-original/readable/drive-cache-proxy.js",
+      "sha256": "21a7b1a76d72548f018d5c7c25f74a71f31c8050fc96da205909bd0b79e11209",
+      "bytes": 2559537
+    },
+    {
+      "path": "service-worker-original/readable/sections/drive-cache-proxy/cache-proxy-bootstrap.js",
+      "sha256": "1154960f4795c056576c120c2e05e2c132e41511f12b1a2ca0252423a716c0ec",
+      "bytes": 1975
+    },
+    {
+      "path": "offscreen-original/readable/912208950-frame_bin.js",
+      "sha256": "07d118a12f24ec10660a48dad743ee681b87d1a7395f3c4f03fffd16df7ad38f",
+      "bytes": 2859695
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/task-stats.js",
+      "sha256": "ad1cde4bac96cf6e7c6c44ceef445dc95b035e8bd8206c3f1a5767e987c5d3d8",
+      "bytes": 1807
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/task-catalog.js",
+      "sha256": "e6ce95c4bf0622b818ca41c8d3509980b504b1a200f65e71dee3e6bf55b783f8",
+      "bytes": 9741
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/policy.js",
+      "sha256": "e7757948c8e99baa254166e5f0765c52ffdf805d7d14f2dcc42f364383b5c76a",
+      "bytes": 2308
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/task-runner.js",
+      "sha256": "3ca75bbff05ded0c790ce0c07968ba5bb48585c171c784a8963325c6b241ee67",
+      "bytes": 14256
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/periodic-scheduler.js",
+      "sha256": "a1766cdedd756bb06394c2d178b1df902e124196a4e86568545e2870a11a71f1",
+      "bytes": 8474
+    },
+    {
+      "path": "offscreen-original/readable/sections/912208950-frame_bin/frame-controller.js",
+      "sha256": "d3df9a0c0bd212f191cdfde6f10156e6f19ef7dc0b68767f0b03e729f7525945",
+      "bytes": 11496
+    },
+    {
+      "path": "service-worker-original/readable/README.md",
+      "sha256": "cf9e874ccbe56ea4f5084c55f02fb6630b5624f643e5c9761b8f757e17de93f2",
+      "bytes": 3072
+    },
+    {
+      "path": "service-worker-original/readable/symbols.json",
+      "sha256": "0bf2054b13abffd3aaa1e9eaa69fdab3e46762a34aa0817f29ae93d33389b09c",
+      "bytes": 41734
+    },
+    {
+      "path": "offscreen-original/readable/README.md",
+      "sha256": "eb87a25c72881ee766cd33c94961a3b1a898faa5af1f85b6a8a2a68b8e1f7a72",
+      "bytes": 1524
+    },
+    {
+      "path": "offscreen-original/readable/symbols.json",
+      "sha256": "56a8edc221d8bf4d132c9c4aecdf338bbd4e2e38b6731b93518178c586484213",
+      "bytes": 26193
+    }
+  ]
+}

@@ -64,4 +64,10 @@ worker 发出的 type 1 / 6 的字段 2 含 `[ouid, origin, version, optInStatus
 
 不同通道上的相同数字不一定含义相同，例如外部 type 3 是账号变化，而内部 type 3 是握手。不得合并为一个含混的大枚举。
 
+## FrameRequest 的网页侧实现补充（2026-09-24）
+
+从实际 HTML 引用的 `912208950-frame_bin.js` 确认：type 0 分派 alarm（明确处理 heartbeat）；type 2 为文档 ID 列表构造 `multi_doc_sync` Worker 任务；type 3 在满足条件时启动一轮周期任务调度。type 2 的参数位于字段 3，嵌套消息字段 1 为文档 ID 列表；type 3 不等于强制上传全部文档。
+
+这些是版本化网页源码的静态证据，未在真实账号中发送测试指令。回包不等于服务端已确认全部修改，详见 [Scheduler frame 分析](SCHEDULER-FRAME.md)。
+
 这里刻意没有把数组协议替换成 JSON 对象，也没有新增或收紧原版消息来源检查。面向自研文档系统的独立实现应明确校验 origin/source、账号、文档权限与版本；这属于另一个产品设计任务，不应混入本次行为保持重构。

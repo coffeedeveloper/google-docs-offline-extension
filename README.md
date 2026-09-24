@@ -33,6 +33,14 @@ Demo 页面位于 `http://localhost:4173`，使用 React 组件实现文件列�
 
 如果关注禁用网页 SW 后如何保留原 URL 离线访问，见 [替代方案与 CDP 录制/回放设计](docs/OFFLINE-WITHOUT-SERVICE-WORKER.md)。这是尚未实现的研究方案，不是当前扩展已支持的功能。
 
+Google 网页 SW 的具体职责与源码链路见 [Docs / Drive Service Worker 调查](docs/GOOGLE-SERVICE-WORKERS.md)：入口路由、清单驱动缓存、版本完整性、本地文档启动，以及自研设计建议。下载的实现脚本、阅读副本及来源校验记录位于 [service-worker-original/](service-worker-original/README.md)；入口样本已脱敏，哈希对应当前副本，详见 [脱敏说明](docs/RESEARCH-PRIVACY.md)。
+
+后续研究重点见 [离线设计研究路线](docs/OFFLINE-RESEARCH-ROADMAP.md)。[Extension frame 连接侧专题](docs/EXTENSION-FRAME.md) 梳理隐藏页定位、双端口握手与公共 API；随后依据用户 HTML 完成的 [Scheduler frame 主实现分析](docs/SCHEDULER-FRAME.md) 进一步解释任务目录、调度、Worker/iframe 执行器与失败处理。样本位于 [offscreen-original/](offscreen-original/README.md)，具体任务内部的上传 ACK 仍待研究。
+
+希望直接阅读 Google 网页端业务代码，可从 [readable 研究代码指南](docs/READABLE-RESEARCH.md) 进入：独立完整副本、语义命名、中文注释及按职责划分的阅读切片。生成与校验分别运行 `pnpm research:generate`、`pnpm research:check`；不参与扩展或 Demo 构建。
+
+更接近正常业务工程的版本见 [人类可读业务层](research/human-readable/README.md)：具名状态和参数、模块化调度器、15 类任务的声明式目录、缓存提交与文档启动逻辑，配有原函数对照测试。快速验证：`pnpm research:test:human`。这是一部分已确认业务的手工重构，不是完整 Google 运行时替代品。
+
 1. [源码导航与旧符号对照](docs/CODE_MAP.md)：先看职责，再按用例跟调用链。
 2. [ExtensionController](src/background/extension-controller.js)：网页请求如何改变状态、调度隐藏页。
 3. [OffscreenManager](src/background/offscreen-manager.js)：创建、握手门闩、重试和重建。

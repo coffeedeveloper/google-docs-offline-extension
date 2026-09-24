@@ -10,6 +10,9 @@
   },
   "description": "Auditable readable reconstruction of the locally installed Google Docs Offline extension",
   "scripts": {
+    "research:generate": "node scripts/readable-research.mjs",
+    "research:check": "node scripts/readable-research.mjs --check && node --test tests/research-readable.test.mjs tests/human-readable.test.mjs",
+    "research:test:human": "node --test tests/human-readable.test.mjs",
     "build": "pnpm run build:google && pnpm run build:demo",
     "build:google": "node scripts/build.mjs",
     "build:demo": "pnpm --filter @offline-docs/demo run build",
